@@ -1,0 +1,189 @@
+/* Base widget chrome. All rules are scoped under .gadget-root and reference
+ * semantic tokens only. */
+.gadget-root,
+.gadget-root *,
+.gadget-root *::before,
+.gadget-root *::after {
+  box-sizing: border-box;
+}
+
+/* The hidden attribute must win over component display rules
+ * (e.g. .gadget-bulk { display: flex }). */
+.gadget-root [hidden] {
+  display: none !important;
+}
+
+.gadget-root {
+  font-family: var(--gadget-font);
+  color: var(--gadget-color-text);
+  background: var(--gadget-color-bg);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.gadget-card {
+  border: 1px solid var(--gadget-color-border);
+  border-radius: var(--gadget-radius-l);
+  background: var(--gadget-color-bg);
+  overflow: hidden;
+}
+
+.gadget-toolbar {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--gadget-space-unit) * 3);
+  flex-wrap: wrap;
+  padding: calc(var(--gadget-space-unit) * 3) calc(var(--gadget-space-unit) * 4);
+  border-bottom: 1px solid var(--gadget-color-border);
+}
+
+.gadget-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  margin-inline-end: auto;
+}
+
+.gadget-btn {
+  font: inherit;
+  color: var(--gadget-color-text);
+  background: var(--gadget-color-surface);
+  border: 1px solid var(--gadget-color-border);
+  border-radius: var(--gadget-radius-s);
+  padding: calc(var(--gadget-space-unit) * 1.5) calc(var(--gadget-space-unit) * 3);
+  cursor: pointer;
+}
+
+.gadget-btn:hover {
+  filter: brightness(0.97);
+}
+
+.gadget-btn--primary {
+  background: var(--gadget-color-primary);
+  border-color: var(--gadget-color-primary);
+  color: var(--gadget-color-primary-text);
+}
+
+.gadget-btn--danger {
+  color: var(--gadget-color-danger);
+  border-color: var(--gadget-color-danger);
+  background: transparent;
+}
+
+.gadget-btn[data-gadget-armed] {
+  background: var(--gadget-color-danger);
+  border-color: var(--gadget-color-danger);
+  color: var(--gadget-color-primary-text);
+}
+
+.gadget-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.gadget-root :focus-visible {
+  outline: 2px solid var(--gadget-color-primary);
+  outline-offset: 1px;
+}
+
+.gadget-input {
+  font: inherit;
+  color: var(--gadget-color-text);
+  background: var(--gadget-color-bg);
+  border: 1px solid var(--gadget-color-border);
+  border-radius: var(--gadget-radius-s);
+  padding: calc(var(--gadget-space-unit) * 1.5) calc(var(--gadget-space-unit) * 2.5);
+}
+
+.gadget-badge {
+  display: inline-block;
+  padding: 0 calc(var(--gadget-space-unit) * 2);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid var(--gadget-color-border);
+  color: var(--gadget-color-text-muted);
+}
+
+.gadget-badge--info {
+  color: var(--gadget-color-primary);
+  border-color: currentcolor;
+}
+
+.gadget-badge--success {
+  color: var(--gadget-color-success);
+  border-color: currentcolor;
+}
+
+.gadget-badge--warning {
+  color: var(--gadget-color-warning);
+  border-color: currentcolor;
+}
+
+.gadget-badge--danger {
+  color: var(--gadget-color-danger);
+  border-color: currentcolor;
+}
+
+.gadget-status {
+  padding: calc(var(--gadget-space-unit) * 2) calc(var(--gadget-space-unit) * 4);
+  border-bottom: 1px solid var(--gadget-color-border);
+  font-size: 0.8125rem;
+}
+
+.gadget-status--error {
+  color: var(--gadget-color-danger);
+}
+
+.gadget-status--success {
+  color: var(--gadget-color-success);
+}
+
+.gadget-status--loading {
+  color: var(--gadget-color-text-muted);
+}
+
+.gadget-status--loading::before {
+  content: "";
+  display: inline-block;
+  width: 0.75em;
+  height: 0.75em;
+  margin-inline-end: calc(var(--gadget-space-unit) * 2);
+  border: 2px solid currentcolor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: gadget-spin 0.7s linear infinite;
+  vertical-align: -0.1em;
+}
+
+@keyframes gadget-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.gadget-empty {
+  padding: calc(var(--gadget-space-unit) * 8) calc(var(--gadget-space-unit) * 4);
+  text-align: center;
+  color: var(--gadget-color-text-muted);
+}
+
+.gadget-empty h3 {
+  margin: 0 0 calc(var(--gadget-space-unit) * 1);
+  font-size: 0.9375rem;
+  color: var(--gadget-color-text);
+}
+
+.gadget-empty p {
+  margin: 0;
+}
+
+.gadget-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--gadget-color-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}

@@ -1,0 +1,104 @@
+.gadget-table-wrap {
+  overflow-x: auto;
+}
+
+.gadget-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.gadget-table th,
+.gadget-table td {
+  text-align: start;
+  padding: calc(var(--gadget-space-unit) * 2) calc(var(--gadget-space-unit) * 4);
+  border-bottom: 1px solid var(--gadget-color-border);
+}
+
+.gadget-table thead th {
+  background: var(--gadget-color-surface);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--gadget-color-text-muted);
+  white-space: nowrap;
+}
+
+.gadget-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.gadget-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--gadget-color-surface) 55%, transparent);
+}
+
+.gadget-align-end {
+  text-align: end;
+}
+
+.gadget-align-center {
+  text-align: center;
+}
+
+.gadget-th-select,
+.gadget-td-select {
+  width: 2.25rem;
+  padding-inline-end: 0;
+}
+
+.gadget-sort-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+th[aria-sort="ascending"] .gadget-sort-btn::after {
+  content: " \2191";
+  color: var(--gadget-color-primary);
+}
+
+th[aria-sort="descending"] .gadget-sort-btn::after {
+  content: " \2193";
+  color: var(--gadget-color-primary);
+}
+
+.gadget-td-actions {
+  white-space: nowrap;
+  text-align: end;
+}
+
+.gadget-td-actions .gadget-btn {
+  padding: calc(var(--gadget-space-unit) * 0.75) calc(var(--gadget-space-unit) * 2);
+  font-size: 0.8125rem;
+}
+
+.gadget-td-actions .gadget-btn + .gadget-btn {
+  margin-inline-start: calc(var(--gadget-space-unit) * 1.5);
+}
+
+.gadget-bulk {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--gadget-space-unit) * 2);
+}
+
+.gadget-bulk-count {
+  font-size: 0.8125rem;
+  color: var(--gadget-color-text-muted);
+}
+
+.gadget-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: calc(var(--gadget-space-unit) * 3);
+  padding: calc(var(--gadget-space-unit) * 2.5) calc(var(--gadget-space-unit) * 4);
+  border-top: 1px solid var(--gadget-color-border);
+}
+
+.gadget-page-info {
+  font-size: 0.8125rem;
+  color: var(--gadget-color-text-muted);
+}

@@ -1,0 +1,200 @@
+package gadget
+
+import (
+	"encoding/json"
+	"flag"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	xhtml "golang.org/x/net/html"
+
+	"github.com/techthos/gadget/theme"
+)
+
+var update = flag.Bool("update", false, "update golden files")
+
+// canonicalTable exercises every column type and table feature.
+func canonicalTable() *Table {
+	return &Table{
+		URI:   "ui://demo/users",
+		Title: "Users",
+		Columns: []Column{
+			Text("name", "Name"),
+			Number("balance", "Balance", "currency:EUR"),
+			Date("createdAt", "Created", "date"),
+			Badge("status", "Status", map[string]BadgeVariant{
+				"active": BadgeSuccess,
+				"banned": BadgeDanger,
+			}),
+			Link("website", "Website"),
+			ActionsColumn(
+				Action{Label: "Edit", Tool: "edit_user", Args: map[string]ArgSource{
+					"id": FromRow("id"),
+				}, Variant: VariantPrimary},
+				Action{Label: "Delete", Tool: "delete_user", Confirm: "Really delete?", Args: map[string]ArgSource{
+					"id": FromRow("id"),
+				}, Variant: VariantDanger},
+			),
+		},
+		PageSize:    10,
+		DefaultSort: &SortSpec{Key: "name"},
+		Filterable:  true,
+		Selection: &SelectionConfig{Bulk: []Action{
+			{Label: "Archive", Tool: "archive_users", Args: map[string]ArgSource{
+				"ids": FromSelection("id"),
+			}},
+		}},
+		Empty: EmptyState{Title: "No users", Body: "Create a user to get started."},
+		InitialData: map[string]any{
+			"rows": []map[string]any{
+				{"id": 1, "name": "Ada", "balance": 12.5, "createdAt": "2026-01-01T00:00:00Z", "status": "active", "website": "https://example.com"},
+			},
+		},
+		Theme: &theme.Theme{ColorPrimary: "#7c3aed"},
+	}
+}
+
+func TestTableGolden(t *testing.T) {
+	doc, err := canonicalTable().Document()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	golden := filepath.Join("testdata", "golden", "table.html")
+	if *update {
+		if err := os.MkdirAll(filepath.Dir(golden), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(golden, []byte(doc), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want, err := os.ReadFile(golden)
+	if err != nil {
+		t.Fatalf("read golden (run with -update to create): %v", err)
+	}
+	if doc != string(want) {
+		t.Error("document does not match golden file; run `go test -run TestTableGolden -update ./...` and review the diff")
+	}
+
+	if _, err := xhtml.Parse(strings.NewReader(doc)); err != nil {
+		t.Fatalf("document does not parse: %v", err)
+	}
+	for _, want := range []string{
+		`data-gadget-widget="table"`,
+		`id="gadget-config"`,
+		`id="gadget-data"`,
+		`data-gadget-sort="name"`,
+		`data-gadget-select-all`,
+		`data-gadget-bulk-action="0"`,
+		`--gadget-color-primary:#7c3aed`,
+	} {
+		if !strings.Contains(doc, want) {
+			t.Errorf("document missing %q", want)
+		}
+	}
+}
+
+func TestTableConfigIsland(t *testing.T) {
+	b, err := json.Marshal(canonicalTable().config())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := string(b)
+	for _, want := range []string{
+		`"widget":"table"`,
+		`"rowsKey":"rows"`,
+		`"rowId":"id"`,
+		`"pageSize":10`,
+		`"filterable":true`,
+		`"defaultSort":{"key":"name"}`,
+		`"type":"badge"`,
+		`"badge":{"active":"success","banned":"danger"}`,
+		`"link":{"hrefKey":"website"}`,
+		`"args":{"id":{"row":"id"}}`,
+		`"args":{"ids":{"selection":"id"}}`,
+		`"confirm":"Really delete?"`,
+		`"empty":{"title":"No users","body":"Create a user to get started."}`,
+	} {
+		if !strings.Contains(cfg, want) {
+			t.Errorf("config island missing %s\nfull: %s", want, cfg)
+		}
+	}
+}
+
+func TestTableToolMetaAndDescriptor(t *testing.T) {
+	tbl := canonicalTable()
+	meta, err := json.Marshal(tbl.ToolMeta())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(meta) != `{"ui":{"resourceUri":"ui://demo/users"}}` {
+		t.Errorf("ToolMeta = %s", meta)
+	}
+	d := tbl.Descriptor()
+	if d.URI != "ui://demo/users" || d.Name != "demo-users" || d.MIMEType != "text/html;profile=mcp-app" {
+		t.Errorf("Descriptor = %+v", d)
+	}
+}
+
+func TestTableValidate(t *testing.T) {
+	valid := func() *Table { return canonicalTable() }
+
+	cases := map[string]func(*Table){
+		"bad URI scheme":       func(t *Table) { t.URI = "https://x" },
+		"no columns":           func(t *Table) { t.Columns = nil },
+		"duplicate column key": func(t *Table) { t.Columns = append(t.Columns, Text("name", "Name2")) },
+		"text without key":     func(t *Table) { t.Columns = []Column{{Label: "X"}} },
+		"link without hrefKey": func(t *Table) { t.Columns = []Column{{Label: "X", Type: ColLink}} },
+		"actions empty":        func(t *Table) { t.Columns = []Column{{Type: ColActions}} },
+		"tool action no tool":  func(t *Table) { t.Columns = []Column{ActionsColumn(Action{Label: "X"})} },
+		"action no label":      func(t *Table) { t.Columns = []Column{ActionsColumn(Action{Tool: "x"})} },
+		"selection arg in row action": func(t *Table) {
+			t.Columns = []Column{ActionsColumn(Action{Label: "X", Tool: "x", Args: map[string]ArgSource{
+				"ids": FromSelection("id"),
+			}})}
+		},
+		"invalid arg source": func(t *Table) {
+			t.Columns = []Column{ActionsColumn(Action{Label: "X", Tool: "x", Args: map[string]ArgSource{
+				"v": {},
+			}})}
+		},
+		"negative page size": func(t *Table) { t.PageSize = -1 },
+		"default sort no key": func(t *Table) {
+			t.DefaultSort = &SortSpec{}
+		},
+		"unsafe theme": func(t *Table) {
+			t.Theme = &theme.Theme{ColorText: "red}</style>"}
+		},
+	}
+
+	if err := valid().Validate(); err != nil {
+		t.Fatalf("canonical table must validate, got: %v", err)
+	}
+	for name, mutate := range cases {
+		tbl := valid()
+		mutate(tbl)
+		if err := tbl.Validate(); err == nil {
+			t.Errorf("%s: Validate() = nil, want error", name)
+		}
+	}
+}
+
+func TestRowsOf(t *testing.T) {
+	type user struct {
+		ID   int    `json:"id"`
+		Name string `json:"name"`
+	}
+	rows, err := RowsOf([]user{{1, "Ada"}, {2, "Bob"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 || rows[0]["name"] != "Ada" || rows[1]["id"] != float64(2) {
+		t.Errorf("rows = %v", rows)
+	}
+	if _, err := RowsOf("not a slice"); err == nil {
+		t.Error("RowsOf on non-slice must error")
+	}
+}

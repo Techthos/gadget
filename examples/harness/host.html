@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>gadget harness — fake MCP Apps host</title>
+<style>
+  body { font: 14px/1.4 ui-sans-serif, system-ui; margin: 0; display: grid;
+         grid-template-columns: 1fr 26rem; height: 100vh; }
+  main { padding: 1rem; overflow: auto; }
+  aside { border-left: 1px solid #ddd; padding: 1rem; overflow: auto;
+          background: #fafafa; display: flex; flex-direction: column; gap: .75rem; }
+  iframe { width: 100%; height: 480px; border: 1px solid #ccc; border-radius: 8px; }
+  pre { background: #111; color: #9f9; font-size: 11px; padding: .5rem;
+        overflow: auto; flex: 1; min-height: 12rem; margin: 0; white-space: pre-wrap; }
+  button, select, textarea { font: inherit; }
+  .row { display: flex; gap: .5rem; flex-wrap: wrap; }
+  textarea { width: 100%; height: 6rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>gadget harness</h1>
+  <div class="row">
+    <select id="widget">
+      <option value="/widget/table">table</option>
+      <option value="/widget/form">form</option>
+    </select>
+    <button id="reload">Load widget</button>
+    <button id="theme">Toggle dark</button>
+  </div>
+  <p></p>
+  <iframe id="frame" sandbox="allow-scripts allow-same-origin" src="/widget/table"></iframe>
+</main>
+<aside>
+  <strong>Push tool-result (structuredContent JSON)</strong>
+  <textarea id="payload">{"rows":[{"id":9,"name":"Pushed Row","balance":1,"createdAt":"2026-07-23T00:00:00Z","status":"active"}]}</textarea>
+  <div class="row">
+    <button id="push">ui/notifications/tool-result</button>
+    <button id="toolinput">tool-input (loading)</button>
+    <button id="cancel">tool-cancelled</button>
+  </div>
+  <label><input type="checkbox" id="failsave"> save_user returns field error</label>
+  <strong>Traffic</strong>
+  <pre id="log"></pre>
+</aside>
+<script>
+  const frame = document.getElementById("frame");
+  const logEl = document.getElementById("log");
+  let dark = false;
+
+  const log = (dir, msg) => {
+    logEl.textContent += `${dir} ${JSON.stringify(msg)}\n`;
+    logEl.scrollTop = logEl.scrollHeight;
+  };
+  const send = (msg) => {
+    const full = { jsonrpc: "2.0", ...msg };
+    log("→", full);
+    frame.contentWindow.postMessage(full, "*");
+  };
+  const notify = (method, params) => send({ method, params });
+
+  const hostContext = () => ({
+    theme: dark ? "dark" : "light",
+    displayMode: "inline",
+    locale: "en-US",
+    timeZone: "UTC",
+    platform: "web",
+    styles: { variables: dark
+      ? { "--color-background-primary": "#1c1c1e", "--color-text-primary": "#f2f2f7" }
+      : { "--color-background-primary": "#ffffff", "--color-text-primary": "#1c1c1e" } },
+  });
+
+  window.addEventListener("message", (ev) => {
+    const msg = ev.data;
+    if (!msg || msg.jsonrpc !== "2.0" || ev.source !== frame.contentWindow) return;
+    log("←", msg);
+    if (msg.method === "ui/initialize") {
+      send({ id: msg.id, result: { protocolVersion: "2026-01-26", hostContext: hostContext() } });
+    } else if (msg.method === "tools/call") {
+      const { name, arguments: args } = msg.params;
+      let result;
+      if (name === "save_user" && document.getElementById("failsave").checked) {
+        result = { structuredContent: { errors: { email: "This email is already taken." } } };
+      } else if (name === "delete_user") {
+        result = { content: [{ type: "text", text: `Deleted #${args.id}.` }],
+                   structuredContent: { rows: [{ id: 99, name: "Remaining User", balance: 5,
+                     createdAt: "2026-07-01T00:00:00Z", status: "active" }] } };
+      } else {
+        result = { content: [{ type: "text", text: `${name} ok.` }], structuredContent: {} };
+      }
+      setTimeout(() => send({ id: msg.id, result }), 400); // visible loading state
+    } else if (msg.id !== undefined && msg.method) {
+      send({ id: msg.id, result: {} }); // any other request: ack
+    }
+  });
+
+  document.getElementById("reload").onclick = () => {
+    frame.src = document.getElementById("widget").value;
+    logEl.textContent = "";
+  };
+  document.getElementById("theme").onclick = () => {
+    dark = !dark;
+    notify("ui/notifications/host-context-changed", hostContext());
+  };
+  document.getElementById("push").onclick = () => {
+    try {
+      notify("ui/notifications/tool-result",
+        { structuredContent: JSON.parse(document.getElementById("payload").value) });
+    } catch (e) { alert(e); }
+  };
+  document.getElementById("toolinput").onclick = () =>
+    notify("ui/notifications/tool-input", { arguments: {} });
+  document.getElementById("cancel").onclick = () =>
+    notify("ui/notifications/tool-cancelled", {});
+</script>
+</body>
+</html>

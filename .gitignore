@@ -1,0 +1,8 @@
+# Node
+ui/node_modules/
+
+# Editors
+.idea/
+*.swp
+
+# NOTE: internal/assets/dist/ is COMMITTED on purpose (go:embed of built runtime).

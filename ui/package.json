@@ -1,0 +1,17 @@
+{
+  "name": "@techthos/gadget-ui",
+  "private": true,
+  "type": "module",
+  "description": "TypeScript runtime and CSS for the gadget widget library. Built output is committed to internal/assets/dist and embedded into the Go binary.",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.1",
+    "jsdom": "29.1.1",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  }
+}

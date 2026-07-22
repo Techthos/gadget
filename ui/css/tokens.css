@@ -1,0 +1,64 @@
+/* gadget design tokens: two layers.
+ * Primitives (--gadget-p-*) are library-owned fallbacks.
+ * Semantic tokens (--gadget-*) resolve host-injected MCP Apps variables
+ * first (set as inline style on :root by the runtime from
+ * hostContext.styles.variables), then fall back to primitives.
+ * Component styles reference semantic tokens only. */
+.gadget-root {
+  /* primitives */
+  --gadget-p-white: #ffffff;
+  --gadget-p-gray-50: #f9fafb;
+  --gadget-p-gray-100: #f3f4f6;
+  --gadget-p-gray-200: #e5e7eb;
+  --gadget-p-gray-400: #9ca3af;
+  --gadget-p-gray-500: #6b7280;
+  --gadget-p-gray-700: #374151;
+  --gadget-p-gray-900: #111827;
+  --gadget-p-blue-600: #2563eb;
+  --gadget-p-red-600: #dc2626;
+  --gadget-p-green-600: #16a34a;
+  --gadget-p-amber-600: #d97706;
+  --gadget-p-font-sans: ui-sans-serif, system-ui, sans-serif;
+  --gadget-p-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* semantic: host variable -> primitive fallback */
+  --gadget-color-bg: var(--color-background-primary, var(--gadget-p-white));
+  --gadget-color-surface: var(--color-background-secondary, var(--gadget-p-gray-50));
+  --gadget-color-text: var(--color-text-primary, var(--gadget-p-gray-900));
+  --gadget-color-text-muted: var(--color-text-secondary, var(--gadget-p-gray-500));
+  --gadget-color-border: var(--color-border-primary, var(--gadget-p-gray-200));
+  --gadget-color-primary: var(--color-text-accent, var(--gadget-p-blue-600));
+  --gadget-color-primary-text: var(--gadget-p-white);
+  --gadget-color-danger: var(--color-text-danger, var(--gadget-p-red-600));
+  --gadget-color-success: var(--color-text-success, var(--gadget-p-green-600));
+  --gadget-color-warning: var(--color-text-warning, var(--gadget-p-amber-600));
+  --gadget-font: var(--font-sans, var(--gadget-p-font-sans));
+  --gadget-font-mono: var(--font-mono, var(--gadget-p-font-mono));
+  --gadget-radius-s: var(--border-radius-sm, 4px);
+  --gadget-radius-m: var(--border-radius-md, 8px);
+  --gadget-radius-l: var(--border-radius-lg, 12px);
+  --gadget-space-unit: 0.25rem;
+
+  /* let host-provided light-dark() values self-adapt */
+  color-scheme: light dark;
+}
+
+/* Dark primitives when the host declares a dark theme… */
+:root[data-gadget-theme="dark"] .gadget-root {
+  --gadget-color-bg: var(--color-background-primary, #171717);
+  --gadget-color-surface: var(--color-background-secondary, #262626);
+  --gadget-color-text: var(--color-text-primary, #fafafa);
+  --gadget-color-text-muted: var(--color-text-secondary, #a3a3a3);
+  --gadget-color-border: var(--color-border-primary, #404040);
+}
+
+/* …or, without an explicit host theme, when the OS prefers dark. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-gadget-theme]) .gadget-root {
+    --gadget-color-bg: var(--color-background-primary, #171717);
+    --gadget-color-surface: var(--color-background-secondary, #262626);
+    --gadget-color-text: var(--color-text-primary, #fafafa);
+    --gadget-color-text-muted: var(--color-text-secondary, #a3a3a3);
+    --gadget-color-border: var(--color-border-primary, #404040);
+  }
+}

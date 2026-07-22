@@ -1,0 +1,28 @@
+{
+  "specVersion": "2026-01-26",
+  "extensionId": "io.modelcontextprotocol/ui",
+  "mimeType": "text/html;profile=mcp-app",
+  "metaKey": "ui",
+  "uriScheme": "ui",
+  "methods": {
+    "initialize": "ui/initialize",
+    "initialized": "ui/notifications/initialized",
+    "toolsCall": "tools/call",
+    "resourcesRead": "resources/read",
+    "openLink": "ui/open-link",
+    "message": "ui/message",
+    "requestDisplayMode": "ui/request-display-mode",
+    "updateModelContext": "ui/update-model-context",
+    "sizeChanged": "ui/notifications/size-changed",
+    "log": "notifications/message",
+    "ping": "ping",
+    "toolInput": "ui/notifications/tool-input",
+    "toolInputPartial": "ui/notifications/tool-input-partial",
+    "toolResult": "ui/notifications/tool-result",
+    "toolCancelled": "ui/notifications/tool-cancelled",
+    "hostContextChanged": "ui/notifications/host-context-changed",
+    "resourceTeardown": "ui/resource-teardown",
+    "sandboxProxyReady": "ui/notifications/sandbox-proxy-ready",
+    "sandboxResourceReady": "ui/notifications/sandbox-resource-ready"
+  }
+}

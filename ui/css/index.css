@@ -1,0 +1,6 @@
+/* gadget stylesheet aggregation point. esbuild bundles all @imports into
+ * internal/assets/dist/gadget.css. */
+@import "./tokens.css";
+@import "./base.css";
+@import "./table.css";
+@import "./form.css";
