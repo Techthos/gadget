@@ -162,6 +162,8 @@ type Table struct {
     Empty       EmptyState       // no-data message
 
     InitialData map[string]any        // optional structuredContent-shaped snapshot baked into the document
+    LoadTool    string                 // read tool the runtime calls once on load to re-fetch rows (must return them under RowsKey), replacing the baked snapshot so a reloaded widget shows current data
+    LoadArgs    map[string]any         // optional static args passed to LoadTool
     Theme       *theme.Theme          // design-token overrides for this widget
     UI          *uispec.ResourceUIMeta // overrides resource _meta.ui (CSP, permissions, prefersBorder)
 }
@@ -242,6 +244,8 @@ type Form struct {
     ErrorsKey  string  // structuredContent key with {"field": "message"} errors. Default "errors"
 
     InitialData map[string]any         // optional snapshot, e.g. {"values": {...}} for a pre-filled edit form
+    LoadTool    string                 // read tool the runtime calls once on load to re-fetch prefill (must return it under PrefillKey), replacing the baked snapshot
+    LoadArgs    map[string]any         // optional static args passed to LoadTool
     Theme       *theme.Theme
     UI          *uispec.ResourceUIMeta
 }
@@ -589,12 +593,21 @@ const (
     VisibilityApp   = "app"   // tool callable from the app UI only
 )
 
-const ( // ResourceUIMeta.Permissions values
-    PermissionCamera         = "camera"
-    PermissionMicrophone     = "microphone"
-    PermissionGeolocation    = "geolocation"
-    PermissionClipboardWrite = "clipboardWrite"
-)
+// Presence marker for a requested sandbox permission. Serializes to {} when
+// set (non-nil) and is omitted when nil, per the MCP Apps spec.
+type Permission struct{}
+
+// Marker used to request a permission, e.g. Permissions{Camera: uispec.Grant}.
+var Grant = &Permission{}
+
+// Browser capabilities a UI resource requests. Serializes to the spec object
+// shape, e.g. {"camera":{},"clipboardWrite":{}}.
+type Permissions struct {
+    Camera         *Permission `json:"camera,omitempty"`
+    Microphone     *Permission `json:"microphone,omitempty"`
+    Geolocation    *Permission `json:"geolocation,omitempty"`
+    ClipboardWrite *Permission `json:"clipboardWrite,omitempty"`
+}
 
 // External origins a UI resource needs (hosts default to fully locked-down).
 type CSP struct {
@@ -606,10 +619,10 @@ type CSP struct {
 
 // _meta.ui on a ui:// resource (set via Table.UI / Form.UI).
 type ResourceUIMeta struct {
-    CSP           *CSP     `json:"csp,omitempty"`
-    Permissions   []string `json:"permissions,omitempty"`
-    Domain        string   `json:"domain,omitempty"`
-    PrefersBorder *bool    `json:"prefersBorder,omitempty"`
+    CSP           *CSP         `json:"csp,omitempty"`
+    Permissions   *Permissions `json:"permissions,omitempty"`
+    Domain        string       `json:"domain,omitempty"`
+    PrefersBorder *bool        `json:"prefersBorder,omitempty"`
 }
 
 // _meta.ui on a tool, linking it to its template resource.

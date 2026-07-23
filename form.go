@@ -36,6 +36,15 @@ type Form struct {
 	// InitialData is an optional structuredContent-shaped snapshot baked
 	// into the document (e.g. {"values": {...}} for a pre-filled edit form).
 	InitialData map[string]any
+
+	// LoadTool, when set, names a read tool the runtime calls once on load
+	// (after the host handshake) to hydrate the form's prefill from fresh
+	// data, replacing the baked InitialData snapshot. The tool must return
+	// the prefill values under PrefillKey in its structuredContent.
+	LoadTool string
+	// LoadArgs are optional static arguments passed to LoadTool.
+	LoadArgs map[string]any
+
 	// Theme overrides gadget design tokens for this widget.
 	Theme *theme.Theme
 	// UI overrides resource _meta.ui.
@@ -223,11 +232,18 @@ func (f *Form) config() map[string]any {
 	if f.Submit.SuccessMessage != "" {
 		submit["successMessage"] = f.Submit.SuccessMessage
 	}
-	return map[string]any{
+	cfg := map[string]any{
 		"widget":     "form",
 		"prefillKey": f.prefillKey(),
 		"errorsKey":  f.errorsKey(),
 		"submit":     submit,
 		"fields":     fields,
 	}
+	if f.LoadTool != "" {
+		cfg["loadTool"] = f.LoadTool
+		if len(f.LoadArgs) > 0 {
+			cfg["loadArgs"] = f.LoadArgs
+		}
+	}
+	return cfg
 }

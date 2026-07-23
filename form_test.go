@@ -109,6 +109,31 @@ func TestFormConfigIsland(t *testing.T) {
 	}
 }
 
+func TestFormConfigLoadTool(t *testing.T) {
+	f := canonicalForm()
+	f.LoadTool = "get_user"
+	f.LoadArgs = map[string]any{"id": "42"}
+	b, err := json.Marshal(f.config())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := string(b)
+	for _, want := range []string{`"loadTool":"get_user"`, `"loadArgs":{"id":"42"}`} {
+		if !strings.Contains(cfg, want) {
+			t.Errorf("config island missing %s\nfull: %s", want, cfg)
+		}
+	}
+
+	// Both keys are omitted when LoadTool is unset.
+	b2, err := json.Marshal(canonicalForm().config())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b2), "loadTool") || strings.Contains(string(b2), "loadArgs") {
+		t.Errorf("load keys present without LoadTool set: %s", b2)
+	}
+}
+
 func TestFormValidate(t *testing.T) {
 	cases := map[string]func(*Form){
 		"bad URI":              func(f *Form) { f.URI = "nope" },

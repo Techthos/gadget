@@ -202,4 +202,39 @@ describe("form behavior", () => {
     await flush();
     expect((root.querySelector("#f-name") as HTMLInputElement).disabled).toBe(false);
   });
+
+  it("hydrates prefill from loadTool on mount", async () => {
+    const root = shell();
+    host.onToolCall = (name) =>
+      name === "get_user"
+        ? { structuredContent: { values: { name: "Grace", age: 42 } } }
+        : { structuredContent: {} };
+    mountForm({
+      root,
+      config: config({ loadTool: "get_user" }),
+      initialData: null,
+      bridge,
+      ready: Promise.resolve(true),
+    });
+    await flush();
+
+    const calls = host.received(M.toolsCall);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.params).toMatchObject({ name: "get_user", arguments: {} });
+    expect((root.querySelector("#f-name") as HTMLInputElement).value).toBe("Grace");
+    expect((root.querySelector("#f-age") as HTMLInputElement).value).toBe("42");
+  });
+
+  it("does not hydrate when no host answered the handshake (ready=false)", async () => {
+    const root = shell();
+    mountForm({
+      root,
+      config: config({ loadTool: "get_user" }),
+      initialData: null,
+      bridge,
+      ready: Promise.resolve(false),
+    });
+    await flush();
+    expect(host.received(M.toolsCall)).toHaveLength(0);
+  });
 });

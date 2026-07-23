@@ -14,6 +14,10 @@ export interface MountContext {
   config: Record<string, unknown>;
   initialData: Record<string, unknown> | null;
   bridge: Bridge;
+  // ready resolves after the ui/initialize handshake: true when a host
+  // answered, false otherwise (standalone preview / no host). Behaviors gate
+  // load-time hydration on it so tool calls only fire against a live host.
+  ready?: Promise<boolean>;
 }
 
 export type Behavior = (ctx: MountContext) => void;
@@ -37,22 +41,27 @@ export async function boot(): Promise<void> {
     emitHostContextApplied();
   });
 
-  behaviors.get(kind)?.({ root, config, initialData, bridge });
+  // Resolve true once the handshake completes (false if no host answers).
+  // Behaviors await this before hydrating so load-time tool calls only fire
+  // against a live host. Rows may have painted before the handshake; applying
+  // host context and re-emitting lets behaviors re-render with the host's
+  // locale/timeZone.
+  const ready = bridge
+    .initialize()
+    .then((hostCtx) => {
+      applyHostContext(hostCtx);
+      emitHostContextApplied();
+      return true;
+    })
+    .catch(() => false);
+
+  behaviors.get(kind)?.({ root, config, initialData, bridge, ready });
 
   // Report size from first paint on — NOT gated on the handshake, so the
   // host can size the frame while ui/initialize is still in flight.
   watchSize(bridge);
 
-  try {
-    const hostCtx = await bridge.initialize();
-    applyHostContext(hostCtx);
-    // Rows may have painted before the handshake; let behaviors re-render
-    // with the host's locale/timeZone applied.
-    emitHostContextApplied();
-  } catch {
-    // No responding host (standalone preview, harness without init support):
-    // the widget still renders with fallback tokens.
-  }
+  await ready;
 }
 
 // Widget behaviors register here as they are implemented.

@@ -124,6 +124,31 @@ func TestTableConfigIsland(t *testing.T) {
 	}
 }
 
+func TestTableConfigLoadTool(t *testing.T) {
+	tbl := canonicalTable()
+	tbl.LoadTool = "list_users"
+	tbl.LoadArgs = map[string]any{"scope": "all"}
+	b, err := json.Marshal(tbl.config())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := string(b)
+	for _, want := range []string{`"loadTool":"list_users"`, `"loadArgs":{"scope":"all"}`} {
+		if !strings.Contains(cfg, want) {
+			t.Errorf("config island missing %s\nfull: %s", want, cfg)
+		}
+	}
+
+	// Both keys are omitted when LoadTool is unset.
+	b2, err := json.Marshal(canonicalTable().config())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b2), "loadTool") || strings.Contains(string(b2), "loadArgs") {
+		t.Errorf("load keys present without LoadTool set: %s", b2)
+	}
+}
+
 func TestTableToolMetaAndDescriptor(t *testing.T) {
 	tbl := canonicalTable()
 	meta, err := json.Marshal(tbl.ToolMeta())

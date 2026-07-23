@@ -54,6 +54,8 @@ interface TableCfg {
 	defaultSort?: SortSpec;
 	selection?: { bulk: ActionCfg[] };
 	empty?: { title?: string; body?: string };
+	loadTool?: string;
+	loadArgs?: Record<string, unknown>;
 }
 
 interface TableState {
@@ -408,4 +410,32 @@ export function mountTable(ctx: MountContext): void {
 
 	store.subscribe(render);
 	render(store.get());
+
+	// Load-time hydration: once a host is connected, fetch fresh rows and
+	// replace the baked snapshot, so a reloaded iframe shows current data
+	// instead of the state frozen at render time. Silent on success (no
+	// status toast) and on failure (the baked snapshot stays).
+	async function hydrate(): Promise<void> {
+		store.set({ status: "loading", statusKind: undefined, statusMsg: "Loading…" });
+		try {
+			const res = await bridge.callTool(cfg.loadTool as string, cfg.loadArgs ?? {});
+			const patch: Partial<TableState> = {
+				status: "idle",
+				statusKind: undefined,
+				statusMsg: undefined,
+			};
+			if (res.structuredContent && cfg.rowsKey in res.structuredContent) {
+				patch.rows = rowsFrom(res.structuredContent, cfg.rowsKey);
+				patch.selected = [];
+			}
+			store.set(patch);
+		} catch {
+			store.set({ status: "idle", statusKind: undefined, statusMsg: undefined });
+		}
+	}
+	if (cfg.loadTool) {
+		void ctx.ready?.then((ok) => {
+			if (ok) void hydrate();
+		});
+	}
 }

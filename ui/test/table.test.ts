@@ -318,4 +318,63 @@ describe("table behavior", () => {
     expect(cellTexts(root, 0)).toEqual(["Zoe"]);
     expect(status.className).not.toContain("gadget-status--loading");
   });
+
+  it("hydrates from loadTool on mount, replacing the baked snapshot", async () => {
+    const root = shell();
+    host.onToolCall = (name) =>
+      name === "list_users"
+        ? { structuredContent: { rows: [{ id: 9, name: "Zed", age: 40 }] } }
+        : { structuredContent: {} };
+    mountTable({
+      root,
+      config: config({ loadTool: "list_users", loadArgs: { scope: "all" } }),
+      initialData: { rows: ROWS },
+      bridge,
+      ready: Promise.resolve(true),
+    });
+
+    // Baked snapshot paints first...
+    expect(cellTexts(root, 0)).toEqual(["Carol", "Alice", "Bob"]);
+    await flush();
+
+    // ...then the load tool fires (with its static args) and replaces it.
+    const calls = host.received(M.toolsCall);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.params).toMatchObject({ name: "list_users", arguments: { scope: "all" } });
+    expect(cellTexts(root, 0)).toEqual(["Zed"]);
+    const status = root.querySelector<HTMLElement>("[data-gadget-status]")!;
+    expect(status.className).not.toContain("gadget-status--loading");
+  });
+
+  it("does not hydrate when no host answered the handshake (ready=false)", async () => {
+    const root = shell();
+    mountTable({
+      root,
+      config: config({ loadTool: "list_users" }),
+      initialData: { rows: ROWS },
+      bridge,
+      ready: Promise.resolve(false),
+    });
+    await flush();
+    expect(host.received(M.toolsCall)).toHaveLength(0);
+    expect(cellTexts(root, 0)).toEqual(["Carol", "Alice", "Bob"]);
+  });
+
+  it("keeps the baked snapshot when loadTool fails", async () => {
+    const root = shell();
+    host.onToolCall = () => {
+      throw new Error("boom");
+    };
+    mountTable({
+      root,
+      config: config({ loadTool: "list_users" }),
+      initialData: { rows: ROWS },
+      bridge,
+      ready: Promise.resolve(true),
+    });
+    await flush();
+    expect(cellTexts(root, 0)).toEqual(["Carol", "Alice", "Bob"]);
+    const status = root.querySelector<HTMLElement>("[data-gadget-status]")!;
+    expect(status.className).not.toContain("gadget-status--loading");
+  });
 });

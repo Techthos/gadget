@@ -45,6 +45,16 @@ type Table struct {
 	// InitialData is an optional structuredContent-shaped snapshot baked
 	// into the document as a JSON island.
 	InitialData map[string]any
+
+	// LoadTool, when set, names a read tool the runtime calls once on load
+	// (after the host handshake) to hydrate the table from fresh data,
+	// replacing the baked InitialData snapshot. This keeps a reloaded widget
+	// current instead of reverting to the state frozen at render time. The
+	// tool must return the rows under RowsKey in its structuredContent.
+	LoadTool string
+	// LoadArgs are optional static arguments passed to LoadTool.
+	LoadArgs map[string]any
+
 	// Theme overrides gadget design tokens for this widget.
 	Theme *theme.Theme
 	// UI overrides resource _meta.ui (CSP, permissions, prefersBorder).
@@ -312,6 +322,12 @@ func (t *Table) config() map[string]any {
 	}
 	if t.Empty != (EmptyState{}) {
 		cfg["empty"] = t.Empty
+	}
+	if t.LoadTool != "" {
+		cfg["loadTool"] = t.LoadTool
+		if len(t.LoadArgs) > 0 {
+			cfg["loadArgs"] = t.LoadArgs
+		}
 	}
 	return cfg
 }

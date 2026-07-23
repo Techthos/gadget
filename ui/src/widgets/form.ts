@@ -19,6 +19,8 @@ interface FormCfg {
 		successMessage?: string;
 	};
 	fields: FieldCfg[];
+	loadTool?: string;
+	loadArgs?: Record<string, unknown>;
 }
 
 type FormControl = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
@@ -197,5 +199,19 @@ export function mountForm(ctx: MountContext): void {
 	// Baked snapshot: prefill and errors, if present.
 	if (ctx.initialData) {
 		applyResult({ structuredContent: ctx.initialData }, false);
+	}
+
+	// Load-time hydration: once a host is connected, fetch fresh prefill and
+	// replace the baked snapshot, so a reloaded form shows current values
+	// instead of the state frozen at render time.
+	if (cfg.loadTool) {
+		void ctx.ready?.then((ok) => {
+			if (!ok) return;
+			showStatus("loading", "Loading…");
+			bridge.callTool(cfg.loadTool as string, cfg.loadArgs ?? {}).then(
+				(res) => applyResult(res, false),
+				() => showStatus("", ""),
+			);
+		});
 	}
 }

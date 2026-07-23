@@ -43,13 +43,25 @@ const (
 	VisibilityApp   = "app"   // tool is callable from the app UI only
 )
 
-// Permission values for ResourceUIMeta.Permissions.
-const (
-	PermissionCamera         = "camera"
-	PermissionMicrophone     = "microphone"
-	PermissionGeolocation    = "geolocation"
-	PermissionClipboardWrite = "clipboardWrite"
-)
+// Permission is the presence marker for a requested sandbox permission. Per
+// the MCP Apps spec each requested capability is a key mapping to an empty
+// object, so a *Permission serializes to {} when set and is omitted when nil.
+type Permission struct{}
+
+// Grant is the marker used to request a permission, e.g.
+// Permissions{Camera: uispec.Grant}.
+var Grant = &Permission{}
+
+// Permissions declares the browser capabilities a UI resource requests. Hosts
+// MAY honor these by setting the sandbox iframe's allow attribute; apps must
+// not assume they are granted. Serializes to the spec object shape, e.g.
+// {"camera":{},"clipboardWrite":{}}.
+type Permissions struct {
+	Camera         *Permission `json:"camera,omitempty"`
+	Microphone     *Permission `json:"microphone,omitempty"`
+	Geolocation    *Permission `json:"geolocation,omitempty"`
+	ClipboardWrite *Permission `json:"clipboardWrite,omitempty"`
+}
 
 // CSP declares the external origins a UI resource needs. Hosts apply a
 // fully locked-down policy by default; every domain must be predeclared.
@@ -62,10 +74,10 @@ type CSP struct {
 
 // ResourceUIMeta is the _meta.ui payload attached to a ui:// resource.
 type ResourceUIMeta struct {
-	CSP           *CSP     `json:"csp,omitempty"`
-	Permissions   []string `json:"permissions,omitempty"`
-	Domain        string   `json:"domain,omitempty"`
-	PrefersBorder *bool    `json:"prefersBorder,omitempty"`
+	CSP           *CSP         `json:"csp,omitempty"`
+	Permissions   *Permissions `json:"permissions,omitempty"`
+	Domain        string       `json:"domain,omitempty"`
+	PrefersBorder *bool        `json:"prefersBorder,omitempty"`
 }
 
 // ToolUIMeta is the _meta.ui payload attached to a tool, linking it to its

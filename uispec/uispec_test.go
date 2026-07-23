@@ -69,7 +69,7 @@ func TestResourceUIMetaMap(t *testing.T) {
 	border := true
 	m := ResourceUIMeta{
 		CSP:           &CSP{ConnectDomains: []string{"https://api.example.com"}},
-		Permissions:   []string{PermissionClipboardWrite},
+		Permissions:   &Permissions{ClipboardWrite: Grant, Camera: Grant},
 		PrefersBorder: &border,
 	}.MetaMap()
 
@@ -77,7 +77,7 @@ func TestResourceUIMetaMap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `{"ui":{"csp":{"connectDomains":["https://api.example.com"]},"permissions":["clipboardWrite"],"prefersBorder":true}}`
+	want := `{"ui":{"csp":{"connectDomains":["https://api.example.com"]},"permissions":{"camera":{},"clipboardWrite":{}},"prefersBorder":true}}`
 	if string(got) != want {
 		t.Errorf("got %s, want %s", got, want)
 	}
