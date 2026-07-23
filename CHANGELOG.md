@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Legacy mcp-ui fallback now speaks the **UI Interaction Protocol v1**: when
+  `callTool` receives the new optional `UIEventMeta` (`{label, kind}`), the
+  dispatch is a prompt-type action `{type:"prompt", messageId,
+  payload:{prompt}}` whose text is the `\uievent` envelope — a single-line
+  JSON header (`v:1`, `label` ≤ 80 chars, `kind` `click`|`submit`|`select`)
+  followed by an instruction naming the tool and its JSON arguments.
+  Protocol-aware hosts (LibreChat with the uievent-chip patch) render the
+  interaction as an event chip instead of a fake user message. The built-in
+  widgets pass meta on every action: table row actions (`"<label> <row id>"`,
+  `click`), bulk actions (`"<label> (<n> selected)"`, `select`), form submit
+  (form title or submit label, `submit`). Calls without meta keep posting the
+  plain tool-type action.
 - Legacy **mcp-ui host interop**: until an MCP Apps host is confirmed
   (`ui/initialize` answered or any host→view method seen), the bridge
   dispatches actions via the community mcp-ui postMessage protocol —

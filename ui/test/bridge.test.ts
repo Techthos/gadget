@@ -153,6 +153,41 @@ describe("Bridge legacy mcp-ui fallback", () => {
     expect(typeof raw[0]!.messageId).toBe("string");
   });
 
+  it("posts a prompt action carrying the \\uievent envelope when UI event metadata is given", async () => {
+    const res = await bridge.callTool(
+      "install_app",
+      { repo: "o/app" },
+      { label: "Install o/app", kind: "click" },
+    );
+    expect(res.dispatched).toBe(true);
+    expect(raw).toHaveLength(1);
+    expect(raw[0]!.type).toBe("prompt");
+    expect(typeof raw[0]!.messageId).toBe("string");
+    const prompt = (raw[0]!.payload as { prompt: string }).prompt;
+    const [header, instruction] = prompt.split("\n");
+    expect(header!.startsWith("\\uievent{")).toBe(true);
+    expect(JSON.parse(header!.slice("\\uievent".length))).toEqual({
+      v: 1,
+      label: "Install o/app",
+      kind: "click",
+    });
+    expect(instruction).toContain('"install_app"');
+    expect(instruction).toContain('"repo":"o/app"');
+  });
+
+  it("truncates envelope labels to 80 chars and defaults kind to click", async () => {
+    await bridge.callTool("t", {}, { label: "x".repeat(100) });
+    const prompt = (raw[0]!.payload as { prompt: string }).prompt;
+    const header = JSON.parse(prompt.split("\n")[0]!.slice("\\uievent".length)) as {
+      v: number;
+      label: string;
+      kind: string;
+    };
+    expect(header.kind).toBe("click");
+    expect(header.label).toHaveLength(80);
+    expect(header.label.endsWith("…")).toBe(true);
+  });
+
   it("resolves with the ui-message-response payload when the host answers", async () => {
     const p = bridge.callTool("x", {});
     await flush();

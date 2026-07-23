@@ -1,6 +1,7 @@
 // Table widget behavior: renders rows from state, wires sort/filter/
 // pagination/selection, and fires row/bulk actions as MCP tool calls.
 import type { MountContext } from "../index";
+import type { UIEventMeta } from "../bridge";
 import { HOST_CONTEXT_EVENT } from "../host";
 import { Row, rowsFrom } from "../data";
 import { clear, delegate, h } from "../dom";
@@ -170,8 +171,13 @@ export function mountTable(ctx: MountContext): void {
 		if (!action.tool) return;
 		clearTimeout(statusTimer);
 		store.set({ status: "loading", statusKind: undefined, statusMsg: "Working…" });
+		// Display metadata for the legacy mcp-ui fallback's \uievent envelope:
+		// row actions read "Install owner/app", bulk actions "Delete (3 selected)".
+		const uiEvent: UIEventMeta = row
+			? { label: `${action.label} ${rowID(row)}`.trim(), kind: "click" }
+			: { label: `${action.label} (${selectedRows().length} selected)`, kind: "select" };
 		try {
-			applyResult(await bridge.callTool(action.tool, resolveArgs(action, row)));
+			applyResult(await bridge.callTool(action.tool, resolveArgs(action, row), uiEvent));
 		} catch (e) {
 			store.set({
 				status: "idle",

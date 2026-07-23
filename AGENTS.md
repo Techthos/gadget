@@ -439,9 +439,8 @@ results. Widgets still work there via a different consumption pattern:
   (`{type:"resource", resource:{uri, mimeType:"text/html", text: doc}}`).
 - **Actions fall back automatically**: until an MCP Apps host is confirmed
   (`ui/initialize` answered, or any host→view method seen), `callTool` posts
-  the legacy mcp-ui action message
-  `{type:"tool", messageId, payload:{toolName, params}}` to the parent and
-  `openLink` posts `{type:"link", payload:{url}}`. If the host replies with a
+  a legacy mcp-ui action message to the parent and `openLink` posts
+  `{type:"link", payload:{url}}`. If the host replies with a
   `ui-message-response` for that `messageId`, it is used as the tool result
   (`payload.error` rejects); otherwise the call resolves fire-and-forget
   after `uiResponseTimeoutMs` (default 3000 ms) with
@@ -449,6 +448,20 @@ results. Widgets still work there via a different consumption pattern:
   the table shows that text as a transient status, the form shows it instead
   of `SuccessMessage` (the host, not the widget, completes the action — e.g.
   LibreChat turns it into a conversation turn where the model runs the tool).
+- **The fallback speaks the UI Interaction Protocol v1** (`\uievent`
+  envelope): the built-in widgets pass `UIEventMeta` (`{label, kind}`) to
+  `callTool`, which makes the dispatch a **prompt-type** action
+  `{type:"prompt", messageId, payload:{prompt}}` whose text is
+  `\uievent{"v":1,"label":…,"kind":…}` on line 1 (label ≤ 80 chars, kind
+  `click`|`submit`|`select`) followed by an instruction naming the tool and
+  its JSON arguments. Protocol-aware hosts render an event chip ("You
+  clicked: Install o/app") and feed the instruction to the model; other
+  hosts show the short first line. Labels are composed automatically: row
+  actions `"<action label> <row id>"` (kind `click`), bulk actions
+  `"<action label> (<n> selected)"` (kind `select`), form submits the form
+  title or submit label (kind `submit`). A `callTool` **without** meta still
+  posts the plain `{type:"tool", messageId, payload:{toolName, params}}`
+  action (backward compatible).
 - **The iframe auto-resizes**: size reporting starts at first paint (not
   gated on the handshake) and, until a host is confirmed, also posts the
   mcp-ui `{type:"ui-size-change", payload:{height}}` message — hosts with

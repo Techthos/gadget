@@ -9,6 +9,12 @@
 // LibreChat that render mcp-ui but do not speak MCP Apps. If such a host sends
 // a ui-message-response for our messageId it is used as the tool result;
 // otherwise the call resolves as fire-and-forget ({dispatched: true}).
+//
+// When the caller supplies UIEventMeta, the fallback posts a prompt-type
+// action instead, whose text is the UI Interaction Protocol v1 envelope
+// (sentinel \uievent + JSON header + tool instruction) — protocol-aware hosts
+// render it as an event chip ("You clicked: …") while the model receives the
+// instruction; hosts without the protocol show the short readable first line.
 import {
   CallToolResult,
   ContentBlock,
@@ -55,9 +61,36 @@ type Handler = (params: unknown) => unknown | Promise<unknown>;
 
 /** Legacy mcp-ui action/response message shapes (community standard). */
 interface UIActionMessage {
-  type: "tool" | "link" | "ui-size-change";
+  type: "tool" | "prompt" | "link" | "ui-size-change";
   messageId?: string;
   payload: Record<string, unknown>;
+}
+
+/** Display metadata for a UI interaction dispatched over the legacy mcp-ui
+ * fallback. Presence switches the dispatch to a prompt-type action carrying
+ * the \uievent envelope. */
+export interface UIEventMeta {
+  /** Human text shown in the chat as the event chip; truncated to 80 chars. */
+  label: string;
+  /** Picks the chip verb ("You clicked/submitted/selected"). Default "click". */
+  kind?: "click" | "submit" | "select";
+}
+
+const UIEVENT_LABEL_MAX = 80;
+
+/** UI Interaction Protocol v1 envelope: sentinel + single-line JSON header,
+ * then a model instruction naming the tool and its arguments precisely. */
+function uiEventEnvelope(
+  name: string,
+  args: Record<string, unknown>,
+  meta: UIEventMeta,
+): string {
+  const label =
+    meta.label.length > UIEVENT_LABEL_MAX
+      ? `${meta.label.slice(0, UIEVENT_LABEL_MAX - 1)}…`
+      : meta.label;
+  const header = JSON.stringify({ v: 1, label, kind: meta.kind ?? "click" });
+  return `\\uievent${header}\nCall the tool "${name}" with arguments ${JSON.stringify(args)}.`;
 }
 
 interface UIResponseMessage {
@@ -154,9 +187,13 @@ export class Bridge {
     return res?.hostContext ?? {};
   }
 
-  callTool(name: string, args: Record<string, unknown>): Promise<CallToolResult> {
+  callTool(
+    name: string,
+    args: Record<string, unknown>,
+    uiEvent?: UIEventMeta,
+  ): Promise<CallToolResult> {
     if (!this.hostConfirmed) {
-      return this.dispatchUIAction(name, args);
+      return this.dispatchUIAction(name, args, uiEvent);
     }
     return this.request<CallToolResult>(M.toolsCall, { name, arguments: args });
   }
@@ -172,10 +209,13 @@ export class Bridge {
   /** Legacy mcp-ui dispatch: post the community-standard action message and
    * wait briefly for a ui-message-response; without one, resolve as a
    * fire-and-forget dispatch (the host turns the action into a follow-up,
-   * e.g. a conversation turn — no direct result will arrive). */
+   * e.g. a conversation turn — no direct result will arrive). With UIEventMeta
+   * the action is prompt-type carrying the \uievent envelope; without, the
+   * plain tool-type action is kept for backward compatibility. */
   private dispatchUIAction(
     name: string,
     args: Record<string, unknown>,
+    uiEvent?: UIEventMeta,
   ): Promise<CallToolResult> {
     const messageId = `gadget-${this.nextId++}`;
     return new Promise<CallToolResult>((resolve, reject) => {
@@ -191,11 +231,19 @@ export class Bridge {
         reject,
         timer,
       });
-      this.postUI({
-        type: "tool",
-        messageId,
-        payload: { toolName: name, params: args },
-      });
+      this.postUI(
+        uiEvent
+          ? {
+              type: "prompt",
+              messageId,
+              payload: { prompt: uiEventEnvelope(name, args, uiEvent) },
+            }
+          : {
+              type: "tool",
+              messageId,
+              payload: { toolName: name, params: args },
+            },
+      );
     });
   }
 

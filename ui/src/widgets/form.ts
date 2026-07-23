@@ -175,7 +175,19 @@ export function mountForm(ctx: MountContext): void {
 		const args = { ...(cfg.submit.staticArgs ?? {}), ...collectValues() };
 		showStatus("loading", "Submitting…");
 		setBusy(true);
-		bridge.callTool(cfg.submit.tool, args).then(
+		// Display metadata for the legacy mcp-ui fallback's \uievent envelope:
+		// prefer the form title ("You submitted: Store configuration"), then the
+		// submit button text, then the tool name.
+		const title = root.querySelector<HTMLElement>(".gadget-title")?.textContent?.trim();
+		const submitText = form
+			.querySelector<HTMLElement>('button[type="submit"]')
+			?.textContent?.trim();
+		bridge
+			.callTool(cfg.submit.tool, args, {
+				label: title || submitText || cfg.submit.tool,
+				kind: "submit",
+			})
+			.then(
 			(res) => {
 				setBusy(false);
 				applyResult(res, true);
