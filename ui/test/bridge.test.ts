@@ -38,6 +38,7 @@ describe("Bridge", () => {
   });
 
   it("calls tools with {name, arguments} and returns the result", async () => {
+    await bridge.initialize();
     host.onToolCall = (name, args) => ({
       structuredContent: { echo: name, args },
     });
@@ -49,6 +50,7 @@ describe("Bridge", () => {
   });
 
   it("rejects with BridgeError on JSON-RPC error responses", async () => {
+    await bridge.initialize();
     host.onToolCall = () => {
       throw new Error("boom");
     };
@@ -62,6 +64,7 @@ describe("Bridge", () => {
     host.mute.add(M.openLink);
     const fast = new Bridge({ timeoutMs: 30 });
     try {
+      await fast.initialize();
       await expect(fast.openLink("https://example.com")).rejects.toThrow(
         /timed out/,
       );
@@ -112,5 +115,100 @@ describe("Bridge", () => {
     host.pushToolResult({});
     await flush();
     expect(seen).toHaveLength(0);
+  });
+});
+
+// Without a confirmed MCP Apps host (no ui/initialize answer, no host->view
+// traffic), actions fall back to the legacy community mcp-ui postMessage
+// protocol so widgets embedded as plain ui:// resources stay actionable.
+describe("Bridge legacy mcp-ui fallback", () => {
+  let bridge: Bridge;
+  let raw: Array<Record<string, unknown>>;
+  const listener = (ev: MessageEvent): void => {
+    const msg = ev.data as Record<string, unknown> | null;
+    if (msg && typeof msg === "object" && msg.jsonrpc === undefined) {
+      raw.push(msg);
+    }
+  };
+
+  beforeEach(() => {
+    raw = [];
+    window.addEventListener("message", listener);
+    bridge = new Bridge({ timeoutMs: 500, uiResponseTimeoutMs: 30 });
+  });
+
+  afterEach(() => {
+    bridge.dispose();
+    window.removeEventListener("message", listener);
+  });
+
+  it("posts an mcp-ui tool action and resolves fire-and-forget", async () => {
+    const res = await bridge.callTool("install_app", { repo: "o/app" });
+    expect(res.dispatched).toBe(true);
+    expect(raw).toHaveLength(1);
+    expect(raw[0]).toMatchObject({
+      type: "tool",
+      payload: { toolName: "install_app", params: { repo: "o/app" } },
+    });
+    expect(typeof raw[0]!.messageId).toBe("string");
+  });
+
+  it("resolves with the ui-message-response payload when the host answers", async () => {
+    const p = bridge.callTool("x", {});
+    await flush();
+    const messageId = raw[0]!.messageId as string;
+    window.postMessage(
+      {
+        type: "ui-message-response",
+        messageId,
+        payload: { response: { structuredContent: { ok: true } } },
+      },
+      "*",
+    );
+    const res = await p;
+    expect(res.dispatched).toBeUndefined();
+    expect(res.structuredContent).toEqual({ ok: true });
+  });
+
+  it("rejects when the ui-message-response carries an error", async () => {
+    const p = bridge.callTool("x", {});
+    await flush();
+    const messageId = raw[0]!.messageId as string;
+    window.postMessage(
+      { type: "ui-message-response", messageId, payload: { error: "denied" } },
+      "*",
+    );
+    await expect(p).rejects.toBeInstanceOf(BridgeError);
+  });
+
+  it("posts an mcp-ui link action for openLink", async () => {
+    await bridge.openLink("https://example.com");
+    await flush();
+    expect(raw).toHaveLength(1);
+    expect(raw[0]).toMatchObject({
+      type: "link",
+      payload: { url: "https://example.com" },
+    });
+  });
+
+  it("posts ui-size-change with height only, and stops once a host is confirmed", async () => {
+    bridge.sizeChanged(320, 480);
+    await flush();
+    expect(raw).toHaveLength(1);
+    expect(raw[0]).toMatchObject({ type: "ui-size-change", payload: { height: 480 } });
+    expect((raw[0]!.payload as Record<string, unknown>).width).toBeUndefined();
+
+    const host = new FakeHost();
+    try {
+      await bridge.initialize();
+      bridge.sizeChanged(320, 500);
+      await flush();
+      // Confirmed MCP Apps host: only the JSON-RPC notification is sent.
+      expect(raw).toHaveLength(1);
+      const sizes = host.received(M.sizeChanged);
+      expect(sizes[sizes.length - 1]!.params).toEqual({ width: 320, height: 500 });
+    } finally {
+      host.dispose();
+    }
   });
 });

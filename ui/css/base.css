@@ -1,5 +1,12 @@
 /* Base widget chrome. All rules are scoped under .gadget-root and reference
- * semantic tokens only. */
+ * semantic tokens only — except the body reset below: the document is fully
+ * gadget-owned, and the default body MARGIN sits outside body.scrollHeight,
+ * clipping the bottom of auto-resized host iframes. Padding measures. */
+body {
+  margin: 0;
+  padding: 8px;
+}
+
 .gadget-root,
 .gadget-root *,
 .gadget-root *::before,

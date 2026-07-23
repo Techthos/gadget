@@ -426,6 +426,41 @@ Flows:
   inline errors, or an errors-free result to succeed (shows
   `SuccessMessage` if set).
 
+### Legacy mcp-ui host interop (embedded per-call widgets)
+
+Hosts that render the community **mcp-ui** standard but not MCP Apps (e.g.
+LibreChat v0.8.x) never fetch `ui://` template resources or push tool
+results. Widgets still work there via a different consumption pattern:
+
+- Build the widget **per call** with the data baked in (`InitialData` — the
+  runtime paints it before, and without, any host handshake) and a **unique
+  URI per render**, and append the rendered `Document()` to the tool result's
+  `content` as an embedded resource
+  (`{type:"resource", resource:{uri, mimeType:"text/html", text: doc}}`).
+- **Actions fall back automatically**: until an MCP Apps host is confirmed
+  (`ui/initialize` answered, or any host→view method seen), `callTool` posts
+  the legacy mcp-ui action message
+  `{type:"tool", messageId, payload:{toolName, params}}` to the parent and
+  `openLink` posts `{type:"link", payload:{url}}`. If the host replies with a
+  `ui-message-response` for that `messageId`, it is used as the tool result
+  (`payload.error` rejects); otherwise the call resolves fire-and-forget
+  after `uiResponseTimeoutMs` (default 3000 ms) with
+  `{dispatched: true, content:[{type:"text", text:"Action sent to the host."}]}` —
+  the table shows that text as a transient status, the form shows it instead
+  of `SuccessMessage` (the host, not the widget, completes the action — e.g.
+  LibreChat turns it into a conversation turn where the model runs the tool).
+- **The iframe auto-resizes**: size reporting starts at first paint (not
+  gated on the handshake) and, until a host is confirmed, also posts the
+  mcp-ui `{type:"ui-size-change", payload:{height}}` message — hosts with
+  auto-resize grow the iframe so the widget is always fully visible, never
+  internally scrolled. `width` is deliberately omitted so the iframe keeps
+  its responsive CSS width. The document resets `body{margin:0;padding:8px}`
+  (margin sits outside `body.scrollHeight` and would clip the bottom).
+- Consequence for such hosts: point actions/submits at **model-visible**
+  tools (the host routes them through the model; `_meta.ui.visibility` is
+  not understood there), and there is no rows-refresh round-trip — attach a
+  freshly rendered widget to the mutating tool's result instead.
+
 ---
 
 ## 5. Package `gosdk` — official go-sdk adapter

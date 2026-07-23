@@ -150,6 +150,10 @@ export function mountForm(ctx: MountContext): void {
 			showStatus("error", "Please fix the highlighted fields.");
 		} else if (res.isError) {
 			showStatus("error", textOf(res) ?? "The request failed.");
+		} else if (res.dispatched) {
+			// Fire-and-forget legacy mcp-ui dispatch: the action reached the
+			// host but no result follows, so don't claim the success message.
+			showStatus("success", textOf(res) ?? "Sent.");
 		} else if (viaSubmit) {
 			showStatus("success", cfg.submit.successMessage ?? textOf(res) ?? "Saved.");
 		} else {

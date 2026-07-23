@@ -39,6 +39,11 @@ export async function boot(): Promise<void> {
 
   behaviors.get(kind)?.({ root, config, initialData, bridge });
 
+  // Report size from first paint on — NOT gated on the handshake. Hosts
+  // without MCP Apps (legacy mcp-ui iframes) would otherwise wait out the
+  // full initialize timeout with a clamped, scrolling iframe.
+  watchSize(bridge);
+
   try {
     const hostCtx = await bridge.initialize();
     applyHostContext(hostCtx);
@@ -49,7 +54,6 @@ export async function boot(): Promise<void> {
     // No responding host (standalone preview, harness without init support):
     // the widget still renders with fallback tokens.
   }
-  watchSize(bridge);
 }
 
 // Widget behaviors register here as they are implemented.
