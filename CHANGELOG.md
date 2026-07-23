@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.2.0 - 2026-07-23
 
 - **MCP Apps native only**: removed the legacy mcp-ui postMessage interop
   (the `{type:"tool"|"prompt"|"link"}` action dispatch, `ui-message-response`
@@ -16,7 +16,9 @@
   Document CSS resets `body{margin:0;padding:8px}` so `body.scrollHeight`
   measures the true content height (margins clipped the bottom edge).
 
-Initial scaffold (targeting v0.1.0):
+## v0.1.0 - 2026-07-23
+
+Initial scaffold:
 
 - MCP Apps (`io.modelcontextprotocol/ui`, spec `2026-01-26`) support:
   `uispec` constants/meta types, self-contained HTML documents satisfying
