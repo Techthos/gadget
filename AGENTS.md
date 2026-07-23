@@ -426,53 +426,29 @@ Flows:
   inline errors, or an errors-free result to succeed (shows
   `SuccessMessage` if set).
 
-### Legacy mcp-ui host interop (embedded per-call widgets)
+### Embedded per-call delivery (result-embedded widgets)
 
-Hosts that render the community **mcp-ui** standard but not MCP Apps (e.g.
-LibreChat v0.8.x) never fetch `ui://` template resources or push tool
-results. Widgets still work there via a different consumption pattern:
+Besides the spec's template model (register the `ui://` resource once, the
+host fetches it and pushes per-call data), a widget can be delivered
+**embedded in the tool result**: build it per call with the data baked in
+(`InitialData` — the runtime paints it before the handshake completes), give
+it a **unique URI per render**, and append the rendered `Document()` to the
+result's `content` as an embedded resource:
 
-- Build the widget **per call** with the data baked in (`InitialData` — the
-  runtime paints it before, and without, any host handshake) and a **unique
-  URI per render**, and append the rendered `Document()` to the tool result's
-  `content` as an embedded resource
-  (`{type:"resource", resource:{uri, mimeType:"text/html", text: doc}}`).
-- **Actions fall back automatically**: until an MCP Apps host is confirmed
-  (`ui/initialize` answered, or any host→view method seen), `callTool` posts
-  a legacy mcp-ui action message to the parent and `openLink` posts
-  `{type:"link", payload:{url}}`. If the host replies with a
-  `ui-message-response` for that `messageId`, it is used as the tool result
-  (`payload.error` rejects); otherwise the call resolves fire-and-forget
-  after `uiResponseTimeoutMs` (default 3000 ms) with
-  `{dispatched: true, content:[{type:"text", text:"Action sent to the host."}]}` —
-  the table shows that text as a transient status, the form shows it instead
-  of `SuccessMessage` (the host, not the widget, completes the action — e.g.
-  LibreChat turns it into a conversation turn where the model runs the tool).
-- **The fallback speaks the UI Interaction Protocol v1** (`\uievent`
-  envelope): the built-in widgets pass `UIEventMeta` (`{label, kind}`) to
-  `callTool`, which makes the dispatch a **prompt-type** action
-  `{type:"prompt", messageId, payload:{prompt}}` whose text is
-  `\uievent{"v":1,"label":…,"kind":…}` on line 1 (label ≤ 80 chars, kind
-  `click`|`submit`|`select`) followed by an instruction naming the tool and
-  its JSON arguments. Protocol-aware hosts render an event chip ("You
-  clicked: Install o/app") and feed the instruction to the model; other
-  hosts show the short first line. Labels are composed automatically: row
-  actions `"<action label> <row id>"` (kind `click`), bulk actions
-  `"<action label> (<n> selected)"` (kind `select`), form submits the form
-  title or submit label (kind `submit`). A `callTool` **without** meta still
-  posts the plain `{type:"tool", messageId, payload:{toolName, params}}`
-  action (backward compatible).
-- **The iframe auto-resizes**: size reporting starts at first paint (not
-  gated on the handshake) and, until a host is confirmed, also posts the
-  mcp-ui `{type:"ui-size-change", payload:{height}}` message — hosts with
-  auto-resize grow the iframe so the widget is always fully visible, never
-  internally scrolled. `width` is deliberately omitted so the iframe keeps
-  its responsive CSS width. The document resets `body{margin:0;padding:8px}`
-  (margin sits outside `body.scrollHeight` and would clip the bottom).
-- Consequence for such hosts: point actions/submits at **model-visible**
-  tools (the host routes them through the model; `_meta.ui.visibility` is
-  not understood there), and there is no rows-refresh round-trip — attach a
-  freshly rendered widget to the mutating tool's result instead.
+```
+{type:"resource", resource:{uri, mimeType:"text/html;profile=mcp-app", text: doc}}
+```
+
+The mimeType MUST be `uispec.MIMEType` (`text/html;profile=mcp-app`) — that
+profile is what tells the host to attach the MCP Apps bridge (handshake,
+`tools/call`, size reporting) instead of rendering a dead static iframe.
+There is no legacy mcp-ui interop: the runtime speaks only the MCP Apps
+protocol, and actions in a host without it will fail with a request timeout.
+
+Size reporting starts at first paint (not gated on the handshake) so the
+host can grow the iframe immediately; the document resets
+`body{margin:0;padding:8px}` so `body.scrollHeight` measures true content
+height (margin sits outside it and would clip the bottom edge).
 
 ---
 

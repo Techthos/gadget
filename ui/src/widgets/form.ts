@@ -150,10 +150,6 @@ export function mountForm(ctx: MountContext): void {
 			showStatus("error", "Please fix the highlighted fields.");
 		} else if (res.isError) {
 			showStatus("error", textOf(res) ?? "The request failed.");
-		} else if (res.dispatched) {
-			// Fire-and-forget legacy mcp-ui dispatch: the action reached the
-			// host but no result follows, so don't claim the success message.
-			showStatus("success", textOf(res) ?? "Sent.");
 		} else if (viaSubmit) {
 			showStatus("success", cfg.submit.successMessage ?? textOf(res) ?? "Saved.");
 		} else {
@@ -175,19 +171,7 @@ export function mountForm(ctx: MountContext): void {
 		const args = { ...(cfg.submit.staticArgs ?? {}), ...collectValues() };
 		showStatus("loading", "Submitting…");
 		setBusy(true);
-		// Display metadata for the legacy mcp-ui fallback's \uievent envelope:
-		// prefer the form title ("You submitted: Store configuration"), then the
-		// submit button text, then the tool name.
-		const title = root.querySelector<HTMLElement>(".gadget-title")?.textContent?.trim();
-		const submitText = form
-			.querySelector<HTMLElement>('button[type="submit"]')
-			?.textContent?.trim();
-		bridge
-			.callTool(cfg.submit.tool, args, {
-				label: title || submitText || cfg.submit.tool,
-				kind: "submit",
-			})
-			.then(
+		bridge.callTool(cfg.submit.tool, args).then(
 			(res) => {
 				setBusy(false);
 				applyResult(res, true);

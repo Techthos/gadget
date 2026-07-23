@@ -2,33 +2,19 @@
 
 ## Unreleased
 
-- Legacy mcp-ui fallback now speaks the **UI Interaction Protocol v1**: when
-  `callTool` receives the new optional `UIEventMeta` (`{label, kind}`), the
-  dispatch is a prompt-type action `{type:"prompt", messageId,
-  payload:{prompt}}` whose text is the `\uievent` envelope — a single-line
-  JSON header (`v:1`, `label` ≤ 80 chars, `kind` `click`|`submit`|`select`)
-  followed by an instruction naming the tool and its JSON arguments.
-  Protocol-aware hosts (LibreChat with the uievent-chip patch) render the
-  interaction as an event chip instead of a fake user message. The built-in
-  widgets pass meta on every action: table row actions (`"<label> <row id>"`,
-  `click`), bulk actions (`"<label> (<n> selected)"`, `select`), form submit
-  (form title or submit label, `submit`). Calls without meta keep posting the
-  plain tool-type action.
-- Legacy **mcp-ui host interop**: until an MCP Apps host is confirmed
-  (`ui/initialize` answered or any host→view method seen), the bridge
-  dispatches actions via the community mcp-ui postMessage protocol —
-  `callTool` posts `{type:"tool", messageId, payload:{toolName, params}}`,
-  `openLink` posts `{type:"link", payload:{url}}`. A matching
-  `ui-message-response` is used as the tool result; otherwise the call
-  resolves fire-and-forget (`CallToolResult.dispatched: true`, new
-  `BridgeOptions.uiResponseTimeoutMs`, default 3000 ms). Enables per-call
-  embedded widgets (`InitialData` + unique URI) in hosts like LibreChat.
-- Iframe auto-resize for mcp-ui hosts: size watching starts at first paint
-  (no longer gated on `ui/initialize`), and until a host is confirmed
-  `sizeChanged` also posts `{type:"ui-size-change", payload:{height}}`
-  (height only — the responsive CSS width must win). Document CSS now resets
-  `body{margin:0;padding:8px}` so `body.scrollHeight` measures the true
-  content height (margins clipped the bottom edge).
+- **MCP Apps native only**: removed the legacy mcp-ui postMessage interop
+  (the `{type:"tool"|"prompt"|"link"}` action dispatch, `ui-message-response`
+  handling, the `\uievent` envelope/`UIEventMeta`, the `ui-size-change`
+  message, `CallToolResult.dispatched`, and `BridgeOptions.uiResponseTimeoutMs`).
+  The runtime speaks only the MCP Apps protocol (`ui/initialize`,
+  `tools/call`, `ui/notifications/*`); hosts must attach the standard bridge.
+  Result-embedded per-call widgets remain supported but MUST be declared with
+  `uispec.MIMEType` (`text/html;profile=mcp-app`) so the host classifies them
+  as apps.
+- Iframe auto-resize: size watching starts at first paint (no longer gated
+  on `ui/initialize`) so hosts can size the frame during the handshake.
+  Document CSS resets `body{margin:0;padding:8px}` so `body.scrollHeight`
+  measures the true content height (margins clipped the bottom edge).
 
 Initial scaffold (targeting v0.1.0):
 

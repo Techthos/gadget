@@ -70,8 +70,7 @@ describe("table behavior", () => {
   beforeEach(async () => {
     host = new FakeHost();
     bridge = new Bridge({ timeoutMs: 500 });
-    // Confirm the MCP Apps host so actions use tools/call, not the legacy
-    // mcp-ui fallback (mirrors boot(): initialize runs before user clicks).
+    // Mirrors boot(): initialize runs before user clicks.
     await bridge.initialize();
     host.requests.length = 0;
   });

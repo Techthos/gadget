@@ -42,10 +42,6 @@ export interface CallToolResult {
   structuredContent?: Record<string, unknown>;
   isError?: boolean;
   _meta?: Record<string, unknown>;
-  /** Set by the bridge when the call was dispatched fire-and-forget via the
-   * legacy mcp-ui postMessage protocol (no MCP Apps host answered): the
-   * action reached the host, but no tool result will follow. */
-  dispatched?: boolean;
 }
 
 export type HostTheme = "light" | "dark";

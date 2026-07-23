@@ -2,19 +2,8 @@
 // view <-> host protocol. Hand-rolled: the official SDK is optional sugar
 // per spec, and this keeps the bundle free of dependencies.
 //
-// Interop: until an MCP Apps host has answered (ui/initialize resolved or any
-// host->view method arrived), tool calls and links fall back to the legacy
-// community mcp-ui postMessage protocol ({type:"tool"|"link", payload:{...}}),
-// so widgets embedded as plain ui:// resources stay actionable in hosts like
-// LibreChat that render mcp-ui but do not speak MCP Apps. If such a host sends
-// a ui-message-response for our messageId it is used as the tool result;
-// otherwise the call resolves as fire-and-forget ({dispatched: true}).
-//
-// When the caller supplies UIEventMeta, the fallback posts a prompt-type
-// action instead, whose text is the UI Interaction Protocol v1 envelope
-// (sentinel \uievent + JSON header + tool instruction) — protocol-aware hosts
-// render it as an event chip ("You clicked: …") while the model receives the
-// instruction; hosts without the protocol show the short readable first line.
+// MCP Apps only: no legacy mcp-ui interop. Hosts are expected to speak the
+// standard (ui/initialize handshake, tools/call, ui/notifications/*).
 import {
   CallToolResult,
   ContentBlock,
@@ -52,68 +41,22 @@ export interface BridgeOptions {
   target?: Window;
   /** Per-request timeout in ms; tool calls can be slow. Default 60000. */
   timeoutMs?: number;
-  /** How long a legacy mcp-ui dispatch waits for a ui-message-response
-   * before resolving fire-and-forget. Default 3000. */
-  uiResponseTimeoutMs?: number;
 }
 
 type Handler = (params: unknown) => unknown | Promise<unknown>;
-
-/** Legacy mcp-ui action/response message shapes (community standard). */
-interface UIActionMessage {
-  type: "tool" | "prompt" | "link" | "ui-size-change";
-  messageId?: string;
-  payload: Record<string, unknown>;
-}
-
-/** Display metadata for a UI interaction dispatched over the legacy mcp-ui
- * fallback. Presence switches the dispatch to a prompt-type action carrying
- * the \uievent envelope. */
-export interface UIEventMeta {
-  /** Human text shown in the chat as the event chip; truncated to 80 chars. */
-  label: string;
-  /** Picks the chip verb ("You clicked/submitted/selected"). Default "click". */
-  kind?: "click" | "submit" | "select";
-}
-
-const UIEVENT_LABEL_MAX = 80;
-
-/** UI Interaction Protocol v1 envelope: sentinel + single-line JSON header,
- * then a model instruction naming the tool and its arguments precisely. */
-function uiEventEnvelope(
-  name: string,
-  args: Record<string, unknown>,
-  meta: UIEventMeta,
-): string {
-  const label =
-    meta.label.length > UIEVENT_LABEL_MAX
-      ? `${meta.label.slice(0, UIEVENT_LABEL_MAX - 1)}…`
-      : meta.label;
-  const header = JSON.stringify({ v: 1, label, kind: meta.kind ?? "click" });
-  return `\\uievent${header}\nCall the tool "${name}" with arguments ${JSON.stringify(args)}.`;
-}
-
-interface UIResponseMessage {
-  type?: unknown;
-  messageId?: unknown;
-  payload?: { response?: unknown; error?: unknown };
-}
 
 export class Bridge {
   private nextId = 1;
   private hostConfirmed = false;
   private readonly pending = new Map<RequestID, Pending>();
-  private readonly pendingUI = new Map<string, Pending>();
   private readonly handlers = new Map<string, Handler[]>();
   private readonly target: Window;
   private readonly timeoutMs: number;
-  private readonly uiResponseTimeoutMs: number;
   private readonly listener = (ev: MessageEvent): void => this.onMessage(ev);
 
   constructor(opts: BridgeOptions = {}) {
     this.target = opts.target ?? window.parent;
     this.timeoutMs = opts.timeoutMs ?? 60_000;
-    this.uiResponseTimeoutMs = opts.uiResponseTimeoutMs ?? 3_000;
     window.addEventListener("message", this.listener);
     // Reply to host pings and teardown requests by default; handlers
     // registered later run in addition (their return values are ignored
@@ -129,11 +72,6 @@ export class Bridge {
       p.reject(new BridgeError("bridge disposed"));
     }
     this.pending.clear();
-    for (const [, p] of this.pendingUI) {
-      clearTimeout(p.timer);
-      p.reject(new BridgeError("bridge disposed"));
-    }
-    this.pendingUI.clear();
   }
 
   /** Whether an MCP Apps host has been confirmed on this session. */
@@ -187,64 +125,12 @@ export class Bridge {
     return res?.hostContext ?? {};
   }
 
-  callTool(
-    name: string,
-    args: Record<string, unknown>,
-    uiEvent?: UIEventMeta,
-  ): Promise<CallToolResult> {
-    if (!this.hostConfirmed) {
-      return this.dispatchUIAction(name, args, uiEvent);
-    }
+  callTool(name: string, args: Record<string, unknown>): Promise<CallToolResult> {
     return this.request<CallToolResult>(M.toolsCall, { name, arguments: args });
   }
 
   openLink(url: string): Promise<unknown> {
-    if (!this.hostConfirmed) {
-      this.postUI({ type: "link", payload: { url } });
-      return Promise.resolve({});
-    }
     return this.request(M.openLink, { url });
-  }
-
-  /** Legacy mcp-ui dispatch: post the community-standard action message and
-   * wait briefly for a ui-message-response; without one, resolve as a
-   * fire-and-forget dispatch (the host turns the action into a follow-up,
-   * e.g. a conversation turn — no direct result will arrive). With UIEventMeta
-   * the action is prompt-type carrying the \uievent envelope; without, the
-   * plain tool-type action is kept for backward compatibility. */
-  private dispatchUIAction(
-    name: string,
-    args: Record<string, unknown>,
-    uiEvent?: UIEventMeta,
-  ): Promise<CallToolResult> {
-    const messageId = `gadget-${this.nextId++}`;
-    return new Promise<CallToolResult>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.pendingUI.delete(messageId);
-        resolve({
-          content: [{ type: "text", text: "Action sent to the host." }],
-          dispatched: true,
-        });
-      }, this.uiResponseTimeoutMs);
-      this.pendingUI.set(messageId, {
-        resolve: resolve as (v: unknown) => void,
-        reject,
-        timer,
-      });
-      this.postUI(
-        uiEvent
-          ? {
-              type: "prompt",
-              messageId,
-              payload: { prompt: uiEventEnvelope(name, args, uiEvent) },
-            }
-          : {
-              type: "tool",
-              messageId,
-              payload: { toolName: name, params: args },
-            },
-      );
-    });
   }
 
   /** Inserts a user message into the host's chat. */
@@ -262,13 +148,6 @@ export class Bridge {
   }
 
   sizeChanged(width: number, height: number): void {
-    if (!this.hostConfirmed) {
-      // Legacy mcp-ui hosts auto-resize the iframe on this message so the
-      // widget is always fully visible. Width is deliberately omitted: hosts
-      // only apply the dimensions present, and the iframe's responsive CSS
-      // width (100%) must win over a fixed pixel width.
-      this.postUI({ type: "ui-size-change", payload: { height } });
-    }
     this.notify(M.sizeChanged, { width, height });
   }
 
@@ -278,17 +157,9 @@ export class Bridge {
     this.target.postMessage(msg, "*");
   }
 
-  private postUI(msg: UIActionMessage): void {
-    this.target.postMessage(msg, "*");
-  }
-
   private onMessage(ev: MessageEvent): void {
     const msg = ev.data as JsonRpcMessage | null;
-    if (!msg || typeof msg !== "object") return;
-    if (msg.jsonrpc !== "2.0") {
-      this.onUIMessage(msg as UIResponseMessage);
-      return;
-    }
+    if (!msg || typeof msg !== "object" || msg.jsonrpc !== "2.0") return;
 
     if (msg.method !== undefined) {
       // Incoming request/notification. Only host->view methods are accepted;
@@ -312,29 +183,6 @@ export class Bridge {
       p.reject(new BridgeError(msg.error.message, msg.error.code, msg.error.data));
     } else {
       p.resolve(msg.result);
-    }
-  }
-
-  /** Handles legacy mcp-ui host replies to a dispatched action. */
-  private onUIMessage(msg: UIResponseMessage): void {
-    if (msg.type !== "ui-message-response" || typeof msg.messageId !== "string") return;
-    const p = this.pendingUI.get(msg.messageId);
-    if (!p) return;
-    this.pendingUI.delete(msg.messageId);
-    clearTimeout(p.timer);
-    const payload = msg.payload ?? {};
-    if (payload.error !== undefined && payload.error !== null) {
-      p.reject(new BridgeError(String(payload.error)));
-      return;
-    }
-    const response = payload.response;
-    if (response && typeof response === "object") {
-      p.resolve(response as CallToolResult);
-    } else {
-      p.resolve({
-        content: [{ type: "text", text: "Action sent to the host." }],
-        dispatched: true,
-      });
     }
   }
 
