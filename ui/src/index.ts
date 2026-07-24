@@ -67,9 +67,13 @@ export async function boot(): Promise<void> {
 // Widget behaviors register here as they are implemented.
 import { mountForm } from "./widgets/form";
 import { mountTable } from "./widgets/table";
+import { mountCard } from "./widgets/card";
+import { mountCardList } from "./widgets/cardlist";
 
 registerBehavior("table", mountTable);
 registerBehavior("form", mountForm);
+registerBehavior("card", mountCard);
+registerBehavior("cardlist", mountCardList);
 
 if (typeof document !== "undefined" && "addEventListener" in document) {
   if (document.readyState === "loading") {

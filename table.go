@@ -278,32 +278,38 @@ func (t *Table) ToolMeta() map[string]any {
 	return uispec.ToolUIMeta{ResourceURI: t.URI}.MetaMap()
 }
 
+// columnConfig serializes one column for the #gadget-config island. Shared
+// by Table columns and Card fields so both sides format cells identically.
+func columnConfig(c Column) map[string]any {
+	col := map[string]any{
+		"key":      c.Key,
+		"label":    c.Label,
+		"type":     string(c.columnType()),
+		"sortable": c.sortable(),
+	}
+	if c.Align != "" {
+		col["align"] = string(c.Align)
+	}
+	if c.Format != "" {
+		col["format"] = c.Format
+	}
+	if len(c.Badge) > 0 {
+		col["badge"] = c.Badge
+	}
+	if c.Link != nil {
+		col["link"] = c.Link
+	}
+	if len(c.Actions) > 0 {
+		col["actions"] = actionConfigs(c.Actions)
+	}
+	return col
+}
+
 // config builds the #gadget-config island content.
 func (t *Table) config() map[string]any {
 	cols := make([]map[string]any, len(t.Columns))
 	for i, c := range t.Columns {
-		col := map[string]any{
-			"key":      c.Key,
-			"label":    c.Label,
-			"type":     string(c.columnType()),
-			"sortable": c.sortable(),
-		}
-		if c.Align != "" {
-			col["align"] = string(c.Align)
-		}
-		if c.Format != "" {
-			col["format"] = c.Format
-		}
-		if len(c.Badge) > 0 {
-			col["badge"] = c.Badge
-		}
-		if c.Link != nil {
-			col["link"] = c.Link
-		}
-		if len(c.Actions) > 0 {
-			col["actions"] = actionConfigs(c.Actions)
-		}
-		cols[i] = col
+		cols[i] = columnConfig(c)
 	}
 
 	cfg := map[string]any{

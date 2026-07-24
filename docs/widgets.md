@@ -12,6 +12,8 @@ Widgets read runtime data from the tool result's `structuredContent`:
 | Widget | Key (default) | Shape |
 |---|---|---|
 | Table | `rows` (`RowsKey`) | `[]object` — one JSON object per row |
+| CardList | `rows` (`RowsKey`) | `[]object` — one JSON object per card |
+| Card | `rows` (`RowsKey`) | `[]object` — renders the first element (`rows[0]`) |
 | Form | `values` (`PrefillKey`) | `{field: value}` prefill |
 | Form | `errors` (`ErrorsKey`) | `{field: "message"}` server-side errors |
 
@@ -103,6 +105,65 @@ form := &gadget.Form{
   `structuredContent`; they render inline and mark the form failed.
 - **Edit mode**: a model-invoked tool linked to the form (e.g. `edit_user`)
   returns `{PrefillKey: {...}}`; the form prefills from the tool result.
+
+## Card and CardList
+
+`Card` renders one record; `CardList` renders many records as cards in a
+responsive grid with the same client-side machinery as `Table` (filter, sort,
+pagination, selection + bulk actions, per-card actions). Both share a
+`CardTemplate` and read the same `rows` contract as `Table` — so the same
+list/mutation tools drive either.
+
+```go
+tmpl := gadget.CardTemplate{
+    TitleKey:    "name",
+    SubtitleKey: "email",
+    Badge: gadget.Badge("status", "Status", map[string]gadget.BadgeVariant{
+        "active": gadget.BadgeSuccess,
+        "banned": gadget.BadgeDanger,
+    }),
+    Fields: []gadget.Column{
+        gadget.Number("balance", "Balance", "currency:EUR"),
+        gadget.Date("createdAt", "Joined", "relative"),
+        gadget.Link("website", "Website"),
+    },
+    Actions: []gadget.Action{
+        {Label: "Edit", Tool: "edit_user", Variant: gadget.VariantPrimary,
+            Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")}},
+    },
+}
+
+cards := &gadget.CardList{
+    URI:         "ui://myapp/users",
+    Title:       "Users",
+    Template:    tmpl,
+    PageSize:    12,
+    DefaultSort: &gadget.SortSpec{Key: "balance", Desc: true},
+    Filterable:  true,
+    Selection: &gadget.SelectionConfig{Bulk: []gadget.Action{{
+        Label: "Archive", Tool: "archive_users",
+        Args: map[string]gadget.ArgSource{"ids": gadget.FromSelection("id")},
+    }}},
+    Empty: gadget.EmptyState{Title: "No users"},
+}
+
+card := &gadget.Card{URI: "ui://myapp/user", Title: "User", Template: tmpl}
+```
+
+- **Template**: `TitleKey` (required) and optional `SubtitleKey` pull the card
+  heading from row fields; `Badge` (a badge column) shows a status pill;
+  `Fields` are typed label/value rows (same `Column` types and formats as a
+  table, minus `actions`); `Actions` render as footer buttons.
+- **CardList** reuses `RowsKey`/`RowID`, `PageSize`, `DefaultSort`,
+  `Filterable`, and `Selection` exactly as `Table`. The sort control is a
+  select auto-derived from the sortable body fields; filtering matches title,
+  subtitle, and field values.
+- **Card** renders `rows[0]`; use it as a detail view. Both support
+  `InitialData` and `LoadTool`/`LoadArgs` load-time hydration, and re-render
+  when an action or tool result returns `RowsKey`.
+- **Actions** behave exactly as in tables (`Static`/`FromRow` args, inline
+  `Confirm`, `Variant`); `FromSelection` is bulk-only via
+  `CardList.Selection`.
 
 ## Wiring with the official Go SDK
 

@@ -1,5 +1,6 @@
 // Command demo is a runnable MCP server showcasing gadget widgets: a user
-// table with row/bulk actions and an edit form with server-side validation.
+// table with row/bulk actions, the same users as a card grid, and an edit
+// form with server-side validation.
 //
 // Run with streamable HTTP (default, for MCPJam / Claude custom connectors):
 //
@@ -109,6 +110,44 @@ func usersTable() *gadget.Table {
 	}
 }
 
+func usersCards() *gadget.CardList {
+	return &gadget.CardList{
+		URI:   "ui://demo/user-cards",
+		Title: "Users",
+		Template: gadget.CardTemplate{
+			TitleKey:    "name",
+			SubtitleKey: "email",
+			Badge: gadget.Badge("status", "Status", map[string]gadget.BadgeVariant{
+				"active":   gadget.BadgeSuccess,
+				"invited":  gadget.BadgeInfo,
+				"archived": gadget.BadgeNeutral,
+			}),
+			Fields: []gadget.Column{
+				gadget.Number("balance", "Balance", "currency:EUR"),
+				gadget.Date("createdAt", "Joined", "relative"),
+			},
+			Actions: []gadget.Action{
+				{
+					Label: "Delete", Tool: "delete_user", Variant: gadget.VariantDanger,
+					Confirm: "Really delete?",
+					Args:    map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+				},
+			},
+		},
+		PageSize:    12,
+		DefaultSort: &gadget.SortSpec{Key: "balance", Desc: true},
+		Filterable:  true,
+		Selection: &gadget.SelectionConfig{Bulk: []gadget.Action{
+			{
+				Label: "Archive", Tool: "archive_users",
+				Args: map[string]gadget.ArgSource{"ids": gadget.FromSelection("id")},
+			},
+		}},
+		Empty: gadget.EmptyState{Title: "No users", Body: "Ask the assistant to create one."},
+		Theme: &theme.Theme{ColorPrimary: "#7c3aed"},
+	}
+}
+
 func userForm() *gadget.Form {
 	return &gadget.Form{
 		URI:   "ui://demo/user-form",
@@ -139,6 +178,7 @@ func newServer(data *db) *mcp.Server {
 		gosdk.EnableUI(nil),
 	)
 	table := usersTable()
+	cards := usersCards()
 	form := userForm()
 
 	// Model-visible: list users, rendered by the table widget.
@@ -148,6 +188,13 @@ func newServer(data *db) *mcp.Server {
 	}
 	must(gosdk.AddWidgetToolFor(server, table,
 		&mcp.Tool{Name: "list_users", Description: "List all users in an interactive table."},
+		func(context.Context, *mcp.CallToolRequest, empty) (*mcp.CallToolResult, rowsOut, error) {
+			return nil, rowsOut{Rows: data.rows()}, nil
+		}))
+
+	// Model-visible: the same users rendered as a card grid.
+	must(gosdk.AddWidgetToolFor(server, cards,
+		&mcp.Tool{Name: "list_user_cards", Description: "List all users as a grid of cards."},
 		func(context.Context, *mcp.CallToolRequest, empty) (*mcp.CallToolResult, rowsOut, error) {
 			return nil, rowsOut{Rows: data.rows()}, nil
 		}))

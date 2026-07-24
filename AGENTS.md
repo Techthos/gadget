@@ -25,7 +25,7 @@ once and cannot contain per-call data. Data arrives at runtime. `gadget`
 therefore splits rendering:
 
 1. **Go renders structure** (registration time): the widget shell (table
-   chrome, form fields with native validation attributes) plus a
+   chrome, form fields with native validation attributes, card chrome) plus a
    `#gadget-config` JSON island describing columns/fields/action bindings, and
    an optional `#gadget-data` snapshot (`InitialData`).
 2. **The embedded TypeScript runtime renders data** (runtime, inside the
@@ -48,7 +48,7 @@ Consequences for you as a library user:
 
 | Package | Import path | Role |
 |---|---|---|
-| `gadget` | `github.com/techthos/gadget` | Widget definitions (`Table`, `Form`, `Action`, columns, fields) + `RowsOf` |
+| `gadget` | `github.com/techthos/gadget` | Widget definitions (`Table`, `Form`, `Card`, `CardList`, `Action`, columns, fields) + `RowsOf` |
 | `theme` | `github.com/techthos/gadget/theme` | `Theme` struct → CSS design-token overrides |
 | `uispec` | `github.com/techthos/gadget/uispec` | MCP Apps spec constants and `_meta` types (zero deps) |
 | `gosdk` | `github.com/techthos/gadget/gosdk` | Adapter for the official `github.com/modelcontextprotocol/go-sdk` — the **only** package importing an MCP SDK |
@@ -115,7 +115,7 @@ result's `structuredContent`; the widget reads its data from there.
 
 ### 3.1 The `Widget` interface
 
-Both `*Table` and `*Form` implement:
+`*Table`, `*Form`, `*Card`, and `*CardList` implement:
 
 ```go
 type Widget interface {
@@ -373,7 +373,84 @@ table.InitialData = map[string]any{"rows": rows}
 
 Errors if the value doesn't marshal to a JSON array of objects.
 
-### 3.9 Validation rules (what `Validate()` / `Document()` reject)
+### 3.9 `CardTemplate`
+
+Shared by `Card` and `CardList`: describes how one record renders as a card.
+
+```go
+type CardTemplate struct {
+    TitleKey    string   // REQUIRED: row field shown as the card title
+    SubtitleKey string   // optional row field shown under the title
+    Badge       Column   // optional status badge (build with gadget.Badge); present when its Key is set — must be a badge column
+    Fields      []Column // label/value body rows: text/number/date/badge/link columns (NOT actions)
+    Actions     []Action // footer buttons; FromSelection args are invalid here (bulk actions belong to CardList.Selection)
+}
+```
+
+`Fields` reuse the same `Column` type and constructors as tables
+(`gadget.Text`/`Number`/`Date`/`Badge`/`Link`) and are Intl-formatted with the
+same format strings; they render as label/value pairs rather than table cells.
+`ColActions` columns are rejected in `Fields` — use `Actions`.
+
+### 3.10 `Card`
+
+Renders a **single record** — the first element of the rows array delivered
+under `RowsKey` (same data contract as `Table`/`CardList`).
+
+```go
+type Card struct {
+    URI      string       // REQUIRED. ui:// resource URI
+    Title    string       // toolbar heading + document title
+    Template CardTemplate // REQUIRED
+
+    RowsKey string // structuredContent key holding the rows array; renders rows[0]. Default "rows"
+    RowID   string // record field used for FromRow action args. Default "id"
+    Empty   EmptyState // shown when no record is present
+
+    InitialData map[string]any         // optional snapshot, e.g. {"rows": [{...}]}
+    LoadTool    string                 // read tool called once on load to re-fetch the record (under RowsKey), replacing the snapshot
+    LoadArgs    map[string]any         // optional static args passed to LoadTool
+    Theme       *theme.Theme
+    UI          *uispec.ResourceUIMeta
+}
+```
+
+### 3.11 `CardList`
+
+Renders a **collection** as cards in a responsive grid, with the same
+client-side runtime as `Table` (filter, sort, pagination, selection + bulk
+actions, per-card actions, load-time hydration) — laid out as cards instead of
+table rows.
+
+```go
+type CardList struct {
+    URI      string       // REQUIRED. ui:// resource URI
+    Title    string       // toolbar heading + document title
+    Template CardTemplate // REQUIRED
+
+    RowsKey string // structuredContent key holding the rows array. Default "rows"
+    RowID   string // record field identifying a card (selection, FromRow/FromSelection). Default "id"
+
+    PageSize    int              // > 0 enables client-side pagination; 0 disables; < 0 invalid
+    DefaultSort *SortSpec        // pre-sort records on load (Key required when set)
+    Filterable  bool             // adds a client-side text filter box (matches title, subtitle, and field values)
+    Selection   *SelectionConfig // per-card checkboxes + bulk actions (FromSelection resolves across selected cards)
+    Empty       EmptyState
+
+    InitialData map[string]any
+    LoadTool    string                 // read tool called once on load to re-fetch records (under RowsKey), replacing the snapshot
+    LoadArgs    map[string]any
+    Theme       *theme.Theme
+    UI          *uispec.ResourceUIMeta
+}
+```
+
+The sort control is a select over the template's **sortable body fields**
+(text/number/date `Fields`; badge/link fields and the title/subtitle are not
+offered) — no config needed. `DefaultSort` sets the initial order and may
+reference any field key.
+
+### 3.12 Validation rules (what `Validate()` / `Document()` reject)
 
 Table:
 - `URI` must be a well-formed `ui://` URI with a non-empty path.
@@ -393,6 +470,17 @@ Form:
 - `FSelect`/`FMultiSelect` require non-empty `Options`.
 - `Theme` must pass `theme.Validate()`.
 
+Card / CardList (via `CardTemplate`):
+- `URI` as above; `Template.TitleKey` required.
+- `Badge`, when present (`Key` set), must be a badge column.
+- Body `Fields`: text/number/date/badge need `Key`; link needs `Link.HrefKey`;
+  no duplicate field `Key`s; `ColActions` is rejected (use `Actions`).
+- Template `Actions`: validated like any action; `FromSelection` is rejected
+  (per-card actions run on one record).
+- CardList only: `PageSize >= 0`; `DefaultSort.Key` required when set; bulk
+  actions validated.
+- `Theme` must pass `theme.Validate()`.
+
 `Document()` calls `Validate()` first and returns its error, so with `gosdk`
 registration you get configuration errors at startup, not at render time.
 
@@ -405,8 +493,15 @@ Widgets read all runtime data from the tool result's `structuredContent`:
 | Widget | Key (configurable via) | Shape | Meaning |
 |---|---|---|---|
 | Table | `rows` (`RowsKey`) | `[]object` | rows to render |
+| CardList | `rows` (`RowsKey`) | `[]object` | records to render as cards |
+| Card | `rows` (`RowsKey`) | `[]object` | renders the first element (`rows[0]`) |
 | Form | `values` (`PrefillKey`) | `{field: value}` | prefill (edit flows) |
 | Form | `errors` (`ErrorsKey`) | `{field: "message"}` | server-side field errors, rendered inline; marks the submit failed |
+
+`Card`/`CardList` share the `rows` contract with `Table`: an action or tool
+result whose `structuredContent` contains `RowsKey` re-renders the widget
+(`CardList` also clears the selection), so the same `list_users`/`delete_user`
+tools drive a table or a card list interchangeably.
 
 With the go-sdk typed handlers, your `Out` struct's JSON form becomes
 `structuredContent` — so match the JSON tags to these keys:

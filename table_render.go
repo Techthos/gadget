@@ -36,19 +36,15 @@ func (t *Table) shell() g.Node {
 	return h.Div(h.Class("gadget-root"), htmlx.Data("widget", "table"),
 		h.Div(h.Class("gadget-card"),
 			t.toolbar(),
-			h.Div(h.Class("gadget-status"), htmlx.Data("status", ""), g.Attr("hidden"), h.Aria("live", "polite")),
+			statusNode(),
 			h.Div(h.Class("gadget-table-wrap"),
 				h.Table(h.Class("gadget-table"),
 					h.THead(h.Tr(t.headerCells()...)),
 					h.TBody(htmlx.Data("rows", "")),
 				),
 			),
-			t.emptyState(),
-			h.Div(h.Class("gadget-pagination"), htmlx.Data("pagination", ""), g.Attr("hidden"),
-				h.Button(h.Type("button"), h.Class("gadget-btn"), htmlx.Data("page", "prev"), g.Text("Previous")),
-				h.Span(h.Class("gadget-page-info"), htmlx.Data("page-info", "")),
-				h.Button(h.Type("button"), h.Class("gadget-btn"), htmlx.Data("page", "next"), g.Text("Next")),
-			),
+			emptyStateNode(t.Empty),
+			paginationNode(),
 		),
 	)
 }
@@ -112,23 +108,6 @@ func (t *Table) headerCells() []g.Node {
 		cells = append(cells, h.Th(attrs...))
 	}
 	return cells
-}
-
-func (t *Table) emptyState() g.Node {
-	title := t.Empty.Title
-	if title == "" {
-		title = "No data"
-	}
-	nodes := []g.Node{
-		h.Class("gadget-empty"),
-		htmlx.Data("empty", ""),
-		g.Attr("hidden"),
-		h.H3(g.Text(title)),
-	}
-	if t.Empty.Body != "" {
-		nodes = append(nodes, h.P(g.Text(t.Empty.Body)))
-	}
-	return h.Div(nodes...)
 }
 
 // actionButton renders a server-side action button (bulk actions; per-row

@@ -23,6 +23,8 @@
   <div class="row">
     <select id="widget">
       <option value="/widget/table">table</option>
+      <option value="/widget/cards">cardlist</option>
+      <option value="/widget/card">card</option>
       <option value="/widget/form">form</option>
     </select>
     <button id="reload">Load widget</button>
@@ -47,6 +49,16 @@
   const frame = document.getElementById("frame");
   const logEl = document.getElementById("log");
   let dark = false;
+
+  // A tiny stateful "database" so row/bulk actions visibly update the widget.
+  // Reset whenever a widget is (re)loaded.
+  const seed = () => [
+    { id: 1, name: "Ada Lovelace", email: "ada@example.com", balance: 1200.5, createdAt: "2026-01-12T09:00:00Z", status: "active", website: "https://example.com/ada" },
+    { id: 2, name: "Grace Hopper", email: "grace@example.com", balance: 815, createdAt: "2026-02-03T10:30:00Z", status: "active", website: "https://example.com/grace" },
+    { id: 3, name: "Alan Turing", email: "alan@example.com", balance: 0, createdAt: "2026-03-19T14:00:00Z", status: "invited", website: "" },
+    { id: 4, name: "Katherine Johnson", email: "katherine@example.com", balance: 233.1, createdAt: "2026-04-01T08:15:00Z", status: "active", website: "https://example.com/katherine" },
+  ];
+  let users = seed();
 
   const log = (dir, msg) => {
     logEl.textContent += `${dir} ${JSON.stringify(msg)}\n`;
@@ -82,9 +94,14 @@
       if (name === "save_user" && document.getElementById("failsave").checked) {
         result = { structuredContent: { errors: { email: "This email is already taken." } } };
       } else if (name === "delete_user") {
+        users = users.filter((u) => u.id !== args.id);
         result = { content: [{ type: "text", text: `Deleted #${args.id}.` }],
-                   structuredContent: { rows: [{ id: 99, name: "Remaining User", balance: 5,
-                     createdAt: "2026-07-01T00:00:00Z", status: "active" }] } };
+                   structuredContent: { rows: users } };
+      } else if (name === "archive_users") {
+        const ids = new Set(args.ids ?? []);
+        users = users.map((u) => (ids.has(u.id) ? { ...u, status: "archived" } : u));
+        result = { content: [{ type: "text", text: `Archived ${ids.size} user(s).` }],
+                   structuredContent: { rows: users } };
       } else {
         result = { content: [{ type: "text", text: `${name} ok.` }], structuredContent: {} };
       }
@@ -95,6 +112,7 @@
   });
 
   document.getElementById("reload").onclick = () => {
+    users = seed();
     frame.src = document.getElementById("widget").value;
     logEl.textContent = "";
   };
