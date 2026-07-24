@@ -98,8 +98,16 @@ describe("Bridge", () => {
     });
   });
 
-  it("sends size-changed notifications with width and height", async () => {
-    bridge.sizeChanged(320, 480);
+  it("sends size-changed notifications with height only by default", async () => {
+    bridge.sizeChanged(480);
+    await flush();
+    const sizes = host.received(M.sizeChanged);
+    expect(sizes).toHaveLength(1);
+    expect(sizes[0]!.params).toEqual({ height: 480 });
+  });
+
+  it("includes width only when one is explicitly given", async () => {
+    bridge.sizeChanged(480, 320);
     await flush();
     const sizes = host.received(M.sizeChanged);
     expect(sizes).toHaveLength(1);

@@ -147,8 +147,13 @@ export class Bridge {
     return this.request(M.updateModelContext, { structuredContent });
   }
 
-  sizeChanged(width: number, height: number): void {
-    this.notify(M.sizeChanged, { width, height });
+  // Height is always reported; width is optional and omitted by default. Hosts
+  // that apply a reported width pin the iframe to it, which couples the frame to
+  // the view's own inner measurement and can ratchet it to zero — so the view
+  // reports only height and lets the host own the width (iframe fills available
+  // space). A width is sent only when a caller explicitly passes one.
+  sizeChanged(height: number, width?: number): void {
+    this.notify(M.sizeChanged, width === undefined ? { height } : { width, height });
   }
 
   // --- transport ---

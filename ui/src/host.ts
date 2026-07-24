@@ -64,11 +64,14 @@ export function watchSize(bridge: Bridge, el?: HTMLElement): () => void {
   let raf = 0;
 
   const report = (): void => {
-    // Width must echo the host-given viewport, not the content: wide tables live
-    // in an overflow-x scroll wrap whose CSS min-width is 0, so reporting content
-    // width lets the host shrink the frame, the wrap collapses, and the loop runs
-    // to zero. Height legitimately grows with content, so keep scrollHeight.
-    bridge.sizeChanged(document.documentElement.clientWidth, target.scrollHeight);
+    // Height only; width is deliberately omitted. A host that pins the iframe
+    // width to a reported value couples the frame to this iframe's own inner
+    // measurement — the vertical scrollbar and any reflow (e.g. a wrapping
+    // toolbar) shave a few pixels off every read, so each tick reports a smaller
+    // width and the frame ratchets to zero. Per MCP Apps the iframe fills the
+    // available width; only height is content-driven, so report scrollHeight and
+    // leave width to the host.
+    bridge.sizeChanged(target.scrollHeight);
   };
   const schedule = (): void => {
     if (raf) return;

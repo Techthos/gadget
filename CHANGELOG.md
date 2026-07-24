@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.4.3 - 2026-07-24
+
+- **Fix iframe width collapse (`size-changed`)**: `watchSize` now reports
+  **height only** and omits `width` from `ui/notifications/size-changed`. Hosts
+  that pin `iframe.style.width` to a reported value (e.g. the MCP Inspector)
+  coupled the frame to the view's own inner measurement — the vertical scrollbar
+  and a wrapping toolbar shaved pixels off every read, so a wide/tall widget
+  (e.g. a many-column table) ratcheted the frame to zero width. The view now
+  lets the host own width (iframe fills available space); only height is
+  content-driven. Supersedes the v0.4.2 `clientWidth` change, which reported a
+  different value on the same axis and still ratcheted. `Bridge.sizeChanged`
+  signature is now `(height, width?)` with width optional and omitted by default.
+
 ## v0.2.0 - 2026-07-23
 
 - **MCP Apps native only**: removed the legacy mcp-ui postMessage interop
