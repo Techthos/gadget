@@ -1,9 +1,13 @@
-.PHONY: assets test test-go test-ui typecheck verify-dist vet
+.PHONY: assets harness test test-go test-ui typecheck verify-dist vet
 
 # Build the TS/CSS bundle into internal/assets/dist (committed, go:embed'd).
 assets:
 	npm --prefix ui ci
 	npm --prefix ui run build
+
+# Serve the fake MCP Apps host for manual widget preview at localhost:8090.
+harness:
+	go run ./examples/harness
 
 test: test-go test-ui
 

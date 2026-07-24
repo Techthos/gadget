@@ -11,6 +11,18 @@ Cursor, Goose, Postman, …).
 
 > **Status: pre-release.** APIs are not stable yet.
 
+<p align="center">
+  <img src="docs/assets/table.png" alt="gadget Table widget: sortable, filterable, paginated data table with typed columns, badges, row selection and per-row actions" width="780">
+</p>
+
+<p align="center">
+  <img src="docs/assets/table-dark.png" alt="The same Table widget rendered in the host's dark theme" width="470">
+  &nbsp;&nbsp;
+  <img src="docs/assets/form.png" alt="gadget Form widget: labelled fields, validation and submit/cancel actions" width="290">
+</p>
+
+<p align="center"><sub>Table and Form widgets rendered by the <code>examples/harness</code> fake host — light and host dark themes.</sub></p>
+
 ## Quickstart
 
 ```go
