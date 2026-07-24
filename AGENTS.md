@@ -7,7 +7,7 @@ docs live in `docs/architecture.md`, `docs/widgets.md`, `docs/theming.md`.
 
 - **Module**: `github.com/techthos/gadget` (Go >= 1.25)
 - **What it is**: prebuilt, parameterized, interactive HTML widgets (**Table**,
-  **Form**) for **MCP Apps** — the official MCP UI extension
+  **CardList**, **Card**, **Form**) for **MCP Apps** — the official MCP UI extension
   (`io.modelcontextprotocol/ui`, spec `2026-01-26`). Widgets render as fully
   self-contained HTML documents (inline CSS + JS, no external references)
   served as `ui://` template resources from a Go MCP server. Hosts (Claude,
@@ -755,7 +755,7 @@ self-contained and satisfy the spec's default locked-down policy. Only set
 The core emits plain spec-shaped values; adapt to any Go MCP implementation:
 
 ```go
-w := table // or form; any gadget.Widget
+w := table // or form, card, cardlist; any gadget.Widget
 
 doc, err := w.Document() // render once (validates); serve from memory
 d := w.Descriptor()      // d.URI, d.Name (derived: "ui://demo/users" -> "demo-users"),
@@ -778,8 +778,8 @@ d := w.Descriptor()      // d.URI, d.Name (derived: "ui://demo/users" -> "demo-u
    `"rows"`, `"values"`, `"errors"`). Nothing renders and nothing errors.
 2. **Row identity**: every row should carry the `RowID` field (default
    `"id"`); selection and `FromRow`/`FromSelection` depend on it.
-3. **Mutating table tools must return the updated row list** under `RowsKey`,
-   or the UI keeps showing stale rows.
+3. **Mutating table/cardlist tools must return the updated row list** under
+   `RowsKey`, or the UI keeps showing stale rows (a `Card` re-renders `rows[0]`).
 4. **Hidden/readonly/text form fields submit strings.** A hidden numeric ID
    arrives as `"3"` — parse server-side (`strconv.Atoi`). Empty `FNumber`
    fields are omitted from the arguments entirely.
@@ -814,15 +814,17 @@ d := w.Descriptor()      // d.URI, d.Name (derived: "ui://demo/users" -> "demo-u
 ## 10. Examples and manual testing
 
 - `examples/demo` — complete runnable MCP server (users table with row/bulk
-  actions + edit form with server-side validation, prefill, string-ID
-  parsing). `go run ./examples/demo -addr :8080` (streamable HTTP at
-  `/mcp`) or `go run ./examples/demo -stdio`. Point MCPJam, Claude custom
-  connectors, or any MCP Apps host at `http://localhost:8080/mcp`.
-- `examples/harness` — a fake MCP Apps host in one HTML page: renders widgets
-  in a sandboxed iframe, answers the `ui/initialize` handshake, logs all
-  JSON-RPC traffic, simulates tool results/errors and theme changes.
-  `go run ./examples/harness`, open `http://localhost:8090`. Use it to verify
-  widget behavior without any real MCP client.
+  actions, the same users as a card grid, + edit form with server-side
+  validation, prefill, string-ID parsing). `go run ./examples/demo -addr :8080`
+  (streamable HTTP at `/mcp`) or `go run ./examples/demo -stdio`. Point MCPJam,
+  Claude custom connectors, or any MCP Apps host at `http://localhost:8080/mcp`.
+- `examples/harness` — a fake MCP Apps host in one HTML page: renders any widget
+  (table, cardlist, card, form) in a sandboxed iframe, answers the
+  `ui/initialize` handshake, logs all JSON-RPC traffic, simulates tool
+  results/errors and theme changes (with a stateful in-memory backend so
+  row/bulk actions update live). `go run ./examples/harness`, open
+  `http://localhost:8090`. Use it to verify widget behavior without any real
+  MCP client.
 
 ## 11. Development commands (when modifying this repo)
 
