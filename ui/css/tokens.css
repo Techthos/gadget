@@ -38,6 +38,8 @@
   --gadget-radius-m: var(--border-radius-md, 8px);
   --gadget-radius-l: var(--border-radius-lg, 12px);
   --gadget-space-unit: 0.25rem;
+  /* fixed width of one card in the CardList carousel */
+  --gadget-card-width: 17rem;
 
   /* let host-provided light-dark() values self-adapt */
   color-scheme: light dark;

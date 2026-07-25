@@ -28,6 +28,68 @@ func RawJS(js string) (g.Node, error) {
 	return h.Script(g.Raw(js)), nil
 }
 
+// svgDenied are constructs an inline logo has no legitimate use for, but
+// which would introduce script execution, network access, or an escape from
+// the SVG subtree. Checked case-insensitively against the whole document.
+var svgDenied = []string{
+	"<script", "<foreignobject", "<iframe", "<embed", "<object", "<use",
+	"<animate", "<set", "<handler", "javascript:", "<!--", "</style",
+}
+
+// RawSVG wraps a trusted inline SVG logo as markup. The caller supplies it at
+// registration time (it is author input, the same trust level as RawCSS and
+// RawJS), so this is a backstop, not a sanitizer: it requires a single <svg>
+// root and refuses script-bearing or resource-loading constructs.
+func RawSVG(svg string) (g.Node, error) {
+	s := strings.TrimSpace(svg)
+	lower := strings.ToLower(s)
+	if !strings.HasPrefix(lower, "<svg") || !strings.HasSuffix(lower, "</svg>") {
+		return nil, fmt.Errorf("htmlx: unsafe SVG: content must be a single <svg> element")
+	}
+	for _, bad := range svgDenied {
+		if strings.Contains(lower, bad) {
+			return nil, fmt.Errorf("htmlx: unsafe SVG: content contains %q", bad)
+		}
+	}
+	if name := eventHandlerAttr(lower); name != "" {
+		return nil, fmt.Errorf("htmlx: unsafe SVG: content contains event handler %q", name)
+	}
+	return g.Raw(s), nil
+}
+
+// eventHandlerAttr reports the first on*= attribute found in an already
+// lowercased document, or "" when there is none. An attribute name is
+// preceded by whitespace and followed (allowing spaces) by "=".
+func eventHandlerAttr(lower string) string {
+	for i := 0; i+2 < len(lower); i++ {
+		if lower[i] != 'o' || lower[i+1] != 'n' {
+			continue
+		}
+		if i > 0 && !isSpace(lower[i-1]) {
+			continue
+		}
+		j := i + 2
+		for j < len(lower) && lower[j] >= 'a' && lower[j] <= 'z' {
+			j++
+		}
+		if j == i+2 {
+			continue
+		}
+		k := j
+		for k < len(lower) && isSpace(lower[k]) {
+			k++
+		}
+		if k < len(lower) && lower[k] == '=' {
+			return lower[i:j]
+		}
+	}
+	return ""
+}
+
+func isSpace(b byte) bool {
+	return b == ' ' || b == '\t' || b == '\n' || b == '\r' || b == '\f'
+}
+
 func checkRaw(s, closer string) error {
 	lower := strings.ToLower(s)
 	if strings.Contains(lower, closer) {

@@ -194,3 +194,47 @@ body {
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* Brand: application logo/name, first item in the widget toolbar. */
+.gadget-brand {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--gadget-space-unit) * 2);
+  font-size: 0.8125rem;
+  color: var(--gadget-color-text-muted);
+  min-width: 0;
+}
+
+.gadget-brand-logo {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  height: 1.25rem;
+}
+
+.gadget-brand-logo > svg,
+img.gadget-brand-logo {
+  height: 1.25rem;
+  width: auto;
+  max-width: 8rem;
+}
+
+.gadget-brand-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gadget-brand--link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--gadget-color-text-muted);
+  cursor: pointer;
+}
+
+.gadget-brand--link:hover .gadget-brand-name {
+  color: var(--gadget-color-text);
+  text-decoration: underline;
+}

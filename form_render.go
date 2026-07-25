@@ -34,10 +34,13 @@ func (f *Form) Document() (string, error) {
 
 func (f *Form) shell() g.Node {
 	var body []g.Node
-	if f.Title != "" {
-		body = append(body, h.Div(h.Class("gadget-toolbar"),
-			h.H2(h.Class("gadget-title"), g.Text(f.Title)),
-		))
+	brand := brandNode(f.Brand)
+	if f.Title != "" || brand != nil {
+		toolbar := []g.Node{h.Class("gadget-toolbar"), brand}
+		if f.Title != "" {
+			toolbar = append(toolbar, h.H2(h.Class("gadget-title"), g.Text(f.Title)))
+		}
+		body = append(body, h.Div(toolbar...))
 	}
 	body = append(body, h.Div(h.Class("gadget-status"), htmlx.Data("status", ""), g.Attr("hidden"), h.Aria("live", "polite")))
 
@@ -61,7 +64,15 @@ func (f *Form) shell() g.Node {
 		}
 		actions = append(actions, h.Button(h.Type("button"), h.Class("gadget-btn"), htmlx.Data("cancel", ""), g.Text(cancelLabel)))
 	}
-	actions = append(actions, h.Button(h.Type("submit"), h.Class("gadget-btn gadget-btn--primary"), g.Text(submitLabel)))
+	// type=button, not submit: hosts sandbox the widget iframe without
+	// allow-forms, which blocks native form submission outright (the submit
+	// event never fires). The runtime drives submission from this click.
+	actions = append(actions, h.Button(
+		h.Type("button"),
+		h.Class("gadget-btn gadget-btn--primary"),
+		htmlx.Data("submit", ""),
+		g.Text(submitLabel),
+	))
 	formChildren = append(formChildren, h.Div(actions...))
 
 	body = append(body, h.Form(formChildren...))

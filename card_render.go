@@ -35,10 +35,13 @@ func (c *Card) Document() (string, error) {
 func (c *Card) shell() g.Node {
 	var chrome []g.Node
 	chrome = append(chrome, h.Class("gadget-card"))
-	if c.Title != "" {
-		chrome = append(chrome, h.Div(h.Class("gadget-toolbar"),
-			h.H2(h.Class("gadget-title"), g.Text(c.Title)),
-		))
+	brand := brandNode(c.Brand)
+	if c.Title != "" || brand != nil {
+		toolbar := []g.Node{h.Class("gadget-toolbar"), brand}
+		if c.Title != "" {
+			toolbar = append(toolbar, h.H2(h.Class("gadget-title"), g.Text(c.Title)))
+		}
+		chrome = append(chrome, h.Div(toolbar...))
 	}
 	chrome = append(chrome,
 		statusNode(),
@@ -80,15 +83,46 @@ func (l *CardList) shell() g.Node {
 		h.Div(h.Class("gadget-card"),
 			l.toolbar(),
 			statusNode(),
-			h.Div(h.Class("gadget-card-grid"), htmlx.Data("cards", "")),
+			carouselNode(),
 			emptyStateNode(l.Empty),
 			paginationNode(),
 		),
 	)
 }
 
+// carouselNode renders the horizontally scrolling card strip and its
+// prev/next controls. The runtime fills the strip and toggles the controls
+// from the strip's scroll geometry; both start hidden.
+func carouselNode() g.Node {
+	return h.Div(h.Class("gadget-carousel"),
+		carouselNavButton("prev", "Previous cards", "‹"),
+		h.Div(
+			h.Class("gadget-card-strip"),
+			htmlx.Data("cards", ""),
+			h.Role("group"),
+			h.TabIndex("0"),
+			h.Aria("label", "Cards"),
+		),
+		carouselNavButton("next", "Next cards", "›"),
+	)
+}
+
+func carouselNavButton(dir, label, glyph string) g.Node {
+	return h.Button(
+		h.Type("button"),
+		h.Class("gadget-btn gadget-carousel-nav"),
+		htmlx.Data("scroll", dir),
+		h.Aria("label", label),
+		g.Attr("hidden"),
+		g.Text(glyph),
+	)
+}
+
 func (l *CardList) toolbar() g.Node {
 	var items []g.Node
+	if brand := brandNode(l.Brand); brand != nil {
+		items = append(items, brand)
+	}
 	if l.Title != "" {
 		items = append(items, h.H2(h.Class("gadget-title"), g.Text(l.Title)))
 	}

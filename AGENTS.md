@@ -164,6 +164,7 @@ type Table struct {
     InitialData map[string]any        // optional structuredContent-shaped snapshot baked into the document
     LoadTool    string                 // read tool the runtime calls once on load to re-fetch rows (must return them under RowsKey), replacing the baked snapshot so a reloaded widget shows current data
     LoadArgs    map[string]any         // optional static args passed to LoadTool
+    Brand       *Brand                 // application logo/name shown on the widget
     Theme       *theme.Theme          // design-token overrides for this widget
     UI          *uispec.ResourceUIMeta // overrides resource _meta.ui (CSP, permissions, prefersBorder)
 }
@@ -246,6 +247,7 @@ type Form struct {
     InitialData map[string]any         // optional snapshot, e.g. {"values": {...}} for a pre-filled edit form
     LoadTool    string                 // read tool the runtime calls once on load to re-fetch prefill (must return it under PrefillKey), replacing the baked snapshot
     LoadArgs    map[string]any         // optional static args passed to LoadTool
+    Brand       *Brand
     Theme       *theme.Theme
     UI          *uispec.ResourceUIMeta
 }
@@ -410,6 +412,7 @@ type Card struct {
     InitialData map[string]any         // optional snapshot, e.g. {"rows": [{...}]}
     LoadTool    string                 // read tool called once on load to re-fetch the record (under RowsKey), replacing the snapshot
     LoadArgs    map[string]any         // optional static args passed to LoadTool
+    Brand       *Brand
     Theme       *theme.Theme
     UI          *uispec.ResourceUIMeta
 }
@@ -417,10 +420,12 @@ type Card struct {
 
 ### 3.11 `CardList`
 
-Renders a **collection** as cards in a responsive grid, with the same
-client-side runtime as `Table` (filter, sort, pagination, selection + bulk
-actions, per-card actions, load-time hydration) — laid out as cards instead of
-table rows.
+Renders a **collection** as cards in a horizontally scrolling strip (a
+carousel), with the same client-side runtime as `Table` (filter, sort,
+pagination, selection + bulk actions, per-card actions, load-time hydration) —
+laid out as cards instead of table rows. The strip is the only layout: it fits
+a narrow chat pane, where a table overflows and a card grid collapses into a
+long vertical scroll.
 
 ```go
 type CardList struct {
@@ -440,6 +445,7 @@ type CardList struct {
     InitialData map[string]any
     LoadTool    string                 // read tool called once on load to re-fetch records (under RowsKey), replacing the snapshot
     LoadArgs    map[string]any
+    Brand       *Brand
     Theme       *theme.Theme
     UI          *uispec.ResourceUIMeta
 }
@@ -450,7 +456,40 @@ The sort control is a select over the template's **sortable body fields**
 offered) — no config needed. `DefaultSort` sets the initial order and may
 reference any field key.
 
-### 3.12 Validation rules (what `Validate()` / `Document()` reject)
+Carousel behavior is automatic: prev/next controls appear only when the cards
+overflow the available width and disable at each end, the strip is draggable
+with the mouse and swipeable on touch, and its scrollbar is hidden. `PageSize`
+still applies and bounds how many cards are in the strip at once. Card width comes from the
+`--gadget-card-width` token (default `17rem`), overridable per widget through
+`theme.Theme.Extra`.
+
+### 3.12 `Brand`
+
+Identifies the application a widget belongs to. Available on `Table`, `Form`,
+`Card` and `CardList` as the `Brand` field; one `*Brand` is typically shared
+across every widget of a server. It always renders at the top left of the
+widget chrome, as the first item of the toolbar, before the title.
+
+```go
+type Brand struct {
+    Name        string // application name; required unless a logo is set
+    URL         string // optional http(s) link, opened through the host (ui/openLink)
+    LogoSVG     string // inline <svg> markup (recommended)
+    LogoDataURI string // "data:image/...;base64,..." alternative to LogoSVG
+    LogoAlt     string // alt text for LogoDataURI; defaults to Name
+}
+```
+
+Documents are self-contained, so a logo is never a URL. Prefer `LogoSVG`: it is
+plain markup and needs nothing from the host's CSP. `LogoDataURI` renders as an
+`<img>` and therefore depends on the host allowing `img-src data:`, which the
+spec does not guarantee. A `Brand` with `URL` renders as a button, not an
+anchor — navigation is blocked in the host's sandboxed iframe, so the runtime
+hands the URL to `ui/openLink`.
+
+A brand makes the toolbar appear even when `Title` is empty.
+
+### 3.13 Validation rules (what `Validate()` / `Document()` reject)
 
 Table:
 - `URI` must be a well-formed `ui://` URI with a non-empty path.
@@ -480,6 +519,17 @@ Card / CardList (via `CardTemplate`):
 - CardList only: `PageSize >= 0`; `DefaultSort.Key` required when set; bulk
   actions validated.
 - `Theme` must pass `theme.Validate()`.
+
+Brand (all widgets, when set):
+- `Name` or a logo is required.
+- `LogoSVG` and `LogoDataURI` are mutually exclusive.
+- `LogoSVG` must be a single `<svg>…</svg>` element and is rejected when it
+  contains `<script>`, an `on*=` event handler, `<foreignObject>`, `<iframe>`,
+  `<embed>`, `<object>`, `<use>`, `<animate>`, `<set>`, `javascript:`, an HTML
+  comment, or `</style`.
+- `LogoDataURI` must be `data:image/{png,jpeg,gif,webp,svg+xml};base64,` with a
+  non-empty base64 payload.
+- `URL`, when set, must be `http://` or `https://`.
 
 `Document()` calls `Validate()` first and returns its error, so with `gosdk`
 registration you get configuration errors at startup, not at render time.
@@ -814,7 +864,7 @@ d := w.Descriptor()      // d.URI, d.Name (derived: "ui://demo/users" -> "demo-u
 ## 10. Examples and manual testing
 
 - `examples/demo` — complete runnable MCP server (users table with row/bulk
-  actions, the same users as a card grid, + edit form with server-side
+  actions, the same users as a card carousel, + edit form with server-side
   validation, prefill, string-ID parsing). `go run ./examples/demo -addr :8080`
   (streamable HTTP at `/mcp`) or `go run ./examples/demo -stdio`. Point MCPJam,
   Claude custom connectors, or any MCP Apps host at `http://localhost:8080/mcp`.

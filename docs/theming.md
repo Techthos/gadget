@@ -68,3 +68,4 @@ empty fields keep host-aware behavior. `Extra` keys must start with
 | `--gadget-font` / `--gadget-font-mono` | typography | `--font-sans` / `--font-mono` |
 | `--gadget-radius-s/m/l` | corner radii | `--border-radius-sm/md/lg` |
 | `--gadget-space-unit` | base spacing unit (0.25rem) | — |
+| `--gadget-card-width` | width of one card in the CardList carousel (17rem) | — |

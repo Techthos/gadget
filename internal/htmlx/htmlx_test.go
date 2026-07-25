@@ -129,6 +129,44 @@ func TestRawGuards(t *testing.T) {
 	}
 }
 
+func TestRawSVGGuards(t *testing.T) {
+	safe := map[string]string{
+		"minimal":    `<svg viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg>`,
+		"whitespace": "\n  <svg><path d=\"M0 0h8v8H0z\"/></svg>\n",
+		// "on" inside an attribute value or element name is not a handler.
+		"on prefix":   `<svg><path id="onward" d="M0 0"/></svg>`,
+		"uppercase":   `<SVG><CIRCLE r="1"/></SVG>`,
+		"gradient":    `<svg><defs><linearGradient id="g"/></defs><rect fill="url(#g)"/></svg>`,
+		"title child": `<svg><title>Acme</title><rect/></svg>`,
+	}
+	for name, svg := range safe {
+		if _, err := RawSVG(svg); err != nil {
+			t.Errorf("RawSVG rejected safe content %s: %v", name, err)
+		}
+	}
+
+	unsafe := map[string]string{
+		"script":            `<svg><script>alert(1)</script></svg>`,
+		"handler":           `<svg onload="alert(1)"><rect/></svg>`,
+		"spaced handler":    `<svg onclick = "alert(1)"><rect/></svg>`,
+		"uppercase handler": `<svg ONLOAD="alert(1)"><rect/></svg>`,
+		"foreign object":    `<svg><foreignObject><body/></foreignObject></svg>`,
+		"use":               `<svg><use href="#x"/></svg>`,
+		"javascript url":    `<svg><a href="javascript:alert(1)"><rect/></a></svg>`,
+		"animate":           `<svg><rect><animate attributeName="x"/></rect></svg>`,
+		"comment":           `<svg><!-- hi --><rect/></svg>`,
+		"fragment":          `<rect/>`,
+		"trailing markup":   `<svg><rect/></svg><img src=x>`,
+		"leading markup":    `<img src=x><svg><rect/></svg>`,
+		"empty":             ``,
+	}
+	for name, svg := range unsafe {
+		if _, err := RawSVG(svg); err == nil {
+			t.Errorf("RawSVG accepted unsafe content %s", name)
+		}
+	}
+}
+
 // mustParse parses doc with the standards-compliant HTML parser.
 func mustParse(t *testing.T, doc string) *xhtml.Node {
 	t.Helper()

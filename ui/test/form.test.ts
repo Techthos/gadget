@@ -37,7 +37,7 @@ function shell(): HTMLElement {
       </div>
       <div class="gadget-form-actions">
         <button type="button" data-gadget-cancel="">Cancel</button>
-        <button type="submit">Save</button>
+        <button type="button" data-gadget-submit="">Save</button>
       </div>
     </form>`;
   document.body.append(root);
@@ -60,8 +60,10 @@ function config(over: Record<string, unknown> = {}): Record<string, unknown> {
   };
 }
 
+// Submission runs off the button click: hosts sandbox the widget without
+// allow-forms, so a native form submit never fires.
 function submit(root: HTMLElement): void {
-  root.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+  root.querySelector<HTMLElement>("[data-gadget-submit]")!.click();
 }
 
 describe("form behavior", () => {

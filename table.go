@@ -55,6 +55,8 @@ type Table struct {
 	// LoadArgs are optional static arguments passed to LoadTool.
 	LoadArgs map[string]any
 
+	// Brand renders the application logo/name on the widget.
+	Brand *Brand
 	// Theme overrides gadget design tokens for this widget.
 	Theme *theme.Theme
 	// UI overrides resource _meta.ui (CSP, permissions, prefersBorder).
@@ -255,6 +257,9 @@ func (t *Table) Validate() error {
 				return err
 			}
 		}
+	}
+	if err := t.Brand.Validate(); err != nil {
+		return fmt.Errorf("gadget: table %s: %w", t.URI, err)
 	}
 	if err := t.Theme.Validate(); err != nil {
 		return fmt.Errorf("gadget: table %s: %w", t.URI, err)

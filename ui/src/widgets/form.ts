@@ -166,8 +166,7 @@ export function mountForm(ctx: MountContext): void {
 		return undefined;
 	}
 
-	form.addEventListener("submit", (ev) => {
-		ev.preventDefault();
+	function doSubmit(): void {
 		clearErrors();
 		if (!validate()) return;
 		const args = { ...(cfg.submit.staticArgs ?? {}), ...collectValues() };
@@ -183,6 +182,25 @@ export function mountForm(ctx: MountContext): void {
 				showStatus("error", e instanceof Error ? e.message : String(e));
 			},
 		);
+	}
+
+	// Hosts sandbox the widget iframe without allow-forms, so a native submit
+	// is blocked before its event ever fires: the button click is the real
+	// entry point. The submit listener stays for hosts that do allow forms,
+	// and Enter in a single-line field is wired by hand for the same reason.
+	root.querySelector<HTMLElement>("[data-gadget-submit]")?.addEventListener("click", doSubmit);
+
+	form.addEventListener("submit", (ev) => {
+		ev.preventDefault();
+		doSubmit();
+	});
+
+	form.addEventListener("keydown", (ev) => {
+		if (ev.key !== "Enter" || ev.isComposing) return;
+		const target = ev.target;
+		if (!(target instanceof HTMLInputElement) || target.type === "checkbox") return;
+		ev.preventDefault();
+		doSubmit();
 	});
 
 	root.querySelector<HTMLElement>("[data-gadget-cancel]")?.addEventListener("click", () => {

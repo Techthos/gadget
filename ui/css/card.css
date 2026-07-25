@@ -1,15 +1,90 @@
 /* Card and CardList styling. Cards are self-contained blocks; the CardList
- * lays them out in a responsive grid inside the shared .gadget-card chrome. */
+ * lays them out as a horizontally scrolling strip (carousel) inside the
+ * shared .gadget-card chrome, so a collection fits any chat-pane width. */
 
 .gadget-card-host {
   padding: calc(var(--gadget-space-unit) * 4);
 }
 
-.gadget-card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+.gadget-carousel {
+  position: relative;
+}
+
+/* min-width:0 keeps the strip from giving the document an intrinsic width:
+ * the cards overflow horizontally inside it instead of widening the frame. */
+.gadget-card-strip {
+  display: flex;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-behavior: smooth;
   gap: calc(var(--gadget-space-unit) * 3);
   padding: calc(var(--gadget-space-unit) * 4);
+  /* The strip is driven by swipe, drag and the nav controls; its scrollbar
+   * would only eat vertical space in an already short widget. */
+  scrollbar-width: none;
+}
+
+.gadget-card-strip::-webkit-scrollbar {
+  display: none;
+}
+
+/* Drag-to-swipe: grab affordance only while the strip actually scrolls. */
+.gadget-card-strip--scrollable {
+  cursor: grab;
+}
+
+.gadget-card-strip--dragging {
+  cursor: grabbing;
+  /* Follow the pointer frame by frame instead of animating to each position. */
+  scroll-behavior: auto;
+  user-select: none;
+}
+
+/* No scroll-snap: when the total overflow is smaller than one card pitch the
+ * only reachable snap position is the start, so the browser pulls every
+ * programmatic scroll straight back and the next control appears dead. */
+.gadget-card-strip > .gadget-card-item {
+  flex: 0 0 var(--gadget-card-width);
+}
+
+.gadget-carousel-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--gadget-space-unit) * 7);
+  height: calc(var(--gadget-space-unit) * 7);
+  padding: 0;
+  font-size: 0.875rem;
+  line-height: 1;
+  border-radius: 50%;
+  background: var(--gadget-color-bg);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+}
+
+.gadget-carousel-nav[data-gadget-scroll="prev"] {
+  inset-inline-start: calc(var(--gadget-space-unit) * 1);
+}
+
+.gadget-carousel-nav[data-gadget-scroll="next"] {
+  inset-inline-end: calc(var(--gadget-space-unit) * 1);
+}
+
+/* Touch hosts swipe; the arrows only get in the way there. */
+@media (hover: none) {
+  .gadget-carousel-nav {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gadget-card-strip {
+    scroll-behavior: auto;
+  }
 }
 
 .gadget-card-item {

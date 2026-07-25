@@ -45,6 +45,8 @@ type Form struct {
 	// LoadArgs are optional static arguments passed to LoadTool.
 	LoadArgs map[string]any
 
+	// Brand renders the application logo/name on the widget.
+	Brand *Brand
 	// Theme overrides gadget design tokens for this widget.
 	Theme *theme.Theme
 	// UI overrides resource _meta.ui.
@@ -188,6 +190,9 @@ func (f *Form) Validate() error {
 		default:
 			return fmt.Errorf("%s: unknown field type %q", ctx, fd.Type)
 		}
+	}
+	if err := f.Brand.Validate(); err != nil {
+		return fmt.Errorf("gadget: form %s: %w", f.URI, err)
 	}
 	if err := f.Theme.Validate(); err != nil {
 		return fmt.Errorf("gadget: form %s: %w", f.URI, err)

@@ -106,6 +106,7 @@ func usersTable() *gadget.Table {
 			},
 		}},
 		Empty: gadget.EmptyState{Title: "No users", Body: "Ask the assistant to create one."},
+		Brand: demoBrand(),
 		Theme: &theme.Theme{ColorPrimary: "#7c3aed"},
 	}
 }
@@ -144,6 +145,7 @@ func usersCards() *gadget.CardList {
 			},
 		}},
 		Empty: gadget.EmptyState{Title: "No users", Body: "Ask the assistant to create one."},
+		Brand: demoBrand(),
 		Theme: &theme.Theme{ColorPrimary: "#7c3aed"},
 	}
 }
@@ -164,7 +166,17 @@ func userForm() *gadget.Form {
 		},
 		Submit: gadget.SubmitSpec{Tool: "save_user", Label: "Save", SuccessMessage: "User saved."},
 		Cancel: &gadget.CancelSpec{},
+		Brand:  demoBrand(),
 		Theme:  &theme.Theme{ColorPrimary: "#7c3aed"},
+	}
+}
+
+// demoBrand is the application mark shown at the top left of every widget.
+func demoBrand() *gadget.Brand {
+	return &gadget.Brand{
+		Name:    "Acme",
+		URL:     "https://example.com",
+		LogoSVG: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="8" r="7"/></svg>`,
 	}
 }
 

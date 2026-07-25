@@ -148,6 +148,8 @@ type Card struct {
 	// LoadArgs are optional static arguments passed to LoadTool.
 	LoadArgs map[string]any
 
+	// Brand renders the application logo/name on the widget.
+	Brand *Brand
 	// Theme overrides gadget design tokens for this widget.
 	Theme *theme.Theme
 	// UI overrides resource _meta.ui (CSP, permissions, prefersBorder).
@@ -175,6 +177,9 @@ func (c *Card) Validate() error {
 	}
 	if err := c.Template.validate(fmt.Sprintf("gadget: card %s", c.URI)); err != nil {
 		return err
+	}
+	if err := c.Brand.Validate(); err != nil {
+		return fmt.Errorf("gadget: card %s: %w", c.URI, err)
 	}
 	if err := c.Theme.Validate(); err != nil {
 		return fmt.Errorf("gadget: card %s: %w", c.URI, err)
@@ -260,6 +265,8 @@ type CardList struct {
 	// LoadArgs are optional static arguments passed to LoadTool.
 	LoadArgs map[string]any
 
+	// Brand renders the application logo/name on the widget.
+	Brand *Brand
 	// Theme overrides gadget design tokens for this widget.
 	Theme *theme.Theme
 	// UI overrides resource _meta.ui (CSP, permissions, prefersBorder).
@@ -300,6 +307,9 @@ func (l *CardList) Validate() error {
 				return err
 			}
 		}
+	}
+	if err := l.Brand.Validate(); err != nil {
+		return fmt.Errorf("gadget: cardlist %s: %w", l.URI, err)
 	}
 	if err := l.Theme.Validate(); err != nil {
 		return fmt.Errorf("gadget: cardlist %s: %w", l.URI, err)

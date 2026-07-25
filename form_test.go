@@ -81,7 +81,8 @@ func TestFormGolden(t *testing.T) {
 		`readonly`,
 		`data-gadget-error-for="name"`,
 		`data-gadget-cancel`,
-		`type="submit"`,
+		// Not type="submit": sandboxed hosts block native form submission.
+		`data-gadget-submit`,
 	} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("document missing %q", want)

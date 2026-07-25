@@ -60,7 +60,11 @@ function listShell({ selection = false, bulk = 0, sort = true } = {}): HTMLEleme
 		}
     </div>
     <div data-gadget-status="" hidden></div>
-    <div class="gadget-card-grid" data-gadget-cards=""></div>
+    <div class="gadget-carousel">
+      <button type="button" data-gadget-scroll="prev" hidden>‹</button>
+      <div class="gadget-card-strip" data-gadget-cards=""></div>
+      <button type="button" data-gadget-scroll="next" hidden>›</button>
+    </div>
     <div data-gadget-empty="" hidden><h3>No records yet</h3></div>
     <div data-gadget-pagination="" hidden>
       <button type="button" data-gadget-page="prev">Prev</button>
@@ -111,6 +115,38 @@ describe("cardlist behavior", () => {
 		expect(root.querySelectorAll(".gadget-card-item")).toHaveLength(3);
 		expect(titles(root)).toEqual(["Carol", "Alice", "Bob"]);
 		expect(root.querySelector(".gadget-card-subtitle")?.textContent).toBe("carol@x.io");
+	});
+
+	// jsdom has no layout, so the strip's geometry is stubbed; the behavior
+	// only reads scrollLeft/scrollWidth/clientWidth.
+	it("offers the carousel controls only when the strip overflows", () => {
+		const root = listShell();
+		const strip = root.querySelector<HTMLElement>("[data-gadget-cards]") as HTMLElement;
+		let scrollLeft = 0;
+		Object.defineProperty(strip, "scrollWidth", { configurable: true, get: () => 1200 });
+		Object.defineProperty(strip, "clientWidth", { configurable: true, get: () => 400 });
+		Object.defineProperty(strip, "scrollLeft", {
+			configurable: true,
+			get: () => scrollLeft,
+			set: (v: number) => {
+				scrollLeft = v;
+			},
+		});
+		mountCardList({ root, config: listConfig(), initialData: { rows: ROWS }, bridge });
+
+		const prev = root.querySelector<HTMLButtonElement>('[data-gadget-scroll="prev"]');
+		const next = root.querySelector<HTMLButtonElement>('[data-gadget-scroll="next"]');
+		expect(prev?.hidden).toBe(false);
+		expect(prev?.disabled).toBe(true); // resting at the start
+		expect(next?.disabled).toBe(false);
+	});
+
+	it("hides the carousel controls when everything fits", () => {
+		const root = listShell();
+		mountCardList({ root, config: listConfig(), initialData: { rows: ROWS }, bridge });
+		for (const btn of root.querySelectorAll<HTMLButtonElement>("[data-gadget-scroll]")) {
+			expect(btn.hidden).toBe(true);
+		}
 	});
 
 	it("shows the empty state when there are no rows", () => {

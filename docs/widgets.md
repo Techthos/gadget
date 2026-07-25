@@ -97,7 +97,10 @@ form := &gadget.Form{
   `pattern`, `min`/`max`/`step`, `minlength`/`maxlength`) and is enforced
   before submit, with inline error messages (`Validation.Message` overrides
   the browser text).
-- **Submit** calls `Submit.Tool` with `{field: value}` merged over
+- **Submit** is driven by the submit button's click, not by native form
+  submission: hosts sandbox the widget iframe without `allow-forms`, which
+  blocks a real submit before its event fires. Enter in a single-line field
+  submits too. It calls `Submit.Tool` with `{field: value}` merged over
   `StaticArgs`. Value types: checkbox → bool, number → number (omitted when
   empty), multiselect → []string, everything else → string (hidden fields
   included — parse server-side).
@@ -109,8 +112,10 @@ form := &gadget.Form{
 ## Card and CardList
 
 `Card` renders one record; `CardList` renders many records as cards in a
-responsive grid with the same client-side machinery as `Table` (filter, sort,
-pagination, selection + bulk actions, per-card actions). Both share a
+horizontally scrolling strip (a carousel) with the same client-side machinery
+as `Table` (filter, sort, pagination, selection + bulk actions, per-card
+actions). The strip is what makes a collection usable in a chat pane, where a
+table overflows and a card grid turns into a long vertical scroll. Both share a
 `CardTemplate` and read the same `rows` contract as `Table` — so the same
 list/mutation tools drive either.
 
@@ -158,12 +163,51 @@ card := &gadget.Card{URI: "ui://myapp/user", Title: "User", Template: tmpl}
   `Filterable`, and `Selection` exactly as `Table`. The sort control is a
   select auto-derived from the sortable body fields; filtering matches title,
   subtitle, and field values.
+- **Carousel**: prev/next controls appear only when the cards overflow the
+  available width and disable at each end. The strip drags with the mouse,
+  swipes on touch, scrolls with the arrow keys when focused, and hides its
+  scrollbar. `PageSize` still applies and bounds how many cards sit in the
+  strip at once. Card width is the `--gadget-card-width`
+  token (default `17rem`), overridable per widget:
+  `Theme: &theme.Theme{Extra: map[string]string{"--gadget-card-width": "22rem"}}`.
 - **Card** renders `rows[0]`; use it as a detail view. Both support
   `InitialData` and `LoadTool`/`LoadArgs` load-time hydration, and re-render
   when an action or tool result returns `RowsKey`.
 - **Actions** behave exactly as in tables (`Static`/`FromRow` args, inline
   `Confirm`, `Variant`); `FromSelection` is bulk-only via
   `CardList.Selection`.
+
+## Branding
+
+Every widget takes an optional `Brand`: a logo, a name, and a link identifying
+the application the widget belongs to. One `*Brand` is normally shared by all
+of a server's widgets.
+
+```go
+brand := &gadget.Brand{
+    Name:    "Acme",
+    URL:     "https://acme.example",  // opened through the host
+    LogoSVG: `<svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="7"/></svg>`,
+}
+
+table := &gadget.Table{URI: "ui://myapp/users", Brand: brand /* … */}
+```
+
+- **Placement**: always the top left of the widget, as the toolbar's first
+  item, before the title. It makes the toolbar appear even when `Title` is
+  empty.
+- **Logo**: prefer `LogoSVG` (inline markup, nothing needed from the host's
+  CSP). `LogoDataURI` takes a `data:image/...;base64,...` string and renders an
+  `<img>`, which depends on the host allowing `img-src data:` — not guaranteed
+  by the spec. External logo URLs are never allowed: documents stay
+  self-contained.
+- **Safety**: `LogoSVG` is author input, checked against script-bearing and
+  resource-loading constructs (`<script>`, `on*=` handlers, `<use>`,
+  `<foreignObject>`, `javascript:`, …); a violation fails `Validate()` and
+  therefore `Document()`.
+- **Link**: a branded widget renders a button, not an anchor — navigation is
+  blocked inside the host's sandboxed iframe, so the URL goes to the host via
+  `ui/openLink`.
 
 ## Wiring with the official Go SDK
 

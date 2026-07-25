@@ -126,7 +126,9 @@ func TestCardListGolden(t *testing.T) {
 	}
 	for _, want := range []string{
 		`data-gadget-widget="cardlist"`,
-		`data-gadget-cards`,
+		`class="gadget-card-strip" data-gadget-cards`,
+		`data-gadget-scroll="prev"`,
+		`data-gadget-scroll="next"`,
 		`data-gadget-sort-select`,
 		`data-gadget-select-all`,
 		`data-gadget-bulk-action="0"`,

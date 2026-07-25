@@ -47,6 +47,7 @@ func table() *gadget.Table {
 			{"id": 3, "name": "Alan Turing", "balance": 0, "createdAt": "2026-03-19T14:00:00Z", "status": "invited"},
 			{"id": 4, "name": "Katherine Johnson", "balance": 233.1, "createdAt": "2026-04-01T08:15:00Z", "status": "active"},
 		}},
+		Brand: demoBrand(),
 		Theme: &theme.Theme{ColorPrimary: "#7c3aed"},
 	}
 }
@@ -94,7 +95,17 @@ func cardList() *gadget.CardList {
 			{Label: "Archive", Tool: "archive_users", Args: map[string]gadget.ArgSource{"ids": gadget.FromSelection("id")}},
 		}},
 		InitialData: map[string]any{"rows": harnessRows()},
+		Brand:       demoBrand(),
 		Theme:       &theme.Theme{ColorPrimary: "#7c3aed"},
+	}
+}
+
+// demoBrand exercises the inline-SVG logo path.
+func demoBrand() *gadget.Brand {
+	return &gadget.Brand{
+		Name:    "Acme",
+		URL:     "https://example.com",
+		LogoSVG: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="8" r="7"/></svg>`,
 	}
 }
 
@@ -105,6 +116,7 @@ func card() *gadget.Card {
 		Template:    cardTemplate(),
 		Empty:       gadget.EmptyState{Title: "No user", Body: "Push a tool-result to load one."},
 		InitialData: map[string]any{"rows": harnessRows()[:1]},
+		Brand:       demoBrand(),
 		Theme:       &theme.Theme{ColorPrimary: "#7c3aed"},
 	}
 }
@@ -124,6 +136,7 @@ func form() *gadget.Form {
 		Submit:      gadget.SubmitSpec{Tool: "save_user", SuccessMessage: "Saved."},
 		Cancel:      &gadget.CancelSpec{},
 		InitialData: map[string]any{"values": map[string]any{"name": "Ada Lovelace", "email": "ada@example.com"}},
+		Brand:       demoBrand(),
 	}
 }
 

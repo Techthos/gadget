@@ -1,0 +1,191 @@
+package gadget
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	xhtml "golang.org/x/net/html"
+)
+
+const logoSVG = `<svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="7"/></svg>`
+
+// 1x1 transparent GIF.
+const logoDataURI = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+
+func TestBrandValidate(t *testing.T) {
+	ok := map[string]*Brand{
+		"nil":              nil,
+		"name only":        {Name: "Acme"},
+		"svg only":         {LogoSVG: logoSVG},
+		"data uri only":    {LogoDataURI: logoDataURI, LogoAlt: "Acme"},
+		"linked":           {Name: "Acme", URL: "https://acme.test"},
+		"svg with newline": {Name: "Acme", LogoSVG: "\n" + logoSVG + "\n"},
+	}
+	for name, b := range ok {
+		t.Run(name, func(t *testing.T) {
+			if err := b.Validate(); err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+
+	bad := map[string]*Brand{
+		"empty":            {},
+		"both logos":       {LogoSVG: logoSVG, LogoDataURI: logoDataURI},
+		"svg with script":  {LogoSVG: `<svg><script>alert(1)</script></svg>`},
+		"svg with handler": {LogoSVG: `<svg onload="alert(1)"><circle r="1"/></svg>`},
+		"svg with use":     {LogoSVG: `<svg><use href="#x"/></svg>`},
+		"svg fragment":     {LogoSVG: `<circle r="1"/>`},
+		"svg trailing":     {LogoSVG: logoSVG + `<img src=x>`},
+		"data uri scheme":  {LogoDataURI: "https://acme.test/logo.png"},
+		"data uri type":    {LogoDataURI: "data:text/html;base64,PGgxPmhpPC9oMT4="},
+		"data uri payload": {LogoDataURI: "data:image/png;base64,<script>"},
+		"bad url":          {Name: "Acme", URL: "javascript:alert(1)"},
+	}
+	for name, b := range bad {
+		t.Run(name, func(t *testing.T) {
+			if err := b.Validate(); err == nil {
+				t.Error("expected an error, got nil")
+			}
+		})
+	}
+}
+
+// widgetsWithBrand returns each widget kind carrying the given brand, so
+// placement is checked uniformly across the four documents.
+func widgetsWithBrand(b *Brand) map[string]Widget {
+	table := canonicalTable()
+	table.Brand = b
+	form := canonicalForm()
+	form.Brand = b
+	card := canonicalCard()
+	card.Brand = b
+	list := canonicalCardList()
+	list.Brand = b
+	return map[string]Widget{"table": table, "form": form, "card": card, "cardlist": list}
+}
+
+func TestBrandRendersInEveryWidget(t *testing.T) {
+	brand := &Brand{Name: "Acme", URL: "https://acme.test", LogoSVG: logoSVG}
+	for kind, w := range widgetsWithBrand(brand) {
+		t.Run(kind, func(t *testing.T) {
+			doc, err := w.Document()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := xhtml.Parse(strings.NewReader(doc)); err != nil {
+				t.Fatalf("document does not parse: %v", err)
+			}
+			for _, want := range []string{
+				`class="gadget-brand-name">Acme<`,
+				`data-gadget-brand="https://acme.test"`,
+				`<circle cx="8" cy="8" r="7"/>`,
+			} {
+				if !strings.Contains(doc, want) {
+					t.Errorf("document missing %q", want)
+				}
+			}
+			// The brand is the toolbar's first child: top left, before the
+			// title. Matched on the class attribute so the stylesheet's own
+			// ".gadget-brand" rule is not mistaken for the markup.
+			toolbar := strings.Index(doc, `class="gadget-toolbar"`)
+			mark := strings.Index(doc, `class="gadget-brand`)
+			title := strings.Index(doc, `class="gadget-title"`)
+			if toolbar < 0 || mark < toolbar {
+				t.Error("brand is not inside the toolbar")
+			}
+			if title >= 0 && title < mark {
+				t.Error("brand must precede the title")
+			}
+		})
+	}
+}
+
+func TestBrandDataURILogoRendersAsImage(t *testing.T) {
+	c := canonicalCard()
+	c.Brand = &Brand{Name: "Acme", LogoDataURI: logoDataURI, LogoAlt: "Acme logo"}
+	doc, err := c.Document()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(doc, `<img class="gadget-brand-logo" src="`+logoDataURI+`" alt="Acme logo">`) {
+		t.Error("document missing the data URI logo image")
+	}
+}
+
+// A brand must produce the toolbar even when the widget has no title.
+func TestBrandCreatesToolbarWithoutTitle(t *testing.T) {
+	brand := &Brand{Name: "Acme"}
+	for kind, w := range widgetsWithBrand(brand) {
+		t.Run(kind, func(t *testing.T) {
+			switch v := w.(type) {
+			case *Table:
+				v.Title = ""
+			case *Form:
+				v.Title = ""
+			case *Card:
+				v.Title = ""
+			case *CardList:
+				v.Title = ""
+			}
+			doc, err := w.Document()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(doc, `class="gadget-toolbar"`) {
+				t.Error("document missing the toolbar")
+			}
+			if !strings.Contains(doc, `class="gadget-brand"`) {
+				t.Error("document missing the brand")
+			}
+		})
+	}
+}
+
+// An unlinked brand renders as a div, not a button: nothing to click.
+func TestBrandWithoutURLIsNotClickable(t *testing.T) {
+	c := canonicalCard()
+	c.Brand = &Brand{Name: "Acme"}
+	doc, err := c.Document()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(doc, "data-gadget-brand") {
+		t.Error("unlinked brand should not carry the openLink hook")
+	}
+	if !strings.Contains(doc, `<div class="gadget-brand">`) {
+		t.Error("unlinked brand should render as a div")
+	}
+}
+
+func TestBrandInvalidFailsDocument(t *testing.T) {
+	c := canonicalCard()
+	c.Brand = &Brand{LogoSVG: `<svg onclick="x()"></svg>`}
+	if _, err := c.Document(); err == nil {
+		t.Fatal("expected Document to reject an unsafe brand logo")
+	}
+}
+
+func TestBrandGolden(t *testing.T) {
+	l := canonicalCardList()
+	l.Brand = &Brand{Name: "Acme", URL: "https://acme.test", LogoSVG: logoSVG}
+	doc, err := l.Document()
+	if err != nil {
+		t.Fatal(err)
+	}
+	golden := filepath.Join("testdata", "golden", "brand.html")
+	if *update {
+		if err := os.WriteFile(golden, []byte(doc), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want, err := os.ReadFile(golden)
+	if err != nil {
+		t.Fatalf("read golden (run with -update to create): %v", err)
+	}
+	if doc != string(want) {
+		t.Error("document does not match golden file; run `go test -run TestBrandGolden -update ./...` and review the diff")
+	}
+}

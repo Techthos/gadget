@@ -2,7 +2,7 @@
 
 Prebuilt, parameterized, interactive HTML widgets for [MCP Apps](https://modelcontextprotocol.io/extensions/apps/overview) — in Go, out of the box.
 
-`gadget` lets an MCP server ship CRUD-style UI — data tables, card grids,
+`gadget` lets an MCP server ship CRUD-style UI — data tables, card carousels,
 forms — as fully self-contained HTML template resources: inline CSS, inline JavaScript,
 zero external files, everything embedded in your single Go binary. Widgets
 speak the official MCP Apps extension (`io.modelcontextprotocol/ui`, spec
@@ -24,14 +24,14 @@ Cursor, Goose, Postman, …).
 <p align="center"><sub>Table and Form widgets rendered by the <code>examples/harness</code> fake host — light and host dark themes.</sub></p>
 
 <p align="center">
-  <img src="docs/assets/cardlist.png" alt="gadget CardList widget: a collection rendered as a responsive grid of cards with title, subtitle, status badge, typed label/value fields, filter, sort, selection and per-card actions" width="640">
+  <img src="docs/assets/cardlist.png" alt="gadget CardList widget: a collection rendered as a horizontally scrolling strip of cards with title, subtitle, status badge, typed label/value fields, filter, sort, selection and per-card actions" width="640">
 </p>
 
 <p align="center">
   <img src="docs/assets/card.png" alt="gadget Card widget: a single record rendered as a detail card with a status badge, label/value fields and actions" width="380">
 </p>
 
-<p align="center"><sub>CardList lays a collection out as a card grid (same filter/sort/pagination/selection as Table); Card renders a single record.</sub></p>
+<p align="center"><sub>CardList lays a collection out as a horizontally scrolling card carousel that fits a narrow chat pane (same filter/sort/pagination/selection as Table); Card renders a single record.</sub></p>
 
 ## Quickstart
 

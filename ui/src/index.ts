@@ -6,6 +6,7 @@
 // host; host context is applied when (and if) the handshake completes.
 import { Bridge } from "./bridge";
 import { CONFIG_ISLAND_ID, DATA_ISLAND_ID, readIsland } from "./data";
+import { delegate } from "./dom";
 import { applyHostContext, emitHostContextApplied, watchSize } from "./host";
 import { HostContext, M } from "./protocol";
 
@@ -54,6 +55,14 @@ export async function boot(): Promise<void> {
       return true;
     })
     .catch(() => false);
+
+  // Brand chrome is server-rendered for every widget kind, so its link is
+  // wired here rather than in each behavior. It is a button, not an anchor:
+  // navigation inside the host's sandboxed iframe is blocked, so the URL goes
+  // to the host through ui/openLink.
+  delegate(root, "click", "brand", (_el, url) => {
+    if (url !== "") void bridge.openLink(url);
+  });
 
   behaviors.get(kind)?.({ root, config, initialData, bridge, ready });
 

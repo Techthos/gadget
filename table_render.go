@@ -51,6 +51,9 @@ func (t *Table) shell() g.Node {
 
 func (t *Table) toolbar() g.Node {
 	var items []g.Node
+	if brand := brandNode(t.Brand); brand != nil {
+		items = append(items, brand)
+	}
 	if t.Title != "" {
 		items = append(items, h.H2(h.Class("gadget-title"), g.Text(t.Title)))
 	}
