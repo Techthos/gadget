@@ -75,6 +75,13 @@
     color: var(--muted); border: 1px solid var(--line);
     border-radius: 999px; padding: .1rem .45rem;
   }
+  .by {
+    color: var(--muted); text-decoration: none; font-size: 12px;
+    border-left: 1px solid var(--line); padding-left: .6rem; margin-left: .15rem;
+  }
+  .by strong { font-weight: 600; color: var(--text); }
+  .by:hover { color: var(--text); }
+  .by:hover strong { color: var(--accent); }
   .topbar-actions { display: flex; align-items: center; gap: .5rem; }
 
   .btn {
@@ -238,6 +245,8 @@
     </span>
     <span class="brand-name">gadget</span>
     <span class="chip">harness</span>
+    <a class="by" href="https://www.techthos.net/" target="_blank" rel="noopener noreferrer"
+       title="Agentic Software Development, done the right way.">by <strong>Techthos</strong></a>
   </div>
   <div class="topbar-actions">
     <div class="seg" id="viewport" role="group" aria-label="Viewport width">
