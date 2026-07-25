@@ -58,6 +58,8 @@ JSON-RPC method names live in `ui/src/spec-constants.json`, consumed by TS and m
 - `bridge.ts` — JSON-RPC 2.0 over `postMessage`: request correlation/timeouts, `ui/initialize` handshake, `tools/call`, size-changed reporting. Only host→view methods are accepted inbound.
 - `host.ts` — applies `hostContext` (style vars, theme, fonts, locale/timeZone); `ResizeObserver` → size-changed notifications.
 - `state.ts` — store + pure reducers (sort/filter/pagination/selection).
+- `dropdown.ts` — upgrades every `<select>` into the gadget dropdown; the
+  select stays in the DOM as the value holder.
 - `widgets/*.ts` — event-delegated behaviors on `data-gadget-*` attributes.
 
 ## Security invariants (by construction — do not break)
@@ -70,4 +72,4 @@ JSON-RPC method names live in `ui/src/spec-constants.json`, consumed by TS and m
 ## Examples / manual testing
 
 - `examples/demo` — complete MCP server (streamable HTTP or `-stdio`) at `http://localhost:8080/mcp`.
-- `examples/harness` — fake MCP Apps host in one HTML page: `go run ./examples/harness`, open `http://localhost:8090`. Renders widgets in a sandboxed iframe, answers the handshake, logs traffic, simulates tool results/errors and theme changes.
+- `examples/harness` — fake MCP Apps host in one HTML page with a story browser: `go run ./examples/harness`, open `http://localhost:8090`. Stories (widget variants) live in `examples/harness/stories.go` and are served at `/story/<id>`; the page renders the selected one in a sandboxed iframe, answers the handshake, logs traffic, follows size-changed, and simulates tool results/errors and theme changes.

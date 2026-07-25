@@ -7,6 +7,7 @@
 import { Bridge } from "./bridge";
 import { CONFIG_ISLAND_ID, DATA_ISLAND_ID, readIsland } from "./data";
 import { delegate } from "./dom";
+import { enhanceSelects } from "./dropdown";
 import { applyHostContext, emitHostContextApplied, watchSize } from "./host";
 import { HostContext, M } from "./protocol";
 
@@ -64,6 +65,11 @@ export async function boot(): Promise<void> {
     if (url !== "") void bridge.openLink(url);
   });
 
+  // Every server-rendered <select> becomes a gadget dropdown before the
+  // behavior mounts. The select survives the upgrade, so behaviors keep
+  // finding and driving the same element.
+  enhanceSelects(root);
+
   behaviors.get(kind)?.({ root, config, initialData, bridge, ready });
 
   // Report size from first paint on — NOT gated on the handshake, so the
@@ -78,11 +84,13 @@ import { mountForm } from "./widgets/form";
 import { mountTable } from "./widgets/table";
 import { mountCard } from "./widgets/card";
 import { mountCardList } from "./widgets/cardlist";
+import { mountMenu } from "./widgets/menu";
 
 registerBehavior("table", mountTable);
 registerBehavior("form", mountForm);
 registerBehavior("card", mountCard);
 registerBehavior("cardlist", mountCardList);
+registerBehavior("menu", mountMenu);
 
 if (typeof document !== "undefined" && "addEventListener" in document) {
   if (document.readyState === "loading") {

@@ -40,6 +40,8 @@
   --gadget-space-unit: 0.25rem;
   /* fixed width of one card in the CardList carousel */
   --gadget-card-width: 17rem;
+  /* smallest a Menu tile may get before the grid drops a column */
+  --gadget-menu-tile-min: 11rem;
 
   /* let host-provided light-dark() values self-adapt */
   color-scheme: light dark;

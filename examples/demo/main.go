@@ -97,6 +97,7 @@ func usersTable() *gadget.Table {
 			),
 		},
 		PageSize:    10,
+		PageSizes:   []int{10, 25, 50},
 		DefaultSort: &gadget.SortSpec{Key: "name"},
 		Filterable:  true,
 		Selection: &gadget.SelectionConfig{Bulk: []gadget.Action{
@@ -136,6 +137,7 @@ func usersCards() *gadget.CardList {
 			},
 		},
 		PageSize:    12,
+		PageSizes:   []int{12, 24, 48},
 		DefaultSort: &gadget.SortSpec{Key: "balance", Desc: true},
 		Filterable:  true,
 		Selection: &gadget.SelectionConfig{Bulk: []gadget.Action{
@@ -171,6 +173,52 @@ func userForm() *gadget.Form {
 	}
 }
 
+// demoMenu is the app's front door: one tile per UI-backed tool. Choosing a
+// tile calls that tool, and the host opens the widget bound to it.
+func demoMenu() *gadget.Menu {
+	return &gadget.Menu{
+		URI:   "ui://demo/menu",
+		Title: "Acme users",
+		Intro: "Pick where to start.",
+		Items: []gadget.MenuItem{
+			{
+				Tool:         "list_users",
+				Label:        "User table",
+				Description:  "Sortable, filterable directory with bulk actions.",
+				IconSVG:      iconTable,
+				Badge:        "read",
+				BadgeVariant: gadget.BadgeInfo,
+			},
+			{
+				Tool:         "list_user_cards",
+				Label:        "User cards",
+				Description:  "The same users as a swipeable card strip.",
+				IconSVG:      iconCards,
+				Badge:        "read",
+				BadgeVariant: gadget.BadgeInfo,
+			},
+			{
+				Tool:         "edit_user",
+				Args:         map[string]any{"id": 1},
+				Label:        "Edit Ada",
+				Description:  "Open the edit form for the first user.",
+				IconSVG:      iconPencil,
+				Badge:        "write",
+				BadgeVariant: gadget.BadgeWarning,
+			},
+		},
+		Brand: demoBrand(),
+		Theme: &theme.Theme{ColorPrimary: "#7c3aed"},
+	}
+}
+
+// Menu icons are inline SVG: a widget document references nothing external.
+const (
+	iconTable  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/></svg>`
+	iconCards  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="8" height="14" rx="2"/><rect x="13" y="5" width="8" height="14" rx="2"/></svg>`
+	iconPencil = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20h4L20 8l-4-4L4 16v4z"/></svg>`
+)
+
 // demoBrand is the application mark shown at the top left of every widget.
 func demoBrand() *gadget.Brand {
 	return &gadget.Brand{
@@ -192,12 +240,21 @@ func newServer(data *db) *mcp.Server {
 	table := usersTable()
 	cards := usersCards()
 	form := userForm()
+	menu := demoMenu()
 
 	// Model-visible: list users, rendered by the table widget.
 	type empty struct{}
 	type rowsOut struct {
 		Rows []map[string]any `json:"rows"`
 	}
+
+	// Model-visible: the app's main menu. It carries no data of its own — the
+	// tiles are baked into the document — so the result is text only.
+	must(gosdk.AddWidgetToolFor(server, menu,
+		&mcp.Tool{Name: "main_menu", Description: "Show the Acme users app menu."},
+		func(context.Context, *mcp.CallToolRequest, empty) (*mcp.CallToolResult, empty, error) {
+			return textResult("Showing the app menu."), empty{}, nil
+		}))
 	must(gosdk.AddWidgetToolFor(server, table,
 		&mcp.Tool{Name: "list_users", Description: "List all users in an interactive table."},
 		func(context.Context, *mcp.CallToolRequest, empty) (*mcp.CallToolResult, rowsOut, error) {

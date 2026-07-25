@@ -21,6 +21,9 @@ body {
 }
 
 .gadget-root {
+  /* Anchor for dropdown panels, which are positioned here rather than inside
+   * the card chrome that would clip them. */
+  position: relative;
   font-family: var(--gadget-font);
   color: var(--gadget-color-text);
   background: var(--gadget-color-bg);
@@ -132,10 +135,32 @@ body {
   border-color: currentcolor;
 }
 
-.gadget-status {
-  padding: calc(var(--gadget-space-unit) * 2) calc(var(--gadget-space-unit) * 4);
-  border-bottom: 1px solid var(--gadget-color-border);
+/* Status bar: the last element of every widget. The bar is always laid out,
+ * at a fixed height and with its message clipped to a single line, so the
+ * widget's height is identical whether or not something is loading — a host
+ * iframe sized from our size-changed reports must not jump mid-call. */
+.gadget-statusbar {
+  display: flex;
+  align-items: center;
   font-size: 0.8125rem;
+  padding: calc(var(--gadget-space-unit) * 2) calc(var(--gadget-space-unit) * 4);
+  border-top: 1px solid var(--gadget-color-border);
+}
+
+/* Zero-width strut: holds the bar at exactly one line while the message is
+ * hidden, at whatever font scale the host imposes. */
+.gadget-statusbar::before {
+  content: "";
+  width: 0;
+  height: 1.45em;
+}
+
+.gadget-status {
+  color: var(--gadget-color-text-muted);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .gadget-status--error {

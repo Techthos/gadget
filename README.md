@@ -90,6 +90,8 @@ host-themed table — sortable, filterable, paginated — inside the chat.
   MCP tool calls, inline destructive-action confirmation, empty/loading states.
 - **Form**: 10 field types, native + inline client validation, submit as a
   tool call, server-side field errors mapped inline, prefill for edit flows.
+- **Menu**: a launcher grid of tiles, one per UI-backed tool — the app's front
+  door. Choosing a tile calls that tool so the host opens its widget.
 - **Host-aware theming**: `--gadget-*` design tokens defaulting to
   host-injected CSS variables (Claude/ChatGPT look automatic), `Theme` struct
   overrides, dark mode.
@@ -103,7 +105,7 @@ host-themed table — sortable, filterable, paginated — inside the chat.
 
 ## Documentation
 
-- [Widget reference](docs/widgets.md) — Table, Form, actions, data contract
+- [Widget reference](docs/widgets.md) — Table, Form, Card, CardList, Menu, actions, data contract
 - [Theming](docs/theming.md) — tokens, host variables, dark mode
 - [Architecture](docs/architecture.md) — rendering model, runtime, security
 
@@ -112,10 +114,12 @@ host-themed table — sortable, filterable, paginated — inside the chat.
 - `examples/demo` — complete MCP server (streamable HTTP or `-stdio`):
   list/edit/save/delete/archive users. Point MCPJam or any MCP Apps host at
   `http://localhost:8080/mcp`.
-- `examples/harness` — a fake MCP Apps host in one HTML page: renders
-  widgets in a sandboxed iframe, answers the JSON-RPC handshake, logs all
-  traffic, simulates tool results/errors and theme changes. `go run
-  ./examples/harness`, open `http://localhost:8090`.
+- `examples/harness` — a fake MCP Apps host in one HTML page, with a story
+  browser: pick a widget variant from the rail (table, cardlist, card, form,
+  menu, plus empty and long-list states), see it rendered in a sandboxed
+  iframe at any viewport width, and watch the JSON-RPC traffic. It answers the
+  handshake, replies to tool calls, and simulates tool results/errors and
+  theme changes. `go run ./examples/harness`, open `http://localhost:8090`.
 
 ## Development
 

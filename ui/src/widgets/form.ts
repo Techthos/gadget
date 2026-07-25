@@ -1,6 +1,7 @@
 // Form widget behavior: native-validation gating, submit as an MCP tool
 // call, server-side field errors mapped inline, prefill from tool results.
 import type { MountContext } from "../index";
+import { refreshDropdowns } from "../dropdown";
 import { CallToolResult, M } from "../protocol";
 
 interface FieldCfg {
@@ -104,6 +105,9 @@ export function mountForm(ctx: MountContext): void {
 				control.value = v === null || v === undefined ? "" : String(v);
 			}
 		}
+		// A programmatic write fires no event, so the dropdowns built over the
+		// select fields cannot see the new prefill on their own.
+		refreshDropdowns(form);
 	}
 
 	function collectValues(): Record<string, unknown> {
@@ -205,6 +209,7 @@ export function mountForm(ctx: MountContext): void {
 
 	root.querySelector<HTMLElement>("[data-gadget-cancel]")?.addEventListener("click", () => {
 		form.reset();
+		refreshDropdowns(form);
 		clearErrors();
 		showStatus("", "");
 	});

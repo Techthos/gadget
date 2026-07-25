@@ -33,6 +33,10 @@ type Table struct {
 
 	// PageSize enables client-side pagination when > 0.
 	PageSize int
+	// PageSizes offers alternative page sizes in a dropdown on the pagination
+	// bar. Entries must be > 0 and PageSize must be set; PageSize is added to
+	// the list if it is not among them. Empty renders no chooser.
+	PageSizes []int
 	// DefaultSort pre-sorts rows on load.
 	DefaultSort *SortSpec
 	// Filterable adds a client-side text filter box.
@@ -247,6 +251,9 @@ func (t *Table) Validate() error {
 	}
 	if t.PageSize < 0 {
 		return fmt.Errorf("gadget: table %s: PageSize must be >= 0", t.URI)
+	}
+	if err := validatePageSizes(fmt.Sprintf("gadget: table %s", t.URI), t.PageSize, t.PageSizes); err != nil {
+		return err
 	}
 	if t.DefaultSort != nil && t.DefaultSort.Key == "" {
 		return fmt.Errorf("gadget: table %s: DefaultSort.Key is required", t.URI)

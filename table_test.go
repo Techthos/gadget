@@ -39,6 +39,7 @@ func canonicalTable() *Table {
 			),
 		},
 		PageSize:    10,
+		PageSizes:   []int{25, 10, 50},
 		DefaultSort: &SortSpec{Key: "name"},
 		Filterable:  true,
 		Selection: &SelectionConfig{Bulk: []Action{
@@ -89,6 +90,7 @@ func TestTableGolden(t *testing.T) {
 		`data-gadget-sort="name"`,
 		`data-gadget-select-all`,
 		`data-gadget-bulk-action="0"`,
+		`data-gadget-page-size`,
 		`--gadget-color-primary:#7c3aed`,
 	} {
 		if !strings.Contains(doc, want) {
@@ -186,7 +188,9 @@ func TestTableValidate(t *testing.T) {
 				"v": {},
 			}})}
 		},
-		"negative page size": func(t *Table) { t.PageSize = -1 },
+		"negative page size":     func(t *Table) { t.PageSize = -1 },
+		"page size option zero":  func(t *Table) { t.PageSizes = []int{10, 0} },
+		"page sizes unpaginated": func(t *Table) { t.PageSize, t.PageSizes = 0, []int{10} },
 		"default sort no key": func(t *Table) {
 			t.DefaultSort = &SortSpec{}
 		},

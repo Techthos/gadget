@@ -44,10 +44,10 @@ func (c *Card) shell() g.Node {
 		chrome = append(chrome, h.Div(toolbar...))
 	}
 	chrome = append(chrome,
-		statusNode(),
 		// The runtime renders one card element into this host.
 		h.Div(h.Class("gadget-card-host"), htmlx.Data("card", "")),
 		emptyStateNode(c.Empty),
+		statusNode(),
 	)
 	return h.Div(h.Class("gadget-root"), htmlx.Data("widget", "card"),
 		h.Div(chrome...),
@@ -82,10 +82,10 @@ func (l *CardList) shell() g.Node {
 	return h.Div(h.Class("gadget-root"), htmlx.Data("widget", "cardlist"),
 		h.Div(h.Class("gadget-card"),
 			l.toolbar(),
-			statusNode(),
 			carouselNode(),
 			emptyStateNode(l.Empty),
-			paginationNode(),
+			paginationNode(pageSizeOptions(l.PageSize, l.PageSizes), l.PageSize),
+			statusNode(),
 		),
 	)
 }

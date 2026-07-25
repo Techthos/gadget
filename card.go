@@ -245,6 +245,10 @@ type CardList struct {
 
 	// PageSize enables client-side pagination when > 0.
 	PageSize int
+	// PageSizes offers alternative page sizes in a dropdown on the pagination
+	// bar. Entries must be > 0 and PageSize must be set; PageSize is added to
+	// the list if it is not among them. Empty renders no chooser.
+	PageSizes []int
 	// DefaultSort pre-sorts records on load.
 	DefaultSort *SortSpec
 	// Filterable adds a client-side text filter box.
@@ -297,6 +301,9 @@ func (l *CardList) Validate() error {
 	}
 	if l.PageSize < 0 {
 		return fmt.Errorf("gadget: cardlist %s: PageSize must be >= 0", l.URI)
+	}
+	if err := validatePageSizes(fmt.Sprintf("gadget: cardlist %s", l.URI), l.PageSize, l.PageSizes); err != nil {
+		return err
 	}
 	if l.DefaultSort != nil && l.DefaultSort.Key == "" {
 		return fmt.Errorf("gadget: cardlist %s: DefaultSort.Key is required", l.URI)

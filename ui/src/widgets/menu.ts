@@ -1,0 +1,85 @@
+// Menu widget behavior: a launcher grid. Every tile is already in the markup
+// (Go renders it from the authored items), so this only maps a click to the
+// tool call recorded at the same index in the config island.
+//
+// A menu item is navigation: the host answers the call by opening the tool's
+// own widget, replacing or stacking this view. So nothing is rendered from
+// the result — only progress while the call is in flight, and the failure if
+// it comes back as one.
+import type { MountContext } from "../index";
+import { delegate } from "../dom";
+import { M } from "../protocol";
+import { textOf } from "./card-common";
+
+interface MenuItemCfg {
+	tool: string;
+	args?: Record<string, unknown>;
+}
+
+interface MenuCfg {
+	widget: string;
+	items: MenuItemCfg[];
+}
+
+export function mountMenu(ctx: MountContext): void {
+	const cfg = ctx.config as unknown as MenuCfg;
+	const { root, bridge } = ctx;
+
+	const items = Array.isArray(cfg.items) ? cfg.items : [];
+	const tiles = [...root.querySelectorAll<HTMLButtonElement>("[data-gadget-menu-item]")];
+	const statusEl = root.querySelector<HTMLElement>("[data-gadget-status]");
+
+	let busy = false;
+
+	function showStatus(kind: "loading" | "error" | "", msg: string): void {
+		if (!statusEl) return;
+		statusEl.hidden = msg === "";
+		statusEl.textContent = msg;
+		statusEl.className = "gadget-status" + (kind ? ` gadget-status--${kind}` : "");
+	}
+
+	// The whole menu goes inert during a call: a second tile would race the
+	// first one's view swap.
+	function setBusy(value: boolean): void {
+		busy = value;
+		for (const tile of tiles) tile.disabled = value;
+	}
+
+	function labelOf(tile: HTMLElement): string {
+		return tile.querySelector(".gadget-menu-label")?.textContent ?? "this";
+	}
+
+	async function open(item: MenuItemCfg, label: string): Promise<void> {
+		if (busy || !item.tool) return;
+		setBusy(true);
+		showStatus("loading", `Opening ${label}…`);
+		try {
+			const res = await bridge.callTool(item.tool, item.args ?? {});
+			setBusy(false);
+			if (res.isError) {
+				showStatus("error", textOf(res) ?? `Could not open ${label}.`);
+			} else {
+				showStatus("", "");
+			}
+		} catch (e) {
+			setBusy(false);
+			showStatus("error", e instanceof Error ? e.message : String(e));
+		}
+	}
+
+	delegate(root, "click", "menu-item", (el, value) => {
+		const item = items[Number(value)];
+		if (item) void open(item, labelOf(el));
+	});
+
+	// A host that keeps this view alive still pushes the tool lifecycle
+	// notifications; either one means the call is no longer ours to wait on.
+	bridge.on(M.toolResult, () => {
+		setBusy(false);
+		showStatus("", "");
+	});
+	bridge.on(M.toolCancelled, () => {
+		setBusy(false);
+		showStatus("", "");
+	});
+}

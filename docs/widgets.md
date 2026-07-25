@@ -16,6 +16,7 @@ Widgets read runtime data from the tool result's `structuredContent`:
 | Card | `rows` (`RowsKey`) | `[]object` — renders the first element (`rows[0]`) |
 | Form | `values` (`PrefillKey`) | `{field: value}` prefill |
 | Form | `errors` (`ErrorsKey`) | `{field: "message"}` server-side errors |
+| Menu | — | reads nothing; its tiles are authored, not fetched |
 
 `gadget.RowsOf(slice)` converts typed Go slices to row maps (honors json
 tags).
@@ -44,6 +45,7 @@ table := &gadget.Table{
         ),
     },
     PageSize:    10,
+    PageSizes:   []int{10, 25, 50}, // page-size dropdown on the pagination bar
     DefaultSort: &gadget.SortSpec{Key: "name"},
     Filterable:  true,
     Selection: &gadget.SelectionConfig{Bulk: []gadget.Action{{
@@ -59,7 +61,9 @@ table := &gadget.Table{
   date formats: `date`, `datetime`, `time`, `relative` — all rendered via
   `Intl` in the host's locale/time zone.
 - **Sorting/filtering/pagination** are client-side over the delivered rows.
-  Text/number/date columns sort by default (`Sortable` overrides).
+  Text/number/date columns sort by default (`Sortable` overrides). `PageSizes`
+  adds a page-size dropdown to the pagination bar; picking a size returns to
+  the first page, and the bar stays visible even when everything fits on one.
 - **RowID** (default `"id"`) identifies rows for selection and args.
 - **Actions**: `Kind` tool (default) calls an MCP tool; `Kind` link opens
   `HrefKey` via `ui/open-link`. Arg sources: `Static(v)`, `FromRow(field)`,
@@ -93,6 +97,11 @@ form := &gadget.Form{
 
 - **Field types**: `text`, `textarea`, `number`, `checkbox`, `select`,
   `multiselect`, `date`, `time`, `hidden`, `readonly`.
+- **Dropdowns**: `select` and `multiselect` render as the gadget dropdown —
+  the runtime upgrades the `<select>` into a trigger plus popup listbox
+  (arrow keys, Home/End, typeahead, Escape, check marks) and keeps the select
+  as the value holder, so validation and submitted value types are unchanged.
+  `Placeholder` becomes the trigger's empty-state text.
 - **Client validation** renders as native HTML attributes (`required`,
   `pattern`, `min`/`max`/`step`, `minlength`/`maxlength`) and is enforced
   before submit, with inline error messages (`Validation.Message` overrides
@@ -143,6 +152,7 @@ cards := &gadget.CardList{
     Title:       "Users",
     Template:    tmpl,
     PageSize:    12,
+    PageSizes:   []int{12, 24, 48},
     DefaultSort: &gadget.SortSpec{Key: "balance", Desc: true},
     Filterable:  true,
     Selection: &gadget.SelectionConfig{Bulk: []gadget.Action{{
@@ -159,10 +169,10 @@ card := &gadget.Card{URI: "ui://myapp/user", Title: "User", Template: tmpl}
   heading from row fields; `Badge` (a badge column) shows a status pill;
   `Fields` are typed label/value rows (same `Column` types and formats as a
   table, minus `actions`); `Actions` render as footer buttons.
-- **CardList** reuses `RowsKey`/`RowID`, `PageSize`, `DefaultSort`,
-  `Filterable`, and `Selection` exactly as `Table`. The sort control is a
-  select auto-derived from the sortable body fields; filtering matches title,
-  subtitle, and field values.
+- **CardList** reuses `RowsKey`/`RowID`, `PageSize`, `PageSizes`,
+  `DefaultSort`, `Filterable`, and `Selection` exactly as `Table`. The sort
+  control is a dropdown auto-derived from the sortable body fields; filtering
+  matches title, subtitle, and field values.
 - **Carousel**: prev/next controls appear only when the cards overflow the
   available width and disable at each end. The strip drags with the mouse,
   swipes on touch, scrolls with the arrow keys when focused, and hides its
@@ -176,6 +186,61 @@ card := &gadget.Card{URI: "ui://myapp/user", Title: "User", Template: tmpl}
 - **Actions** behave exactly as in tables (`Static`/`FromRow` args, inline
   `Confirm`, `Variant`); `FromSelection` is bulk-only via
   `CardList.Selection`.
+
+## Menu
+
+A launcher: a responsive grid of tiles, one per tool the server exposes with a
+UI. Choosing a tile calls that tool and the host opens the widget bound to it,
+so a menu is the entry point an app hands the user before any record is in
+view.
+
+```go
+menu := &gadget.Menu{
+    URI:   "ui://myapp/menu",
+    Title: "Acme users",
+    Intro: "Pick where to start.",
+    Items: []gadget.MenuItem{
+        {
+            Tool:         "list_users",
+            Label:        "User table",
+            Description:  "Sortable, filterable directory.",
+            IconSVG:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/></svg>`,
+            Badge:        "read",
+            BadgeVariant: gadget.BadgeInfo,
+        },
+        {Tool: "edit_user", Args: map[string]any{"id": 1}, Label: "Edit Ada"},
+    },
+    Brand: brand,
+}
+
+// The tool that shows the menu returns no structured data of its own.
+type empty struct{}
+gosdk.AddWidgetToolFor(server, menu,
+    &mcp.Tool{Name: "main_menu", Description: "Show the app menu."},
+    func(context.Context, *mcp.CallToolRequest, empty) (*mcp.CallToolResult, empty, error) {
+        return nil, empty{}, nil
+    })
+```
+
+- **Authored, not fetched**: unlike the data widgets, the tiles are rendered
+  server-side from `Items`. There is no `InitialData`, no `LoadTool`, and no
+  `structuredContent` key — the document is complete the moment it is
+  registered.
+- **`Args`** are fixed values. A tile has no record behind it, so
+  `Static`/`FromRow`/`FromSelection` do not apply.
+- **`Label`** defaults to `Tool`, so a bare `{Tool: "list_users"}` still
+  renders a usable tile.
+- **`IconSVG`** is inline markup, never a URL, with the same safety checks as
+  `Brand.LogoSVG`. `Badge`/`BadgeVariant` add a short marker ("read", "beta")
+  in the tile's top right.
+- **While a tile is firing**, the whole grid is disabled — a second tile would
+  race the first one's view swap — and the status region reads
+  "Opening &lt;label&gt;…". A result with `isError` is shown there and the menu
+  stays usable; otherwise nothing is rendered, because the host takes over.
+- **Layout** reflows via CSS `auto-fill`, so one document works in a narrow
+  chat pane and a wide panel. Minimum tile width is the
+  `--gadget-menu-tile-min` token (default `11rem`), overridable per widget:
+  `Theme: &theme.Theme{Extra: map[string]string{"--gadget-menu-tile-min": "14rem"}}`.
 
 ## Branding
 

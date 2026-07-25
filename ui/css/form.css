@@ -52,10 +52,6 @@
   color: var(--gadget-color-text-muted);
 }
 
-.gadget-form select[multiple] {
-  min-height: 6rem;
-}
-
 .gadget-form-actions {
   display: flex;
   justify-content: flex-end;

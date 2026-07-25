@@ -4,7 +4,7 @@ import { mountTable } from "../src/widgets/table";
 import { M } from "../src/protocol";
 import { FakeHost, flush } from "./fake-host";
 
-function shell({ selection = false, bulk = 0 } = {}): HTMLElement {
+function shell({ selection = false, bulk = 0, pageSizes = [] as number[] } = {}): HTMLElement {
   document.body.innerHTML = "";
   const root = document.createElement("div");
   root.className = "gadget-root";
@@ -28,6 +28,13 @@ function shell({ selection = false, bulk = 0 } = {}): HTMLElement {
     </tr></thead><tbody data-gadget-rows=""></tbody></table>
     <div data-gadget-empty="" hidden><h3>No records yet</h3></div>
     <div data-gadget-pagination="" hidden>
+      ${
+        pageSizes.length > 0
+          ? `<div class="gadget-page-size"><span>Per page</span><select data-gadget-page-size="">` +
+            pageSizes.map((n) => `<option value="${n}">${n}</option>`).join("") +
+            `</select></div>`
+          : ""
+      }
       <button type="button" data-gadget-page="prev">Prev</button>
       <span data-gadget-page-info=""></span>
       <button type="button" data-gadget-page="next">Next</button>
@@ -151,6 +158,22 @@ describe("table behavior", () => {
     root.querySelector<HTMLElement>('[data-gadget-page="next"]')!.click();
     expect(root.querySelectorAll("tbody tr")).toHaveLength(1);
     expect(info.textContent).toBe("3–3 of 3");
+  });
+
+  it("resizes the page from the page-size chooser", () => {
+    const root = shell({ pageSizes: [2, 10] });
+    mountTable({ root, config: config({ pageSize: 2 }), initialData: { rows: ROWS }, bridge });
+    const pagination = root.querySelector<HTMLElement>("[data-gadget-pagination]")!;
+    const sizeEl = root.querySelector<HTMLSelectElement>("[data-gadget-page-size]")!;
+    expect(sizeEl.value).toBe("2");
+    expect(root.querySelectorAll("tbody tr")).toHaveLength(2);
+
+    sizeEl.value = "10";
+    sizeEl.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(root.querySelectorAll("tbody tr")).toHaveLength(3);
+    expect(root.querySelector("[data-gadget-page-info]")?.textContent).toBe("1–3 of 3");
+    // One page now, but the bar stays: it is the way back to a smaller page.
+    expect(pagination.hidden).toBe(false);
   });
 
   it("fires row actions with FromRow args and applies returned rows", async () => {

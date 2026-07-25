@@ -1,0 +1,45 @@
+# Runs the gadget widget harness.
+#
+#   docker compose -f examples/harness/docker-compose.yml up -d --build
+#
+# Then open http://localhost:8090.
+#
+# Like the Dockerfile, this needs no checkout: the build context is the remote
+# repository, so the file works on its own on any host with Docker.
+#
+#   curl -O https://raw.githubusercontent.com/Techthos/gadget/main/examples/harness/docker-compose.yml
+#   docker compose up -d
+#
+# To rebuild after new commits on the ref:
+#   docker compose build --no-cache && docker compose up -d
+
+services:
+  harness:
+    build:
+      context: https://github.com/Techthos/gadget.git#main:examples/harness
+      args:
+        # Branch, tag or commit to serve.
+        GIT_REF: main
+    image: gadget-harness:local
+    # Publish on the host. Bind to 127.0.0.1 instead (127.0.0.1:8090:8090) when
+    # a reverse proxy in front terminates TLS.
+    ports:
+      - "8090:8090"
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # The image is scratch — no shell or curl — so a container-side healthcheck
+    # is not possible; probe http://<host>:8090/ from outside.
+
+# Fronting it with Traefik? Drop the ports mapping and add, on the service:
+#
+#   labels:
+#     - "traefik.enable=true"
+#     - "traefik.http.routers.harness.rule=Host(`harness.example.com`)"
+#     - "traefik.http.routers.harness.entrypoints=websecure"
+#     - "traefik.http.routers.harness.tls.certresolver=letsencrypt"
+#     - "traefik.http.services.harness.loadbalancer.server.port=8090"
+#   networks: [proxy]

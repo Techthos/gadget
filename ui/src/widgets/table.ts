@@ -4,6 +4,7 @@ import type { MountContext } from "../index";
 import { HOST_CONTEXT_EVENT } from "../host";
 import { Row, rowsFrom } from "../data";
 import { clear, delegate, h } from "../dom";
+import { refreshDropdown } from "../dropdown";
 import { formatCell } from "../format";
 import { CallToolResult, M } from "../protocol";
 import {
@@ -63,6 +64,9 @@ interface TableState {
 	sort: SortSpec | null;
 	filter: string;
 	page: number;
+	// Starts at the configured PageSize; the pagination bar's chooser (when the
+	// widget renders one) moves it.
+	pageSize: number;
 	selected: string[];
 	status: "idle" | "loading";
 	statusKind?: "error" | "success";
@@ -89,6 +93,7 @@ export function mountTable(ctx: MountContext): void {
 	const bulkEl = root.querySelector<HTMLElement>("[data-gadget-bulk]");
 	const bulkCountEl = root.querySelector<HTMLElement>("[data-gadget-bulk-count]");
 	const selectAllEl = root.querySelector<HTMLInputElement>("[data-gadget-select-all]");
+	const pageSizeEl = root.querySelector<HTMLSelectElement>("[data-gadget-page-size]");
 
 	const filterKeys = cfg.columns.map((c) => c.key).filter((k) => k !== "");
 	const rowID = (row: Row): string => String(row[cfg.rowId] ?? "");
@@ -98,6 +103,7 @@ export function mountTable(ctx: MountContext): void {
 		sort: cfg.defaultSort ?? null,
 		filter: "",
 		page: 0,
+		pageSize: cfg.pageSize,
 		selected: [],
 		status: "idle",
 	});
@@ -107,7 +113,7 @@ export function mountTable(ctx: MountContext): void {
 	function visible(s: TableState): { pageRows: Row[]; total: number } {
 		const filtered = sortRows(filterRows(s.rows, s.filter, filterKeys), s.sort);
 		return {
-			pageRows: pageSlice(filtered, s.page, cfg.pageSize),
+			pageRows: pageSlice(filtered, s.page, s.pageSize),
 			total: filtered.length,
 		};
 	}
@@ -290,17 +296,24 @@ export function mountTable(ctx: MountContext): void {
 		}
 
 		// pagination
-		const pages = pageCount(total, cfg.pageSize);
+		const pages = pageCount(total, s.pageSize);
 		if (paginationEl) {
-			paginationEl.hidden = cfg.pageSize <= 0 || pages <= 1;
+			// A single page normally means no bar — but with a page-size chooser
+			// the bar is also the way back to a smaller page, so it stays.
+			paginationEl.hidden = s.pageSize <= 0 || (pages <= 1 && !pageSizeEl);
 			if (pageInfoEl) {
-				const from = total === 0 ? 0 : s.page * cfg.pageSize + 1;
-				const to = Math.min((s.page + 1) * cfg.pageSize, total);
+				const from = total === 0 ? 0 : s.page * s.pageSize + 1;
+				const to = Math.min((s.page + 1) * s.pageSize, total);
 				pageInfoEl.textContent = `${from}–${to} of ${total}`;
 			}
 			for (const btn of paginationEl.querySelectorAll<HTMLButtonElement>("[data-gadget-page]")) {
 				const dir = btn.getAttribute("data-gadget-page");
 				btn.disabled = busy || (dir === "prev" ? s.page <= 0 : s.page >= pages - 1);
+			}
+			if (pageSizeEl) {
+				pageSizeEl.value = String(s.pageSize);
+				pageSizeEl.disabled = busy;
+				refreshDropdown(pageSizeEl);
 			}
 		}
 
@@ -349,7 +362,14 @@ export function mountTable(ctx: MountContext): void {
 		const s = store.get();
 		const total = filterRows(s.rows, s.filter, filterKeys).length;
 		const next = dir === "prev" ? s.page - 1 : s.page + 1;
-		store.set({ page: clampPage(next, total, cfg.pageSize) });
+		store.set({ page: clampPage(next, total, s.pageSize) });
+	});
+
+	// Resizing the page invalidates the current page number, so go back to the
+	// first one rather than guess where the reader was.
+	delegate(root, "change", "page-size", (el) => {
+		const size = Number((el as HTMLSelectElement).value);
+		if (Number.isFinite(size) && size > 0) store.set({ pageSize: size, page: 0 });
 	});
 
 	delegate(root, "change", "select-row", (el) => {

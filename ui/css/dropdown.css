@@ -1,0 +1,182 @@
+/* Dropdown: the runtime upgrades every <select> into a trigger button plus a
+ * popup listbox (see ui/src/dropdown.ts). The select stays in the DOM as the
+ * value holder, so it is only taken out of view — never out of the document. */
+
+.gadget-dd {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+
+/* A form field's control fills the field. */
+.gadget-field .gadget-dd {
+  display: flex;
+}
+
+.gadget-dd-native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.gadget-dd-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--gadget-space-unit) * 2);
+  width: 100%;
+  min-width: 0;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.gadget-dd-trigger:hover:not(:disabled) {
+  border-color: var(--gadget-color-primary);
+}
+
+.gadget-dd-trigger[aria-expanded="true"] {
+  border-color: var(--gadget-color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gadget-color-primary) 20%, transparent);
+}
+
+.gadget-dd-trigger[aria-invalid="true"] {
+  border-color: var(--gadget-color-danger);
+}
+
+.gadget-dd-trigger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.gadget-dd-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.gadget-dd-value--placeholder {
+  color: var(--gadget-color-text-muted);
+}
+
+.gadget-dd-chevron {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  color: var(--gadget-color-text-muted);
+  transition: transform 0.18s ease;
+}
+
+.gadget-dd-trigger[aria-expanded="true"] .gadget-dd-chevron {
+  transform: rotate(180deg);
+  color: var(--gadget-color-primary);
+}
+
+/* Anchored to .gadget-root, not to the field: the card chrome clips overflow,
+ * and a panel inside it would be cut off at the card's edge. The runtime sets
+ * left/top/min-width from the trigger's box. */
+.gadget-dd-panel {
+  position: absolute;
+  z-index: 20;
+  max-height: 15rem;
+  overflow-y: auto;
+  padding: calc(var(--gadget-space-unit) * 1);
+  background: var(--gadget-color-bg);
+  border: 1px solid var(--gadget-color-border);
+  border-radius: var(--gadget-radius-m);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.16);
+  animation: gadget-dd-in 0.12s ease-out;
+}
+
+.gadget-dd-panel--above {
+  animation-name: gadget-dd-in-above;
+}
+
+@keyframes gadget-dd-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem);
+  }
+}
+
+@keyframes gadget-dd-in-above {
+  from {
+    opacity: 0;
+    transform: translateY(0.25rem);
+  }
+}
+
+.gadget-dd-option {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--gadget-space-unit) * 2);
+  padding: calc(var(--gadget-space-unit) * 1.5) calc(var(--gadget-space-unit) * 2);
+  border-radius: var(--gadget-radius-s);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.gadget-dd-option--active {
+  background: var(--gadget-color-surface);
+}
+
+.gadget-dd-option[aria-selected="true"] {
+  color: var(--gadget-color-primary);
+  font-weight: 500;
+}
+
+.gadget-dd-option[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* The check keeps its box on every row, so labels share one left edge. */
+.gadget-dd-check {
+  flex: none;
+  width: 0.875rem;
+  height: 0.875rem;
+  opacity: 0;
+}
+
+.gadget-dd-option[aria-selected="true"] .gadget-dd-check {
+  opacity: 1;
+}
+
+.gadget-dd-option-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Page-size chooser: first item of the pagination bar, pushed away from the
+ * pager by the bar's justify-content. */
+.gadget-page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--gadget-space-unit) * 2);
+  margin-inline-end: auto;
+  font-size: 0.8125rem;
+  color: var(--gadget-color-text-muted);
+}
+
+.gadget-page-size-select {
+  padding-block: calc(var(--gadget-space-unit) * 0.75);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gadget-dd-panel {
+    animation: none;
+  }
+
+  .gadget-dd-trigger,
+  .gadget-dd-chevron {
+    transition: none;
+  }
+}

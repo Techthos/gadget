@@ -1,0 +1,82 @@
+/* Menu: the launcher grid. Tiles are server-rendered buttons, one per tool;
+ * the runtime only turns a click into that tool's call. The grid reflows on
+ * its own via auto-fill, so the same document works in a narrow chat pane and
+ * a wide panel without a breakpoint. */
+
+.gadget-menu {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--gadget-menu-tile-min), 1fr));
+  gap: calc(var(--gadget-space-unit) * 3);
+  padding: calc(var(--gadget-space-unit) * 4);
+}
+
+.gadget-menu-intro {
+  margin: 0;
+  padding: calc(var(--gadget-space-unit) * 4) calc(var(--gadget-space-unit) * 4) 0;
+  color: var(--gadget-color-text-muted);
+}
+
+.gadget-menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(var(--gadget-space-unit) * 1.5);
+  height: 100%;
+  font: inherit;
+  text-align: start;
+  color: var(--gadget-color-text);
+  background: var(--gadget-color-bg);
+  border: 1px solid var(--gadget-color-border);
+  border-radius: var(--gadget-radius-m);
+  padding: calc(var(--gadget-space-unit) * 3.5);
+  cursor: pointer;
+}
+
+.gadget-menu-item:hover:not(:disabled) {
+  background: var(--gadget-color-surface);
+  border-color: var(--gadget-color-primary);
+}
+
+/* Tiles are disabled together while a menu tool call is in flight. */
+.gadget-menu-item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Present on every tile of a menu that uses icons or badges anywhere, empty
+ * or not, so labels share one baseline across the grid. */
+.gadget-menu-top {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--gadget-space-unit) * 2);
+  width: 100%;
+  min-height: 1.5rem;
+  margin-bottom: calc(var(--gadget-space-unit) * 0.5);
+}
+
+.gadget-menu-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--gadget-color-primary);
+}
+
+.gadget-menu-icon > svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.gadget-menu-badge {
+  margin-inline-start: auto;
+}
+
+.gadget-menu-label {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
+
+.gadget-menu-desc {
+  color: var(--gadget-color-text-muted);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}

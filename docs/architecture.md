@@ -68,6 +68,10 @@ declarations needed.
   `data-gadget-theme`, host fonts, locale/timeZone; watches content size via
   `ResizeObserver` → `ui/notifications/size-changed`.
 - `state.ts` — store + pure reducers (sort/filter/pagination/selection).
+- `dropdown.ts` — upgrades every server-rendered `<select>` into the gadget
+  dropdown (trigger + popup listbox, keyboard and typeahead). The select stays
+  in the DOM as the value holder, so behaviors keep reading and writing it;
+  panels are anchored to `.gadget-root` because the card chrome clips overflow.
 - `widgets/*.ts` — per-widget behaviors, event-delegated on
   `data-gadget-*` attributes; DOM built via `textContent` only (no
   innerHTML with data — XSS-safe by construction).

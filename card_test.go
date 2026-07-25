@@ -54,6 +54,7 @@ func canonicalCardList() *CardList {
 		Title:       "Users",
 		Template:    canonicalTemplate(),
 		PageSize:    10,
+		PageSizes:   []int{25, 10, 50},
 		DefaultSort: &SortSpec{Key: "balance", Desc: true},
 		Filterable:  true,
 		Selection: &SelectionConfig{Bulk: []Action{
@@ -132,6 +133,7 @@ func TestCardListGolden(t *testing.T) {
 		`data-gadget-sort-select`,
 		`data-gadget-select-all`,
 		`data-gadget-bulk-action="0"`,
+		`data-gadget-page-size`,
 	} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("document missing %q", want)
@@ -244,9 +246,13 @@ func TestCardValidate(t *testing.T) {
 
 func TestCardListValidate(t *testing.T) {
 	cases := map[string]func(*CardList){
-		"bad URI scheme":       func(l *CardList) { l.URI = "https://x" },
-		"no title key":         func(l *CardList) { l.Template.TitleKey = "" },
-		"negative page size":   func(l *CardList) { l.PageSize = -1 },
+		"bad URI scheme":        func(l *CardList) { l.URI = "https://x" },
+		"no title key":          func(l *CardList) { l.Template.TitleKey = "" },
+		"negative page size":    func(l *CardList) { l.PageSize = -1 },
+		"page size option zero": func(l *CardList) { l.PageSizes = []int{10, 0} },
+		"page sizes unpaginated": func(l *CardList) {
+			l.PageSize, l.PageSizes = 0, []int{10}
+		},
 		"default sort no key":  func(l *CardList) { l.DefaultSort = &SortSpec{} },
 		"bulk action no label": func(l *CardList) { l.Selection = &SelectionConfig{Bulk: []Action{{Tool: "x"}}} },
 	}

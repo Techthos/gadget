@@ -42,8 +42,6 @@ func (f *Form) shell() g.Node {
 		}
 		body = append(body, h.Div(toolbar...))
 	}
-	body = append(body, h.Div(h.Class("gadget-status"), htmlx.Data("status", ""), g.Attr("hidden"), h.Aria("live", "polite")))
-
 	// novalidate: the runtime runs checkValidity itself and renders inline
 	// errors; native validation would swallow the submit event and rely on
 	// browser bubbles that hosts' sandboxed iframes may not show.
@@ -75,7 +73,7 @@ func (f *Form) shell() g.Node {
 	))
 	formChildren = append(formChildren, h.Div(actions...))
 
-	body = append(body, h.Form(formChildren...))
+	body = append(body, h.Form(formChildren...), statusNode())
 
 	return h.Div(h.Class("gadget-root"), htmlx.Data("widget", "form"),
 		h.Div(append([]g.Node{h.Class("gadget-card")}, body...)...),

@@ -36,7 +36,6 @@ func (t *Table) shell() g.Node {
 	return h.Div(h.Class("gadget-root"), htmlx.Data("widget", "table"),
 		h.Div(h.Class("gadget-card"),
 			t.toolbar(),
-			statusNode(),
 			h.Div(h.Class("gadget-table-wrap"),
 				h.Table(h.Class("gadget-table"),
 					h.THead(h.Tr(t.headerCells()...)),
@@ -44,7 +43,8 @@ func (t *Table) shell() g.Node {
 				),
 			),
 			emptyStateNode(t.Empty),
-			paginationNode(),
+			paginationNode(pageSizeOptions(t.PageSize, t.PageSizes), t.PageSize),
+			statusNode(),
 		),
 	)
 }

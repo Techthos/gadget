@@ -48,7 +48,7 @@ Consequences for you as a library user:
 
 | Package | Import path | Role |
 |---|---|---|
-| `gadget` | `github.com/techthos/gadget` | Widget definitions (`Table`, `Form`, `Card`, `CardList`, `Action`, columns, fields) + `RowsOf` |
+| `gadget` | `github.com/techthos/gadget` | Widget definitions (`Table`, `Form`, `Card`, `CardList`, `Menu`, `Action`, columns, fields) + `RowsOf` |
 | `theme` | `github.com/techthos/gadget/theme` | `Theme` struct → CSS design-token overrides |
 | `uispec` | `github.com/techthos/gadget/uispec` | MCP Apps spec constants and `_meta` types (zero deps) |
 | `gosdk` | `github.com/techthos/gadget/gosdk` | Adapter for the official `github.com/modelcontextprotocol/go-sdk` — the **only** package importing an MCP SDK |
@@ -115,7 +115,7 @@ result's `structuredContent`; the widget reads its data from there.
 
 ### 3.1 The `Widget` interface
 
-`*Table`, `*Form`, `*Card`, and `*CardList` implement:
+`*Table`, `*Form`, `*Card`, `*CardList`, and `*Menu` implement:
 
 ```go
 type Widget interface {
@@ -156,6 +156,7 @@ type Table struct {
     RowID   string      // row field uniquely identifying a row (selection, FromRow/FromSelection). Default "id"
 
     PageSize    int              // > 0 enables client-side pagination (page size); 0 disables; < 0 is invalid
+    PageSizes   []int            // alternative page sizes offered in a dropdown on the pagination bar; entries > 0; needs PageSize > 0; PageSize is added if absent; empty renders no chooser
     DefaultSort *SortSpec        // pre-sort rows on load (Key required when set)
     Filterable  bool             // adds a client-side text filter box
     Selection   *SelectionConfig // enables row checkboxes + bulk actions
@@ -284,6 +285,16 @@ type Field struct {
 **Field types** (`FieldType`): `FText` (`"text"`, zero-value default),
 `FTextarea`, `FNumber`, `FCheckbox`, `FSelect`, `FMultiSelect`, `FDate`,
 `FTime`, `FHidden`, `FReadonly`.
+
+`FSelect` and `FMultiSelect` render as the gadget dropdown: the runtime
+upgrades the `<select>` into a styled trigger and popup listbox (keyboard
+navigation, typeahead, check marks on the chosen entries) while the select
+itself stays the value holder, so submitted value types are unchanged. Every
+other select in the library — the CardList sort control, the pagination bar's
+page-size chooser — is the same control.
+
+If a `Placeholder` is set on a select field, it is the empty-state text of the
+trigger.
 
 ```go
 type Option struct {
@@ -437,6 +448,7 @@ type CardList struct {
     RowID   string // record field identifying a card (selection, FromRow/FromSelection). Default "id"
 
     PageSize    int              // > 0 enables client-side pagination; 0 disables; < 0 invalid
+    PageSizes   []int            // alternative page sizes offered in a dropdown on the pagination bar; entries > 0; needs PageSize > 0; PageSize is added if absent; empty renders no chooser
     DefaultSort *SortSpec        // pre-sort records on load (Key required when set)
     Filterable  bool             // adds a client-side text filter box (matches title, subtitle, and field values)
     Selection   *SelectionConfig // per-card checkboxes + bulk actions (FromSelection resolves across selected cards)
@@ -451,7 +463,7 @@ type CardList struct {
 }
 ```
 
-The sort control is a select over the template's **sortable body fields**
+The sort control is a dropdown over the template's **sortable body fields**
 (text/number/date `Fields`; badge/link fields and the title/subtitle are not
 offered) — no config needed. `DefaultSort` sets the initial order and may
 reference any field key.
@@ -463,11 +475,83 @@ still applies and bounds how many cards are in the strip at once. Card width com
 `--gadget-card-width` token (default `17rem`), overridable per widget through
 `theme.Theme.Extra`.
 
-### 3.12 `Brand`
+### 3.12 `Menu`
+
+The app's front door: a responsive grid of tiles, one per tool the server
+exposes with a UI. Choosing a tile calls that tool, and the host opens the
+widget bound to it — a menu item is navigation, not an action with a result of
+its own.
+
+Unlike the data widgets, a `Menu` is **fully authored at registration time**:
+the tiles are server-rendered from `Items`, the document carries no
+`#gadget-data` island, and the menu reads nothing from `structuredContent`.
+The config island holds only the tool name and static args behind each tile,
+matched positionally to the rendered buttons.
+
+```go
+type Menu struct {
+    URI   string      // ui:// resource URI (required)
+    Title string      // toolbar + document title
+    Intro string      // optional lead text above the tiles
+    Items []MenuItem  // at least one required
+
+    Brand *Brand                  // application logo/name
+    Theme *theme.Theme            // design token overrides
+    UI    *uispec.ResourceUIMeta  // resource _meta.ui override
+}
+
+type MenuItem struct {
+    Tool         string         // MCP tool called when the item is chosen (required)
+    Args         map[string]any // static arguments passed to Tool
+    Label        string         // tile heading; defaults to Tool
+    Description  string         // supporting line under the label
+    IconSVG      string         // inline <svg> markup shown above the label
+    Badge        string         // short marker in the tile's top right ("read", "beta")
+    BadgeVariant BadgeVariant   // colors the badge; defaults to BadgeNeutral
+}
+```
+
+```go
+menu := &gadget.Menu{
+    URI:   "ui://demo/menu",
+    Title: "Acme users",
+    Intro: "Pick where to start.",
+    Items: []gadget.MenuItem{
+        {Tool: "list_users", Label: "User table",
+         Description: "Sortable, filterable directory.",
+         Badge: "read", BadgeVariant: gadget.BadgeInfo},
+        {Tool: "edit_user", Args: map[string]any{"id": 1}, Label: "Edit Ada"},
+    },
+}
+
+// The tool that shows the menu returns no structured data of its own.
+type empty struct{}
+gosdk.AddWidgetToolFor(server, menu,
+    &mcp.Tool{Name: "main_menu", Description: "Show the app menu."},
+    func(context.Context, *mcp.CallToolRequest, empty) (*mcp.CallToolResult, empty, error) {
+        return nil, empty{}, nil
+    })
+```
+
+`MenuItem.Args` are fixed values, not row lookups: a menu tile has no record
+behind it, so `Static`/`FromRow`/`FromSelection` do not apply here.
+
+Runtime behavior: the whole grid goes inert while a tile's call is in flight
+(a second tile would race the first one's view swap), a `loading` status reads
+"Opening &lt;label&gt;…", and a tool result that comes back with `isError` is
+shown in the status region with the menu left usable. Nothing else is rendered
+from the result — the host is expected to take over the view. Tile width comes
+from the `--gadget-menu-tile-min` token (default `11rem`), overridable per
+widget through `theme.Theme.Extra`.
+
+Documents are self-contained, so `IconSVG` is inline markup, never a URL — the
+same trust level and the same checks as `Brand.LogoSVG`.
+
+### 3.13 `Brand`
 
 Identifies the application a widget belongs to. Available on `Table`, `Form`,
-`Card` and `CardList` as the `Brand` field; one `*Brand` is typically shared
-across every widget of a server. It always renders at the top left of the
+`Card`, `CardList` and `Menu` as the `Brand` field; one `*Brand` is typically
+shared across every widget of a server. It always renders at the top left of the
 widget chrome, as the first item of the toolbar, before the title.
 
 ```go
@@ -489,7 +573,7 @@ hands the URL to `ui/openLink`.
 
 A brand makes the toolbar appear even when `Title` is empty.
 
-### 3.13 Validation rules (what `Validate()` / `Document()` reject)
+### 3.14 Validation rules (what `Validate()` / `Document()` reject)
 
 Table:
 - `URI` must be a well-formed `ui://` URI with a non-empty path.
@@ -497,7 +581,8 @@ Table:
 - text/number/date/badge columns: `Key` required.
 - link columns: `Link.HrefKey` required.
 - actions columns: at least one action.
-- `PageSize >= 0`; `DefaultSort.Key` required when `DefaultSort` is set.
+- `PageSize >= 0`; `PageSizes` entries `> 0` and only with `PageSize > 0`;
+  `DefaultSort.Key` required when `DefaultSort` is set.
 - Actions: `Label` required; `Tool` required for tool kind; `HrefKey` required
   for link kind; all `Args` built with the constructors; `FromSelection` only
   in bulk actions.
@@ -516,8 +601,16 @@ Card / CardList (via `CardTemplate`):
   no duplicate field `Key`s; `ColActions` is rejected (use `Actions`).
 - Template `Actions`: validated like any action; `FromSelection` is rejected
   (per-card actions run on one record).
-- CardList only: `PageSize >= 0`; `DefaultSort.Key` required when set; bulk
-  actions validated.
+- CardList only: `PageSize >= 0`; `PageSizes` entries `> 0` and only with
+  `PageSize > 0`; `DefaultSort.Key` required when set; bulk actions validated.
+- `Theme` must pass `theme.Validate()`.
+
+Menu:
+- `URI` as above; at least one item.
+- Item `Tool` required.
+- Item `IconSVG`, when set, must pass the same `<svg>` checks as
+  `Brand.LogoSVG` (below).
+- Item `BadgeVariant`, when set, must be one of the `Badge*` constants.
 - `Theme` must pass `theme.Validate()`.
 
 Brand (all widgets, when set):
@@ -547,6 +640,7 @@ Widgets read all runtime data from the tool result's `structuredContent`:
 | Card | `rows` (`RowsKey`) | `[]object` | renders the first element (`rows[0]`) |
 | Form | `values` (`PrefillKey`) | `{field: value}` | prefill (edit flows) |
 | Form | `errors` (`ErrorsKey`) | `{field: "message"}` | server-side field errors, rendered inline; marks the submit failed |
+| Menu | — | — | reads nothing; tiles are authored and server-rendered |
 
 `Card`/`CardList` share the `rows` contract with `Table`: an action or tool
 result whose `structuredContent` contains `RowsKey` re-renders the widget
@@ -868,13 +962,17 @@ d := w.Descriptor()      // d.URI, d.Name (derived: "ui://demo/users" -> "demo-u
   validation, prefill, string-ID parsing). `go run ./examples/demo -addr :8080`
   (streamable HTTP at `/mcp`) or `go run ./examples/demo -stdio`. Point MCPJam,
   Claude custom connectors, or any MCP Apps host at `http://localhost:8080/mcp`.
-- `examples/harness` — a fake MCP Apps host in one HTML page: renders any widget
-  (table, cardlist, card, form) in a sandboxed iframe, answers the
-  `ui/initialize` handshake, logs all JSON-RPC traffic, simulates tool
+- `examples/harness` — a fake MCP Apps host in one HTML page, with a story
+  browser: a rail of widget variants (table, cardlist, card, form, menu, plus
+  empty states and a long list) defined in `examples/harness/stories.go` and
+  served one per route (`/story/<id>`, catalog at `/stories.json`). It renders
+  the selected story in a sandboxed iframe at a chosen viewport width, answers
+  the `ui/initialize` handshake, logs all JSON-RPC traffic (expandable
+  entries), follows `ui/notifications/size-changed`, and simulates tool
   results/errors and theme changes (with a stateful in-memory backend so
   row/bulk actions update live). `go run ./examples/harness`, open
   `http://localhost:8090`. Use it to verify widget behavior without any real
-  MCP client.
+  MCP client. Add a story by appending to `catalog()` and writing its builder.
 
 ## 11. Development commands (when modifying this repo)
 

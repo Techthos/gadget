@@ -64,7 +64,9 @@ func widgetsWithBrand(b *Brand) map[string]Widget {
 	card.Brand = b
 	list := canonicalCardList()
 	list.Brand = b
-	return map[string]Widget{"table": table, "form": form, "card": card, "cardlist": list}
+	menu := canonicalMenu()
+	menu.Brand = b
+	return map[string]Widget{"table": table, "form": form, "card": card, "cardlist": list, "menu": menu}
 }
 
 func TestBrandRendersInEveryWidget(t *testing.T) {
@@ -128,6 +130,8 @@ func TestBrandCreatesToolbarWithoutTitle(t *testing.T) {
 			case *Card:
 				v.Title = ""
 			case *CardList:
+				v.Title = ""
+			case *Menu:
 				v.Title = ""
 			}
 			doc, err := w.Document()
