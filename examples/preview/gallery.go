@@ -1055,11 +1055,20 @@ func registerGallery(s *mcp.Server) {
 }
 
 // galleryIndex is the front door to the catalog: one tile per variant.
+//
+// Every tile carries a Prompt. A gallery tool answers with a widget rather
+// than with data, so the host has to open it, and a host that runs a
+// view-initiated tools/call out of band opens nothing. Routing through the
+// chat makes the model place the call, which is the path that works
+// everywhere. The label is echoed verbatim because it is what the tool's own
+// description leads with, so the model has an unambiguous target among the
+// catalog's several dozen near-identical entries.
 func galleryIndex(catalog []preview) *gadget.Menu {
 	items := make([]gadget.MenuItem, 0, len(catalog))
 	for _, p := range catalog {
 		items = append(items, gadget.MenuItem{
 			Tool:         p.Tool,
+			Prompt:       "Show me the gallery preview for " + p.Label,
 			Label:        p.Label,
 			Description:  p.Desc,
 			IconSVG:      p.Icon,
@@ -1070,7 +1079,7 @@ func galleryIndex(catalog []preview) *gadget.Menu {
 	return &gadget.Menu{
 		URI:   "ui://preview/gallery-index",
 		Title: "Widget gallery",
-		Intro: "Every variant this library renders. Each tile calls the tool that opens it.",
+		Intro: "Every variant this library renders. Each tile asks the chat to open it.",
 		Items: items,
 		Brand: appBrand(),
 		Theme: appTheme(),
