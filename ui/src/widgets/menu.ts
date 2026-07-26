@@ -6,6 +6,11 @@
 // own widget, replacing or stacking this view. So nothing is rendered from
 // the result — only progress while the call is in flight, and the failure if
 // it comes back as one.
+//
+// An item carrying a prompt navigates through the host's chat instead: the
+// host posts the prompt as a user turn (ui/message) and the model makes the
+// call, which is the only path that opens anything on hosts that run a
+// view-initiated tools/call out of band.
 import type { MountContext } from "../index";
 import { delegate } from "../dom";
 import { M } from "../protocol";
@@ -14,6 +19,7 @@ import { textOf } from "./card-common";
 interface MenuItemCfg {
 	tool: string;
 	args?: Record<string, unknown>;
+	prompt?: string;
 }
 
 interface MenuCfg {
@@ -54,6 +60,14 @@ export function mountMenu(ctx: MountContext): void {
 		setBusy(true);
 		showStatus("loading", `Opening ${label}…`);
 		try {
+			// ui/message carries no tool result: the request resolving means the
+			// host accepted the turn, and what opens is the model's answer to it.
+			if (item.prompt) {
+				await bridge.sendMessage(item.prompt);
+				setBusy(false);
+				showStatus("", "");
+				return;
+			}
 			const res = await bridge.callTool(item.tool, item.args ?? {});
 			setBusy(false);
 			if (res.isError) {

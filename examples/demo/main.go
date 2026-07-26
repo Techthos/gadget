@@ -1,6 +1,7 @@
 // Command demo is a runnable MCP server showcasing gadget widgets: a user
-// table with row/bulk actions, the same users as a card grid, and an edit
-// form with server-side validation.
+// table with row/bulk actions, the same users as a card grid, an edit form
+// with server-side validation, a confirmation, and a date picker whose
+// selectable window is computed per call.
 //
 // Run with streamable HTTP (default, for MCPJam / Claude custom connectors):
 //
@@ -21,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -38,6 +40,9 @@ type user struct {
 	Status  string  `json:"status"`
 	Balance float64 `json:"balance"`
 	Created string  `json:"createdAt"`
+	// FollowUp is the day the account manager calls back, "YYYY-MM-DD", set
+	// by the date picker. Empty until someone picks one.
+	FollowUp string `json:"followUpAt"`
 }
 
 type db struct {
@@ -48,10 +53,10 @@ type db struct {
 
 func seed() *db {
 	users := []*user{
-		{1, "Ada Lovelace", "ada@example.com", "active", 1200.50, "2026-01-12T09:00:00Z"},
-		{2, "Grace Hopper", "grace@example.com", "active", 815.00, "2026-02-03T10:30:00Z"},
-		{3, "Alan Turing", "alan@example.com", "invited", 0, "2026-03-19T14:00:00Z"},
-		{4, "Katherine Johnson", "katherine@example.com", "archived", 233.10, "2026-04-01T08:15:00Z"},
+		{1, "Ada Lovelace", "ada@example.com", "active", 1200.50, "2026-01-12T09:00:00Z", ""},
+		{2, "Grace Hopper", "grace@example.com", "active", 815.00, "2026-02-03T10:30:00Z", ""},
+		{3, "Alan Turing", "alan@example.com", "invited", 0, "2026-03-19T14:00:00Z", ""},
+		{4, "Katherine Johnson", "katherine@example.com", "archived", 233.10, "2026-04-01T08:15:00Z", ""},
 	}
 	m := map[int]*user{}
 	for _, u := range users {
@@ -70,6 +75,19 @@ func (d *db) rows() []map[string]any {
 	sort.Slice(list, func(i, j int) bool { return list[i].ID < list[j].ID })
 	rows, _ := gadget.RowsOf(list)
 	return rows
+}
+
+// bookedDays are the days that already hold a call, in the "YYYY-MM-DD" form
+// the calendar blocks by. Call with the lock held.
+func bookedDays(d *db) []string {
+	var days []string
+	for _, u := range d.users {
+		if u.FollowUp != "" {
+			days = append(days, u.FollowUp)
+		}
+	}
+	sort.Strings(days)
+	return days
 }
 
 // userRow is one user in the row shape every widget reads (honors json tags).
@@ -92,6 +110,9 @@ func usersTable() *gadget.Table {
 			gadget.Text("email", "Email"),
 			gadget.Number("balance", "Balance", "currency:EUR"),
 			gadget.Date("createdAt", "Created", "date"),
+			// Written by the date picker, so the two widgets are visibly the
+			// same record.
+			gadget.Date("followUpAt", "Follow-up", "date"),
 			gadget.Badge("status", "Status", map[string]gadget.BadgeVariant{
 				"active":   gadget.BadgeSuccess,
 				"invited":  gadget.BadgeInfo,
@@ -220,6 +241,45 @@ func deleteConfirm() *gadget.Confirm {
 	}
 }
 
+// followUpPicker asks for one date. The question and the shortcuts are
+// authored here; the window it may be answered in is not — which days are
+// still open changes between registration and the question, so
+// schedule_followup computes min/max and the days already taken at call time
+// and delivers them under "value" alongside the record.
+func followUpPicker() *gadget.DatePicker {
+	return &gadget.DatePicker{
+		URI:    "ui://demo/followup",
+		Title:  "Follow-up",
+		Prompt: "When should we call this user back?",
+		Body:   "Weekends are not working days, and the diary is already full on some.",
+		Calendar: &gadget.Calendar{
+			DisableWeekends: true,
+			Presets: []gadget.DatePreset{
+				{Label: "Today", Span: gadget.SpanToday},
+				{Label: "Tomorrow", Span: gadget.SpanTomorrow},
+			},
+		},
+		Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
+			{Label: "User", Key: "name"},
+			{Label: "Email", Key: "email"},
+			{Label: "Status", Key: "status", Type: gadget.ColBadge, Badge: map[string]gadget.BadgeVariant{
+				"active":   gadget.BadgeSuccess,
+				"invited":  gadget.BadgeInfo,
+				"archived": gadget.BadgeNeutral,
+			}},
+		}},
+		Submit: gadget.DateSubmit{
+			Tool:           "set_followup_date",
+			Label:          "Book the call",
+			Args:           map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+			SuccessMessage: "Call booked.",
+		},
+		Cancel: &gadget.RejectSpec{Label: "Not now", Message: "No call was booked."},
+		Brand:  demoBrand(),
+		Theme:  &theme.Theme{ColorPrimary: "#7c3aed"},
+	}
+}
+
 // demoMenu is the app's front door: one tile per UI-backed tool. Choosing a
 // tile calls that tool, and the host opens the widget bound to it.
 func demoMenu() *gadget.Menu {
@@ -253,6 +313,15 @@ func demoMenu() *gadget.Menu {
 				Badge:        "write",
 				BadgeVariant: gadget.BadgeWarning,
 			},
+			{
+				Tool:         "schedule_followup",
+				Args:         map[string]any{"id": 1},
+				Label:        "Call Ada back",
+				Description:  "Pick the day, from the ones still open.",
+				IconSVG:      iconCalendar,
+				Badge:        "write",
+				BadgeVariant: gadget.BadgeWarning,
+			},
 		},
 		Brand: demoBrand(),
 		Theme: &theme.Theme{ColorPrimary: "#7c3aed"},
@@ -261,9 +330,10 @@ func demoMenu() *gadget.Menu {
 
 // Menu icons are inline SVG: a widget document references nothing external.
 const (
-	iconTable  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/></svg>`
-	iconCards  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="8" height="14" rx="2"/><rect x="13" y="5" width="8" height="14" rx="2"/></svg>`
-	iconPencil = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20h4L20 8l-4-4L4 16v4z"/></svg>`
+	iconTable    = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/></svg>`
+	iconCards    = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="8" height="14" rx="2"/><rect x="13" y="5" width="8" height="14" rx="2"/></svg>`
+	iconPencil   = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20h4L20 8l-4-4L4 16v4z"/></svg>`
+	iconCalendar = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>`
 )
 
 // demoBrand is the application mark shown at the top left of every widget.
@@ -289,6 +359,7 @@ func newServer(data *db) *mcp.Server {
 	form := userForm()
 	menu := demoMenu()
 	confirm := deleteConfirm()
+	picker := followUpPicker()
 
 	// Model-visible: list users, rendered by the table widget.
 	type empty struct{}
@@ -385,6 +456,64 @@ func newServer(data *db) *mcp.Server {
 			delete(data.users, in.ID)
 			data.Unlock()
 			return textResult("User deleted."), empty{}, nil
+		}))
+
+	// Model-visible: ask which day to call a user back on. The picker reads
+	// the record under "rows" and its own limits under "value" — the window,
+	// and the days the diary has already taken — both computed here rather
+	// than authored into the widget, since neither is true for long.
+	type dateOut struct {
+		Rows  []map[string]any `json:"rows"`
+		Value map[string]any   `json:"value"`
+	}
+	must(gosdk.AddWidgetToolFor(server, picker,
+		&mcp.Tool{Name: "schedule_followup", Description: "Ask which day to call a user back on."},
+		func(_ context.Context, _ *mcp.CallToolRequest, in deleteIn) (*mcp.CallToolResult, dateOut, error) {
+			data.Lock()
+			u := data.users[in.ID]
+			taken := bookedDays(data)
+			data.Unlock()
+			if u == nil {
+				return textResult("No such user."), dateOut{}, nil
+			}
+			today := time.Now()
+			value := map[string]any{
+				"min": today.Format(time.DateOnly),
+				"max": today.AddDate(0, 0, 42).Format(time.DateOnly),
+			}
+			if len(taken) > 0 {
+				value["disabled"] = taken
+			}
+			// A user who already has a call keeps it selected, so opening the
+			// picker again shows what was booked rather than nothing.
+			if u.FollowUp != "" {
+				value["start"] = u.FollowUp
+			}
+			return nil, dateOut{Rows: []map[string]any{userRow(u)}, Value: value}, nil
+		}))
+
+	// App-only: fired by the picker's submit button.
+	type followUpIn struct {
+		ID   int    `json:"id"`
+		Date string `json:"date"`
+	}
+	followUpTool := &mcp.Tool{Name: "set_followup_date", Description: "Record the day a user is called back."}
+	gosdk.AppOnly(followUpTool, picker)
+	must(gosdk.AddWidgetToolFor(server, picker, followUpTool,
+		func(_ context.Context, _ *mcp.CallToolRequest, in followUpIn) (*mcp.CallToolResult, rowsOut, error) {
+			data.Lock()
+			u := data.users[in.ID]
+			if u != nil {
+				u.FollowUp = in.Date
+			}
+			data.Unlock()
+			if u == nil {
+				return textResult("No such user."), rowsOut{}, nil
+			}
+			// The rows go back too: a table open beside the picker repaints
+			// from the server's truth rather than guessing locally.
+			return textResult(fmt.Sprintf("%s will be called back on %s.", u.Name, in.Date)),
+				rowsOut{Rows: data.rows()}, nil
 		}))
 
 	// Model-visible: open the edit form prefilled for one user.

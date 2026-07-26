@@ -29,6 +29,8 @@ interface ActionCfg {
 	kind: "tool" | "link";
 	tool?: string;
 	args?: Record<string, ArgSourceCfg>;
+	/** Posts this as a user turn instead of calling tool. See Action.Prompt. */
+	prompt?: string;
 	hrefKey?: string;
 	confirm?: string;
 	variant?: string;
@@ -210,6 +212,14 @@ export function mountTable(ctx: MountContext): void {
 		clearTimeout(statusTimer);
 		store.set({ status: "loading", statusKind: undefined, statusMsg: "Working…" });
 		try {
+			// A prompt action hands the request to the host's chat: the model makes
+			// the call, so there is no result of ours to apply — only the turn being
+			// accepted.
+			if (action.prompt) {
+				await bridge.sendMessage(action.prompt);
+				store.set({ status: "idle", statusKind: undefined, statusMsg: undefined });
+				return;
+			}
 			applyResult(await bridge.callTool(action.tool, resolveArgs(action, row)));
 		} catch (e) {
 			store.set({

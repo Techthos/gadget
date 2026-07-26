@@ -20,6 +20,8 @@ Widgets read runtime data from the tool result's `structuredContent`:
 | Confirm | `effects` (`EffectsKey`) | `[]object` — side effects: `{text, detail?, value?, severity?}` |
 | Choice | `rows` (`RowsKey`) | `[]object` — the record the question is about (`rows[0]`) |
 | Choice | `options` (`OptionsKey`) | `[]object` — what is on offer: `{value, label?, summary?, body?, bullets?, details?, badge?, badgeVariant?, default?, disabled?}`, `details` being `[{label, value}]` |
+| DatePicker | `value` (`ValueKey`) | `"YYYY-MM-DD"`, or `{start?, end?, min?, max?, disabled?}` — the selection and the window it may move in |
+| DatePicker | `rows` (`RowsKey`) | `[]object` — the record the question is about (`rows[0]`) |
 | Menu | — | reads nothing; its tiles are authored, not fetched |
 
 `gadget.RowsOf(slice)` converts typed Go slices to row maps (honors json
@@ -80,6 +82,48 @@ table := &gadget.Table{
 - If an action's result contains `RowsKey`, the table re-renders with the
   returned rows and clears the selection — return the updated list from
   mutating tools.
+- **`Prompt`** switches an action to the chat path, for hosts that answer a
+  view-initiated `tools/call` without opening the widget behind it — see
+  [The chat path](#the-chat-path) below.
+
+## The chat path
+
+An action calls its tool from the view and the widget handles the result. That
+works when the tool answers with data. When it answers with a widget of its own
+— an edit form opened from a row, a detail view opened from a menu tile —
+opening it is the host's job, and a host that runs the call out of band opens
+nothing: the tool runs and the user sees no change.
+
+Setting a prompt routes that action through the host's chat: the view sends
+`ui/message` with the text as a user turn, the model calls the tool, and the
+widget arrives as that call's result.
+
+```go
+// Table row / card action
+gadget.Action{Label: "Edit", Tool: "edit_user",
+    Prompt: "Open the edit form for this user"}
+
+// Menu tile
+gadget.MenuItem{Tool: "list_customers", Label: "Customers",
+    Prompt: "Show me the customer list"}
+
+// Confirm, Choice, DatePicker — named ChatPrompt, since Prompt is the
+// question already put to the reader
+gadget.AcceptSpec{Tool: "delete_user",
+    ChatPrompt: "Delete the account for Ada"}
+```
+
+- Write it as the request a user would type; the model decides which tool
+  answers, so `Tool` documents what the action opens and stays required.
+- `Args` are dropped: the model chooses the arguments. The text is fixed and
+  carries no row values.
+- There is no result to inspect, so the widget only reports that the turn was
+  accepted, or shows an error if the host refused it.
+- Link actions may not set `Prompt` — a link already navigates on its own.
+- `Choice` and `DatePicker` append the reader's decision to the text, since a
+  chat turn has no argument to carry it: `"Ship order ORD-4471 — chose:
+  Express"`, `"Book the room — chose: 2026-07-20 to 2026-07-24"`. Dates go as
+  ISO whatever the grid rendered; options go by label, since a person reads it.
 
 ## Form
 
@@ -104,12 +148,22 @@ form := &gadget.Form{
 ```
 
 - **Field types**: `text`, `textarea`, `number`, `checkbox`, `select`,
-  `multiselect`, `date`, `time`, `hidden`, `readonly`.
+  `multiselect`, `date`, `daterange`, `time`, `hidden`, `readonly`.
 - **Dropdowns**: `select` and `multiselect` render as the gadget dropdown —
   the runtime upgrades the `<select>` into a trigger plus popup listbox
   (arrow keys, Home/End, typeahead, Escape, check marks) and keeps the select
   as the value holder, so validation and submitted value types are unchanged.
   `Placeholder` becomes the trigger's empty-state text.
+- **Date fields**: `FDate` and `FDateRange` render the gadget calendar — the
+  runtime upgrades the native date input into a trigger showing the date in the
+  host's locale, with the grid in a popover, and keeps the input as the value
+  holder (so validation and the submitted value are unchanged, and a document
+  whose script never runs still has a working date control). `Field.Calendar`
+  configures the grid exactly as it configures the `DatePicker` widget: bounds,
+  blocked days, presets, month travel — see [DatePicker](#datepicker).
+  A range sends two flat arguments: `Name` carries the start and `EndName`
+  (default `Name + "_end"`) the end, both `"YYYY-MM-DD"`. `Default` takes
+  `[]string{start, end}`. An optional field's popover offers a Clear button.
 - **Client validation** renders as native HTML attributes (`required`,
   `pattern`, `min`/`max`/`step`, `minlength`/`maxlength`) and is enforced
   before submit, with inline error messages (`Validation.Message` overrides
@@ -252,6 +306,12 @@ gosdk.AddWidgetToolFor(server, menu,
   registered.
 - **`Args`** are fixed values. A tile has no record behind it, so
   `Static`/`FromRow`/`FromSelection` do not apply.
+- **`Prompt`** switches a tile to the chat launch path, for hosts that run a
+  view-initiated `tools/call` out of band and so never open the bound widget.
+  The view sends `ui/message` with the text as a user turn, the model calls the
+  tool, and the widget arrives as that call's result. Write it as the request a
+  user would type; `Args` are dropped for such a tile, since the model chooses
+  the arguments. Tiles of both kinds can sit in one menu.
 - **`Label`** defaults to `Tool`, so a bare `{Tool: "list_users"}` still
   renders a usable tile.
 - **`IconSVG`** is inline markup, never a URL, with the same safety checks as
@@ -260,7 +320,9 @@ gosdk.AddWidgetToolFor(server, menu,
 - **While a tile is firing**, the whole grid is disabled — a second tile would
   race the first one's view swap — and the status region reads
   "Opening &lt;label&gt;…". A result with `isError` is shown there and the menu
-  stays usable; otherwise nothing is rendered, because the host takes over.
+  stays usable; otherwise nothing is rendered, because the host takes over. A
+  `Prompt` tile has no result to inspect and clears its status as soon as the
+  host accepts the turn.
 - **Layout** reflows via CSS `auto-fill`, so one document works in a narrow
   chat pane and a wide panel. Minimum tile width is the
   `--gadget-menu-tile-min` token (default `11rem`), overridable per widget:
@@ -441,6 +503,96 @@ gadget.Descriptions{Items: []gadget.DescriptionItem{
   `Theme: &theme.Theme{Extra: map[string]string{"--gadget-desc-min": "16rem"}}`.
 - **A value the record does not carry renders as an em dash** rather than
   disappearing: a reader deciding on these facts should see which are missing.
+
+## DatePicker
+
+A date, or the span between two, as the whole question. It is the standalone
+form of the same calendar `FDate` and `FDateRange` open in a form: use the
+widget when the date *is* the question ("when should this ship?", "which
+nights?"), and the field when it is one answer among several.
+
+```go
+picker := &gadget.DatePicker{
+    URI:    "ui://myapp/booking",
+    Title:  "Booking",
+    Prompt: "Which nights should we hold the suite?",
+    Mode:   gadget.DateRange,
+    Calendar: &gadget.Calendar{
+        Min:         "2026-08-01",
+        Max:         "2026-12-31",
+        Disabled:    []string{"2026-08-27", "2026-08-28"},
+        WeekNumbers: true,
+        Presets: []gadget.DatePreset{
+            {Label: "This week", Span: gadget.SpanThisWeek},
+            {Label: "Trade fair", Start: "2026-09-07", End: "2026-09-11"},
+        },
+    },
+    Submit: gadget.DateSubmit{
+        Tool: "hold_room", Label: "Hold it",
+        ValueArg: "from", EndArg: "until", SuccessMessage: "Held.",
+    },
+    Cancel: &gadget.RejectSpec{},
+}
+```
+
+- **The grid is inline**, not behind a trigger: a view whose only job is a
+  calendar should not ask to be opened. Picking is local; only the submit
+  button calls a tool, and it stays disabled until the selection is something
+  the reader could submit (both ends, in a range).
+- **Dates are days, not instants.** Everything travels as `"YYYY-MM-DD"`:
+  no time, no zone, no offset. The host's time zone is used for exactly one
+  thing — deciding which day is today, so a widget read in Auckland does not
+  ring yesterday because the server is in Berlin.
+- **Submit** calls `Submit.Tool` with its `Static`/`FromRow` args plus
+  `ValueArg` (default `"date"`, or `"start"` in a range) and, in a range,
+  `EndArg` (default `"end"`). Two flat string arguments, so a tool schema can
+  declare two dates and a server can read them without unpacking anything.
+- **Runtime state** arrives under `ValueKey` (default `"value"`): either a
+  date string, or an object carrying the selection *and* the grid's limits —
+  `{start, end, min, max, disabled}`. Which days are still free is exactly the
+  kind of thing that changes between registration and the question, so
+  `LoadTool`/`LoadArgs` fetch it fresh on load.
+- **`Details`** describes the record the question is about (from `rows[0]`),
+  the same block `Confirm` and `Choice` use.
+- **The decision is final**: once submitted or cancelled the controls are gone
+  and the outcome stays on screen, even if the host pushes later results.
+
+### Calendar
+
+`Calendar` is a shared block, not a widget: the same grid configuration for the
+`DatePicker` widget and for a form's `FDate`/`FDateRange` fields. The zero
+value (a nil `*Calendar`) is a one-month grid with every day selectable, which
+is what most fields want.
+
+| Field | Effect |
+|---|---|
+| `Min`, `Max` | The selectable window, `"YYYY-MM-DD"`. The grid will not travel past the months holding them, and date fields render them as native `min`/`max` too. |
+| `Disabled` | Individual days that cannot be picked — holidays, days already booked. A range may not straddle one. |
+| `DisableWeekends` | Blocks every Saturday and Sunday. |
+| `Months` | Months shown at once; defaults to 1 for a date and 2 for a range, maximum 4. They sit side by side where there is room and wrap under each other where there is not — every month asked for is always on screen, so a span across a boundary is one gesture in a chat pane too. |
+| `WeekNumbers` | A leading column of ISO 8601 week numbers. |
+| `MonthDropdowns` | Month and year dropdowns in place of the caption, bounded by `FromYear`/`ToYear` (defaulting to the years of `Min`/`Max`). For dates of birth and anything else far from today. |
+| `WeekStart` | Overrides the first day of the week; defaults to the host locale's own (`WeekStartMonday`, `WeekStartSunday`, `WeekStartSaturday`). |
+| `StartOn` | The month the grid opens on while nothing is selected. |
+| `Presets` | Named shortcuts beside the grid. |
+
+`DatePreset` names a window with either a fixed `Start`/`End` or a `Span`
+resolved at runtime against the reader's today: `SpanToday`, `SpanYesterday`,
+`SpanTomorrow`, `SpanLast7Days`, `SpanLast30Days`, `SpanLast90Days`,
+`SpanNext7Days`, `SpanNext30Days`, `SpanThisWeek`, `SpanLastWeek`,
+`SpanThisMonth`, `SpanLastMonth`, `SpanThisYear`, `SpanYearToDate`. A span is
+the name of a rule rather than a pair of dates because a server cannot name
+those dates at registration time: "the last 7 days" is a different week by the
+time the widget is read. In a single-date calendar a preset picks the day its
+window opens on.
+
+- **Keyboard**: one tab stop for the whole grid, arrows by day and week,
+  PageUp/PageDown by month (with Shift, by year), Home/End to the ends of the
+  week, Enter or Space to pick, Escape to close a popover. A blocked day still
+  takes focus — passing over it is how you get past it.
+- **Locale**: month and weekday names, the first day of the week and the
+  formatted value all come from the host's locale, which is why the grid is
+  built at runtime rather than server-rendered.
 
 ## Branding
 

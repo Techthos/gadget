@@ -4,6 +4,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/techthos/gadget"
 )
@@ -43,6 +44,9 @@ type order struct {
 	Method     string   `json:"method"`
 	Extras     []string `json:"extras"`
 	Tracking   string   `json:"tracking"`
+	// DeliverOn is the day the customer expects the parcel, "YYYY-MM-DD", set
+	// by the date picker. Empty until someone picks one.
+	DeliverOn string `json:"deliverOn"`
 }
 
 // store holds the scenario state. Everything the scenario tools read and
@@ -181,6 +185,51 @@ func (s *store) orderCount(id int) int {
 		}
 	}
 	return n
+}
+
+// deliveryFor returns the order as a row plus the window it can be delivered
+// in: from tomorrow to four weeks out, with the depot's closed days blocked.
+// Both are computed at call time, which is the point — a window authored at
+// registration time would be stale by the time anyone read it.
+func (s *store) deliveryFor(id int, today time.Time) (map[string]any, map[string]any, bool) {
+	s.mu.Lock()
+	o := s.orders[id]
+	s.mu.Unlock()
+	if o == nil {
+		return nil, nil, false
+	}
+	first := today.AddDate(0, 0, 1)
+	value := map[string]any{
+		"min": first.Format(time.DateOnly),
+		"max": today.AddDate(0, 0, 28).Format(time.DateOnly),
+		// Stocktaking: the depot dispatches nothing on the 1st and 2nd of the
+		// month after next.
+		"disabled": []string{
+			firstOfMonth(today, 2).Format(time.DateOnly),
+			firstOfMonth(today, 2).AddDate(0, 0, 1).Format(time.DateOnly),
+		},
+	}
+	if o.DeliverOn != "" {
+		value["start"] = o.DeliverOn
+	}
+	return rowOf(o), value, true
+}
+
+// firstOfMonth is the first day of the month n months after t.
+func firstOfMonth(t time.Time, n int) time.Time {
+	return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, t.Location()).AddDate(0, n, 0)
+}
+
+// setDeliveryDate records the day an order is expected to arrive.
+func (s *store) setDeliveryDate(id int, day string) (*order, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	o := s.orders[id]
+	if o == nil {
+		return nil, false
+	}
+	o.DeliverOn = day
+	return o, true
 }
 
 // shippingFor returns the order as a row plus the methods it can ship by.

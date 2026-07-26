@@ -375,3 +375,23 @@ func TestChoiceAllowsRuntimeOnlyOptions(t *testing.T) {
 		t.Errorf("config island missing the options key: %s", b)
 	}
 }
+
+func TestChoiceConfigChatPrompt(t *testing.T) {
+	c := canonicalChoice()
+	c.Submit.ChatPrompt = "Ship order ORD-4471"
+	c.Submit.Args = map[string]ArgSource{"order": FromRow("id")}
+
+	// Inspect the submit block alone: the cancel side keeps its own args, so a
+	// search over the whole island would find those instead.
+	submit, _ := json.Marshal(c.config()["submit"])
+	got := string(submit)
+
+	if !strings.Contains(got, `"chatPrompt":"Ship order ORD-4471"`) {
+		t.Errorf("submit config missing chatPrompt\nfull: %s", got)
+	}
+	// The chat path never calls the tool from the view, so its args are dead
+	// weight and must not reach the island.
+	if strings.Contains(got, `"args"`) {
+		t.Errorf("submit config should drop args when chatPrompt is set\nfull: %s", got)
+	}
+}

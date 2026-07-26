@@ -35,6 +35,14 @@ function shell(): HTMLElement {
         </select>
         <p data-gadget-error-for="tags" hidden></p>
       </div>
+      <div class="gadget-field gadget-field--daterange">
+        <label for="f-stay">Stay</label>
+        <div class="gadget-daterange" data-gadget-daterange="stay">
+          <input type="date" name="stay" class="gadget-daterange-start" id="f-stay">
+          <input type="date" name="stay_until" class="gadget-daterange-end">
+        </div>
+        <p data-gadget-error-for="stay" hidden></p>
+      </div>
       <div class="gadget-form-actions">
         <button type="button" data-gadget-cancel="">Cancel</button>
         <button type="button" data-gadget-submit="">Save</button>
@@ -55,6 +63,7 @@ function config(over: Record<string, unknown> = {}): Record<string, unknown> {
       { name: "age", type: "number" },
       { name: "active", type: "checkbox" },
       { name: "tags", type: "multiselect" },
+      { name: "stay", type: "daterange", endName: "stay_until", calendar: { mode: "range", months: 1 } },
     ],
     ...over,
   };
@@ -238,5 +247,69 @@ describe("form behavior", () => {
     });
     await flush();
     expect(host.received(M.toolsCall)).toHaveLength(0);
+  });
+  it("upgrades a date range field and submits both ends as flat arguments", async () => {
+    const root = shell();
+    mountForm({ root, config: config(), initialData: null, bridge });
+    (root.querySelector("#f-name") as HTMLInputElement).value = "Ada";
+
+    // The native inputs survive as the value holders; the trigger is what the
+    // reader sees (see ui/src/calendar.ts).
+    const start = root.querySelector<HTMLInputElement>('input[name="stay"]')!;
+    const end = root.querySelector<HTMLInputElement>('input[name="stay_until"]')!;
+    const trigger = root.querySelector<HTMLButtonElement>(".gadget-dt-trigger")!;
+    expect(trigger.id).toBe("f-stay");
+    expect(start.classList.contains("gadget-dt-native")).toBe(true);
+
+    trigger.click();
+    const panel = root.querySelector<HTMLElement>(".gadget-cal-panel")!;
+    panel.querySelector<HTMLButtonElement>('[data-gadget-cal-day]')!.click();
+    const picked = start.value;
+    expect(picked).not.toBe("");
+    // Second click finishes the range and closes the popover.
+    panel.querySelectorAll<HTMLButtonElement>("[data-gadget-cal-day]")[5]!.click();
+
+    submit(root);
+    await flush();
+    const args = (host.received(M.toolsCall)[0]!.params as { arguments: Record<string, unknown> })
+      .arguments;
+    expect(args.stay).toBe(picked);
+    expect(args.stay_until).toBe(end.value);
+    expect(end.value).not.toBe("");
+  });
+
+  it("prefills a range from either of its two arguments", async () => {
+    const root = shell();
+    mountForm({
+      root,
+      config: config(),
+      initialData: { values: { stay: "2026-09-07", stay_until: "2026-09-11" } },
+      bridge,
+    });
+    expect(root.querySelector<HTMLInputElement>('input[name="stay"]')!.value).toBe("2026-09-07");
+    expect(root.querySelector<HTMLInputElement>('input[name="stay_until"]')!.value).toBe(
+      "2026-09-11",
+    );
+    // The trigger read the prefill: a programmatic write fires no event, so the
+    // form has to hand it over.
+    expect(root.querySelector<HTMLElement>(".gadget-dt-value")!.textContent).not.toBe(
+      "Pick a date range",
+    );
+  });
+
+  it("refuses a range that runs backwards", async () => {
+    const root = shell();
+    mountForm({ root, config: config(), initialData: null, bridge });
+    (root.querySelector("#f-name") as HTMLInputElement).value = "Ada";
+    root.querySelector<HTMLInputElement>('input[name="stay"]')!.value = "2026-09-11";
+    root.querySelector<HTMLInputElement>('input[name="stay_until"]')!.value = "2026-09-07";
+
+    submit(root);
+    await flush();
+
+    expect(host.received(M.toolsCall)).toHaveLength(0);
+    const slot = root.querySelector<HTMLElement>('[data-gadget-error-for="stay"]')!;
+    expect(slot.hidden).toBe(false);
+    expect(slot.textContent).toBe("The end date is before the start date.");
   });
 });

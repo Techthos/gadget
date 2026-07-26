@@ -87,6 +87,7 @@ import { mountCardList } from "./widgets/cardlist";
 import { mountMenu } from "./widgets/menu";
 import { mountConfirm } from "./widgets/confirm";
 import { mountChoice } from "./widgets/choice";
+import { mountDatePicker } from "./widgets/datepicker";
 
 registerBehavior("table", mountTable);
 registerBehavior("form", mountForm);
@@ -95,6 +96,7 @@ registerBehavior("cardlist", mountCardList);
 registerBehavior("menu", mountMenu);
 registerBehavior("confirm", mountConfirm);
 registerBehavior("choice", mountChoice);
+registerBehavior("datepicker", mountDatePicker);
 
 if (typeof document !== "undefined" && "addEventListener" in document) {
   if (document.readyState === "loading") {

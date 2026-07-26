@@ -8,6 +8,12 @@
 // its trigger, because the card chrome and the table's scroll container clip
 // their overflow and a nested panel would be cut off at their edge. Its
 // coordinates are therefore written relative to that root.
+//
+// "One at a time" is a stack rather than a single slot, because a popup can be
+// opened from inside another: the calendar's month and year dropdowns live in
+// the calendar's own panel. Opening one closes every popup it is not nested
+// inside, and an outside press peels the stack from the top — so pressing the
+// calendar closes the dropdown over it without taking the calendar with it.
 
 /** Gap between a trigger and its panel, and the room a panel needs below the
  * trigger before it flips above it. */
@@ -23,7 +29,9 @@ export interface Popup {
   position(): void;
 }
 
-let open: Popup | null = null;
+// Open popups, outermost first. A popup is nested inside the one below it when
+// that one's panel holds its anchor.
+let stack: Popup[] = [];
 let globalsBound = false;
 
 /** The element a popup's panel is appended to and positioned against. */
@@ -31,16 +39,31 @@ export function popupHost(el: Element): HTMLElement {
   return el.closest<HTMLElement>(".gadget-root") ?? document.body;
 }
 
-/** Records p as the open popup, closing whichever was open before it. */
+/**
+ * Records p as open, closing every open popup p is not nested inside. A nested
+ * panel hangs off the widget root like any other (see popupHost), so ancestry
+ * is read from where the trigger sits, not from where the panel was appended.
+ */
 export function openPopup(p: Popup): void {
-  if (open && open !== p) open.close();
-  open = p;
+  for (let i = stack.length - 1; i >= 0; i--) {
+    const q = stack[i] as Popup;
+    if (q === p || q.panel.contains(p.anchor)) break;
+    stack.pop();
+    q.close();
+  }
+  if (!stack.includes(p)) stack.push(p);
   bindGlobals();
 }
 
-/** Drops p from the open slot. Safe to call for a popup that is not in it. */
+/** Drops p, and anything opened from inside it, from the open stack. Safe to
+ * call for a popup that is not in it. */
 export function releasePopup(p: Popup): void {
-  if (open === p) open = null;
+  const i = stack.indexOf(p);
+  if (i < 0) return;
+  // Splice first: each close() calls back in here, and by then its entry is
+  // already gone, so the recursion stops at one level.
+  const dropped = stack.splice(i);
+  for (let k = dropped.length - 1; k >= 1; k--) (dropped[k] as Popup).close();
 }
 
 export interface PlaceOptions {
@@ -88,15 +111,22 @@ function bindGlobals(): void {
   document.addEventListener(
     "pointerdown",
     (ev) => {
-      const p = open;
       const target = ev.target;
-      if (!p || !(target instanceof Node)) return;
-      if (!p.anchor.contains(target) && !p.panel.contains(target)) p.close();
+      if (!(target instanceof Node)) return;
+      // Peel from the top: a press inside the calendar is outside the dropdown
+      // over it, and closes only that one.
+      for (let i = stack.length - 1; i >= 0; i--) {
+        const p = stack[i] as Popup;
+        if (p.anchor.contains(target) || p.panel.contains(target)) break;
+        p.close();
+      }
     },
     true,
   );
 
-  const reposition = (): void => open?.position();
+  const reposition = (): void => {
+    for (const p of [...stack]) p.position();
+  };
   window.addEventListener("resize", reposition);
   window.addEventListener("scroll", reposition, true);
 }

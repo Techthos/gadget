@@ -299,3 +299,26 @@ func TestConfirmValidate(t *testing.T) {
 		}
 	}
 }
+
+func TestConfirmConfigChatPrompt(t *testing.T) {
+	c := &Confirm{
+		URI:    "ui://demo/ok",
+		Prompt: "Proceed?",
+		Accept: AcceptSpec{
+			Tool:       "delete_user",
+			ChatPrompt: "Delete the account for Ada",
+			Args:       map[string]ArgSource{"id": FromRow("id")},
+		},
+	}
+	b, _ := json.Marshal(c.config())
+	cfg := string(b)
+
+	if !strings.Contains(cfg, `"chatPrompt":"Delete the account for Ada"`) {
+		t.Errorf("config island missing chatPrompt\nfull: %s", cfg)
+	}
+	// The chat path never calls the tool from the view, so its args are dead
+	// weight and must not reach the island.
+	if strings.Contains(cfg, `"args"`) {
+		t.Errorf("config island should drop args when chatPrompt is set\nfull: %s", cfg)
+	}
+}

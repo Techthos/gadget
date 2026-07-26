@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -306,6 +307,8 @@ func ordersTable() *gadget.Table {
 					Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")}},
 				gadget.Action{Label: "Add extras", Tool: "choose_extras",
 					Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")}},
+				gadget.Action{Label: "Set delivery date", Tool: "schedule_delivery",
+					Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")}},
 			),
 		},
 		PageSize:    5,
@@ -341,6 +344,37 @@ func shippingChoice() *gadget.Choice {
 			SuccessMessage: "On its way.",
 		},
 		Cancel: &gadget.RejectSpec{Label: "Decide later", Message: "Nothing was shipped."},
+		Brand:  appBrand(),
+		Theme:  appTheme(),
+	}
+}
+
+// deliveryPicker authors the question; the window it may be answered in comes
+// from schedule_delivery, computed against the day the tool runs.
+func deliveryPicker() *gadget.DatePicker {
+	return &gadget.DatePicker{
+		URI:    "ui://preview/delivery",
+		Title:  "Delivery",
+		Prompt: "When should this order arrive?",
+		Body:   "The depot needs one working day's notice, and dispatches nothing on stocktaking days.",
+		Calendar: &gadget.Calendar{
+			Presets: []gadget.DatePreset{
+				{Label: "Tomorrow", Span: gadget.SpanTomorrow},
+				{Label: "In a week", Span: gadget.SpanNext7Days},
+			},
+		},
+		Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
+			{Label: "Order", Key: "reference"},
+			{Label: "Customer", Key: "customer"},
+			{Label: "Items", Key: "items", Type: gadget.ColNumber, Format: "int"},
+		}},
+		Submit: gadget.DateSubmit{
+			Tool:           "set_delivery_date",
+			Label:          "Book it",
+			Args:           map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+			SuccessMessage: "Delivery booked.",
+		},
+		Cancel: &gadget.RejectSpec{Label: "Decide later", Message: "Nothing was booked."},
 		Brand:  appBrand(),
 		Theme:  appTheme(),
 	}
@@ -405,6 +439,7 @@ func registerScenario(s *mcp.Server, data *store, withGallery bool) {
 	orders := ordersTable()
 	shipping := shippingChoice()
 	extras := extrasChoice()
+	delivery := deliveryPicker()
 
 	must(gosdk.AddWidgetToolFor(s, menu,
 		&mcp.Tool{Name: "main_menu", Description: "Show the Acme Dispatch app menu."},
@@ -487,6 +522,16 @@ func registerScenario(s *mcp.Server, data *store, withGallery bool) {
 			return nil, rowsOut{Rows: []map[string]any{row}}, nil
 		}))
 
+	must(gosdk.AddWidgetToolFor(s, delivery,
+		&mcp.Tool{Name: "schedule_delivery", Description: "Ask the user which day an order should arrive on."},
+		func(_ context.Context, _ *mcp.CallToolRequest, in idArg) (*mcp.CallToolResult, dateOut, error) {
+			row, window, ok := data.deliveryFor(in.ID, time.Now())
+			if !ok {
+				return textResult(fmt.Sprintf("Order %d not found.", in.ID)), dateOut{}, nil
+			}
+			return nil, dateOut{Rows: []map[string]any{row}, Value: window}, nil
+		}))
+
 	// The one tool with no widget of its own: it answers with text, the way
 	// any ordinary MCP tool does.
 	mcp.AddTool(s, &mcp.Tool{Name: "reset_demo", Description: "Restore the seed customers and orders."},
@@ -495,14 +540,14 @@ func registerScenario(s *mcp.Server, data *store, withGallery bool) {
 			return textResult("Preview data restored."), noOut{}, nil
 		})
 
-	registerScenarioActions(s, data, table, cards, form, create, confirm, shipping, extras)
+	registerScenarioActions(s, data, table, cards, form, create, confirm, shipping, extras, delivery)
 }
 
 // registerScenarioActions installs the app-only half: the tools widgets call
 // and the model does not.
 func registerScenarioActions(s *mcp.Server, data *store,
 	table *gadget.Table, cards *gadget.CardList, form, create *gadget.Form,
-	confirm *gadget.Confirm, shipping, extras *gadget.Choice,
+	confirm *gadget.Confirm, shipping, extras *gadget.Choice, delivery *gadget.DatePicker,
 ) {
 	// Row action: delete, answering with the rows that remain so the table
 	// repaints from the server's truth rather than guessing locally.
@@ -616,6 +661,17 @@ func registerScenarioActions(s *mcp.Server, data *store,
 			return textResult(fmt.Sprintf("%s shipped by %s.", o.Reference, in.Method)), noOut{}, nil
 		}))
 
+	dateTool := &mcp.Tool{Name: "set_delivery_date", Description: "Record the day an order should arrive on."}
+	gosdk.AppOnly(dateTool, delivery)
+	must(gosdk.AddWidgetToolFor(s, delivery, dateTool,
+		func(_ context.Context, _ *mcp.CallToolRequest, in dateInput) (*mcp.CallToolResult, noOut, error) {
+			o, ok := data.setDeliveryDate(in.ID, in.Date)
+			if !ok {
+				return textResult("No such order."), noOut{}, nil
+			}
+			return textResult(fmt.Sprintf("%s will arrive on %s.", o.Reference, in.Date)), noOut{}, nil
+		}))
+
 	extrasTool := &mcp.Tool{Name: "add_order_extras", Description: "Attach add-ons to an order."}
 	gosdk.AppOnly(extrasTool, extras)
 	must(gosdk.AddWidgetToolFor(s, extras, extrasTool,
@@ -690,6 +746,11 @@ type shipInput struct {
 type extrasInput struct {
 	ID     int      `json:"id"`
 	Extras []string `json:"extras" jsonschema:"the chosen add-ons"`
+}
+
+type dateInput struct {
+	ID   int    `json:"id"`
+	Date string `json:"date" jsonschema:"the delivery day, YYYY-MM-DD"`
 }
 
 // --- per-call data the widgets read ---

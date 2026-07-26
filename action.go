@@ -26,14 +26,31 @@ const (
 
 // Action is a user-triggerable operation on a widget: a per-row button, a
 // bulk action over selected rows, or a link.
+//
+// A tool action normally calls Tool and lets the widget handle the result —
+// re-rendering from returned rows, or reporting the outcome. When the tool
+// answers with a widget of its own instead (an edit form, a detail view), the
+// host is the one that must open it, and a host that runs a view-initiated
+// call out of band opens nothing. Prompt routes such an action through the
+// chat for those hosts: see its documentation below.
 type Action struct {
 	Label string
 	// Kind defaults to ActionTool.
 	Kind ActionKind
 	// Tool is the MCP tool name to call (Kind == ActionTool).
 	Tool string
-	// Args maps tool argument names to their sources.
+	// Args maps tool argument names to their sources. Ignored when Prompt is
+	// set — the model chooses the arguments there.
 	Args map[string]ArgSource
+	// Prompt, when set, makes the action ask the host to post this text as a
+	// user message (ui/message) instead of calling Tool itself. Write it as
+	// the request a user would type; the model reads it and decides which
+	// tool answers, so Tool documents what the action opens.
+	//
+	// The text is fixed: it carries no row values, because the model works
+	// out which record is meant from the conversation. Only tool actions may
+	// set it — a link action already navigates on its own.
+	Prompt string
 	// HrefKey is the row field holding the URL (Kind == ActionLink).
 	HrefKey string
 	// Confirm, when set, requires a second confirming click showing this
@@ -63,6 +80,9 @@ func (a Action) validate(context string) error {
 		if a.HrefKey == "" {
 			return fmt.Errorf("%s: action %q: HrefKey is required for link actions", context, a.Label)
 		}
+		if a.Prompt != "" {
+			return fmt.Errorf("%s: action %q: Prompt does not apply to link actions", context, a.Label)
+		}
 	default:
 		return fmt.Errorf("%s: action %q: unknown kind %q", context, a.Label, a.Kind)
 	}
@@ -83,7 +103,11 @@ func (a Action) config() map[string]any {
 	if a.Tool != "" {
 		m["tool"] = a.Tool
 	}
-	if len(a.Args) > 0 {
+	if a.Prompt != "" {
+		// A prompt action never calls the tool from the view, so its args
+		// would be dead weight in the island.
+		m["prompt"] = a.Prompt
+	} else if len(a.Args) > 0 {
 		m["args"] = a.Args
 	}
 	if a.HrefKey != "" {

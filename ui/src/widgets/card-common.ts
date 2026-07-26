@@ -18,6 +18,8 @@ export interface ActionCfg {
 	kind: "tool" | "link";
 	tool?: string;
 	args?: Record<string, ArgSourceCfg>;
+	/** Posts this as a user turn instead of calling tool. See Action.Prompt. */
+	prompt?: string;
 	hrefKey?: string;
 	confirm?: string;
 	variant?: string;

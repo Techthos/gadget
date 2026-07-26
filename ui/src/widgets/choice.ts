@@ -40,7 +40,14 @@ interface ChoiceCfg {
 	max?: number;
 	options?: OptionCfg[];
 	details?: DescriptionItemCfg[];
-	submit: { tool: string; valueArg: string; args?: ActionCfg["args"]; successMessage?: string };
+	submit: {
+		tool: string;
+		valueArg: string;
+		args?: ActionCfg["args"];
+		/** Posts this plus the decision as a user turn. See ChoiceSubmit.ChatPrompt. */
+		chatPrompt?: string;
+		successMessage?: string;
+	};
 	cancel?: { tool?: string; args?: ActionCfg["args"]; message: string };
 	loadTool?: string;
 	loadArgs?: Record<string, unknown>;
@@ -348,9 +355,42 @@ export function mountChoice(ctx: MountContext): void {
 		return multiple ? picked : (picked[0] ?? "");
 	}
 
+	/** What the reader picked, by label, for a message a person will read. */
+	function decisionText(): string {
+		return options
+			.filter((o) => chosen.has(o.value))
+			.map((o) => o.label || o.value)
+			.join(", ");
+	}
+
+	// Hands the request to the host's chat instead of calling the tool: the
+	// model makes the call, so there is no result to apply — only the turn
+	// being accepted. Returns false when the host refused and the widget has
+	// re-armed for a retry.
+	async function chat(text: string): Promise<boolean> {
+		phase = "working";
+		renderOptions();
+		syncControls();
+		showStatus("loading", "Working…");
+		try {
+			await bridge.sendMessage(text);
+			return true;
+		} catch (e) {
+			fail(e instanceof Error ? e.message : String(e));
+			return false;
+		}
+	}
+
 	async function submit(): Promise<void> {
 		if (phase !== "deciding" || !cfg.submit?.tool) return;
 		if (chosen.size < min || (max && chosen.size > max)) return;
+		if (cfg.submit.chatPrompt) {
+			// A choice's whole output is what the reader picked, and a chat turn
+			// has no argument to carry it, so the decision goes in the text.
+			if (!(await chat(`${cfg.submit.chatPrompt} — chose: ${decisionText()}`))) return;
+			settle(cfg.submit.successMessage || "Sent.", "accepted");
+			return;
+		}
 		const res = await call(
 			cfg.submit.tool,
 			cfg.submit.args,

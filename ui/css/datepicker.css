@@ -1,0 +1,91 @@
+/* DatePicker: a question, the grid answering it, and what has been picked so
+ * far. The grid itself is calendar.css; this is only the frame around it —
+ * deliberately the same frame as Choice's, since both are a question with two
+ * buttons under it. */
+
+.gadget-datepicker-prompt {
+  padding: calc(var(--gadget-space-unit) * 4);
+}
+
+.gadget-datepicker-question {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.gadget-datepicker-lede {
+  margin: calc(var(--gadget-space-unit) * 1) 0 0;
+  color: var(--gadget-color-text-muted);
+}
+
+/* The prompt and the record it is about are one block: no rule between a
+ * question and the facts it is asked against. */
+.gadget-datepicker-prompt + .gadget-descriptions {
+  padding-top: 0;
+}
+
+.gadget-datepicker-body {
+  display: flex;
+  justify-content: center;
+  padding: calc(var(--gadget-space-unit) * 4);
+  border-top: 1px solid var(--gadget-color-border);
+  /* A grid wider than the pane scrolls rather than pushing the card open. */
+  overflow-x: auto;
+}
+
+.gadget-datepicker-summary {
+  margin: 0;
+  padding: 0 calc(var(--gadget-space-unit) * 4) calc(var(--gadget-space-unit) * 3);
+  color: var(--gadget-color-text-muted);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+.gadget-datepicker-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: calc(var(--gadget-space-unit) * 2);
+  padding: calc(var(--gadget-space-unit) * 3) calc(var(--gadget-space-unit) * 4);
+  border-top: 1px solid var(--gadget-color-border);
+}
+
+/* What is left once the decision is made, in place of the controls. */
+.gadget-datepicker-outcome {
+  margin: 0;
+  padding: calc(var(--gadget-space-unit) * 3) calc(var(--gadget-space-unit) * 4);
+  border-top: 1px solid var(--gadget-color-border);
+  overflow-wrap: anywhere;
+}
+
+.gadget-datepicker-outcome--accepted {
+  color: var(--gadget-color-success);
+}
+
+.gadget-datepicker-outcome--declined {
+  color: var(--gadget-color-text-muted);
+}
+
+@container gadget (max-width: 34rem) {
+  .gadget-datepicker-prompt,
+  .gadget-datepicker-body,
+  .gadget-datepicker-actions,
+  .gadget-datepicker-outcome {
+    padding-inline: calc(var(--gadget-space-unit) * 3);
+  }
+
+  .gadget-datepicker-summary {
+    padding-inline: calc(var(--gadget-space-unit) * 3);
+  }
+
+  /* Full-width stacked buttons, submit on top: at this width a right-aligned
+   * pair is two small targets in the corner. */
+  .gadget-datepicker-actions {
+    flex-direction: column-reverse;
+  }
+
+  .gadget-datepicker-actions .gadget-btn {
+    width: 100%;
+  }
+}

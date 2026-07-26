@@ -33,6 +33,7 @@ shows how the pieces fit together.
 | `confirm_delete_customer` | Confirm | Consequences counted from current state at call time, acknowledgement box, a reject tool the server hears about |
 | `choose_shipping` | Choice | Options priced per call, typed option details formatted in the host locale |
 | `choose_extras` | Choice | Authored options, several picks, bounded by `Min`/`Max` |
+| `schedule_delivery` | DatePicker | A delivery date bounded by current availability, blocked days from state at call time |
 | `reset_demo` | none | An ordinary text tool, to restore the seed data |
 
 Everything the widgets fire back into (`delete_customer`, `save_customer`,
@@ -44,7 +45,7 @@ resource, covering the renderings the scenario has no room for. Start at
 `preview_index`, a menu listing all of them, or call any `preview_*` tool
 directly. It mirrors the story list in `examples/harness`, including the empty
 states, the long list, the load-more strip, both menu styles, all three choice
-layouts, the runtime-data variants, a table with `RowsKey`/`RowID` moved off
+layouts, the date and date-range pickers with presets and caption dropdowns, the runtime-data variants, a table with `RowsKey`/`RowID` moved off
 their defaults, a full theme-token override, the frameless theme, and the
 data-URI brand path.
 

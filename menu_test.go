@@ -38,6 +38,14 @@ func canonicalMenu() *Menu {
 			},
 			// Neither a label nor decoration: the tool name carries the tile.
 			{Tool: "archive_users"},
+			// A prompt item navigates through the host's chat. Args are set
+			// too, to pin that the island drops them on this path.
+			{
+				Tool:   "invite_user",
+				Args:   map[string]any{"id": 9},
+				Prompt: "Start an invite for a new teammate",
+				Label:  "Invite",
+			},
 		},
 		Brand: &Brand{Name: "Acme"},
 		Theme: &theme.Theme{ColorPrimary: "#7c3aed"},
@@ -110,10 +118,16 @@ func TestMenuConfigIsland(t *testing.T) {
 		`{"tool":"list_users"}`,
 		`{"args":{"id":1},"tool":"edit_user"}`,
 		`{"tool":"archive_users"}`,
+		`{"prompt":"Start an invite for a new teammate","tool":"invite_user"}`,
 	} {
 		if !strings.Contains(cfg, want) {
 			t.Errorf("config island missing %s\nfull: %s", want, cfg)
 		}
+	}
+	// A prompt item never calls the tool from the view, so its args are dead
+	// weight and must not reach the island.
+	if strings.Contains(cfg, `"id":9`) {
+		t.Errorf("config island should drop args of a prompt item\nfull: %s", cfg)
 	}
 	// Labels, descriptions and icons are server-rendered; the runtime never
 	// needs them, so they stay out of the island.

@@ -88,6 +88,16 @@ export function mountCard(ctx: MountContext): void {
 		render();
 		showStatus("loading", "Working…");
 		try {
+			// A prompt action hands the request to the host's chat: the model makes
+			// the call, so there is no result of ours to apply — only the turn being
+			// accepted.
+			if (action.prompt) {
+				await bridge.sendMessage(action.prompt);
+				busy = false;
+				render();
+				showStatus("", "");
+				return;
+			}
 			applyResult(await bridge.callTool(action.tool, resolveArgs(action, row, [])));
 		} catch (e) {
 			busy = false;

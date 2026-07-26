@@ -445,6 +445,11 @@
         result = { content: [{ type: "text", text: `${name} ok.` }], structuredContent: {} };
       }
       setTimeout(() => send({ id: msg.id, result }), 400); // visible loading state
+    } else if (msg.method === "ui/message") {
+      // A prompt tile navigates through the chat: a real host posts this as a
+      // user turn and the model's answer opens the widget. There is no chat
+      // here, so acking is the whole of it — the traffic pane is the proof.
+      send({ id: msg.id, result: {} });
     } else if (msg.id !== undefined && msg.method) {
       send({ id: msg.id, result: {} }); // any other request: ack
     }

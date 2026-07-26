@@ -53,6 +53,9 @@ type previewOut struct {
 	Values  map[string]any    `json:"values,omitempty"`
 	Effects []map[string]any  `json:"effects,omitempty"`
 	Options []map[string]any  `json:"options,omitempty"`
+	// Value is what a DatePicker reads: the selection, and the window it may
+	// move in.
+	Value map[string]any `json:"value,omitempty"`
 }
 
 // --- fixture data ---
@@ -389,6 +392,36 @@ func galleryCatalog() []preview {
 			},
 		},
 
+		// Date picker
+		{
+			Tool: "preview_date_single", Group: "Date picker", Label: "Date picker, one date", Icon: iconCal,
+			Desc:   "An inline calendar with presets, a bounded window and two days already taken.",
+			Widget: galleryDatePicker(), Data: rowsOnly(galleryOrderRow()),
+		},
+		{
+			Tool: "preview_date_range", Group: "Date picker", Label: "Date picker, a range", Icon: iconCal,
+			Desc:   "Two months side by side, ISO week numbers, and quick ranges beside the grid.",
+			Widget: galleryDatePickerRange(),
+		},
+		{
+			Tool: "preview_date_dropdowns", Group: "Date picker", Label: "Date picker, month and year", Icon: iconCal,
+			Desc:   "Caption dropdowns for a date far from today, with every weekend blocked.",
+			Widget: galleryDatePickerDropdowns(),
+		},
+		{
+			Tool: "preview_date_runtime", Group: "Date picker", Label: "Date picker, runtime availability", Icon: iconCal,
+			Desc:   "The window and the nights already booked arrive with the tool result.",
+			Widget: galleryDatePickerRuntime(),
+			Data: func() previewOut {
+				row := galleryOrderRow()
+				return previewOut{Rows: &row, Value: map[string]any{
+					"min":      "2026-08-01",
+					"max":      "2026-10-31",
+					"disabled": []string{"2026-08-27", "2026-08-28", "2026-08-29"},
+				}}
+			},
+		},
+
 		// Theming and chrome
 		{
 			Tool: "preview_theme_tokens", Group: "Theme", Label: "Theme, token overrides", Icon: iconPalette,
@@ -659,7 +692,17 @@ func galleryFormFields() *gadget.Form {
 				Options: []gadget.Option{gadget.Opt("read"), gadget.Opt("write"), gadget.Opt("billing")}},
 			{Name: "seats", Label: "Seats", Type: gadget.FNumber, Default: "3",
 				Validation: &gadget.Validation{Min: ptr(1.0), Max: ptr(50.0), Step: ptr(1.0)}},
-			{Name: "startsOn", Label: "Starts on", Type: gadget.FDate, Default: "2026-08-01"},
+			{Name: "startsOn", Label: "Starts on", Type: gadget.FDate, Default: "2026-08-01",
+				Calendar: &gadget.Calendar{Min: "2026-01-01", MonthDropdowns: true, FromYear: 2026, ToYear: 2030}},
+			{Name: "trialFrom", Label: "Trial period", Type: gadget.FDateRange, EndName: "trialTo",
+				Description: "The dates the free trial covers.",
+				Calendar: &gadget.Calendar{
+					Min: "2026-01-01",
+					Presets: []gadget.DatePreset{
+						{Label: "Next 7 days", Span: gadget.SpanNext7Days},
+						{Label: "Next 30 days", Span: gadget.SpanNext30Days},
+					},
+				}},
 			{Name: "digestAt", Label: "Daily digest", Type: gadget.FTime, Default: "09:00"},
 			{Name: "notes", Label: "Notes", Type: gadget.FTextarea, Rows: 3,
 				Placeholder: "Anything the team should know",
@@ -840,6 +883,97 @@ func galleryChoiceRuntime() *gadget.Choice {
 	}
 }
 
+func galleryDatePicker() *gadget.DatePicker {
+	return &gadget.DatePicker{
+		URI:    "ui://preview/gallery-date",
+		Title:  "Delivery",
+		Prompt: "When should we deliver order ORD-4471?",
+		Body:   "The depot needs one working day's notice.",
+		Calendar: &gadget.Calendar{
+			Min:      "2026-08-01",
+			Max:      "2026-10-31",
+			Disabled: []string{"2026-08-14", "2026-08-15"},
+			Presets: []gadget.DatePreset{
+				{Label: "Today", Span: gadget.SpanToday},
+				{Label: "Tomorrow", Span: gadget.SpanTomorrow},
+			},
+		},
+		Details: galleryChoiceDetails(),
+		Submit: gadget.DateSubmit{
+			Tool:           "sandbox_schedule",
+			Label:          "Book it",
+			Args:           map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+			SuccessMessage: "Booked.",
+		},
+		Cancel: &gadget.RejectSpec{Label: "Decide later", Message: "Nothing was booked."},
+		Brand:  appBrand(),
+		Theme:  appTheme(),
+	}
+}
+
+func galleryDatePickerRange() *gadget.DatePicker {
+	return &gadget.DatePicker{
+		URI:    "ui://preview/gallery-date-range",
+		Title:  "Booking",
+		Prompt: "Which nights should we hold the suite?",
+		Mode:   gadget.DateRange,
+		Calendar: &gadget.Calendar{
+			Min:         "2026-08-01",
+			Max:         "2026-12-31",
+			Disabled:    []string{"2026-08-27", "2026-08-28", "2026-08-29"},
+			WeekNumbers: true,
+			Presets: []gadget.DatePreset{
+				{Label: "This week", Span: gadget.SpanThisWeek},
+				{Label: "Next 7 days", Span: gadget.SpanNext7Days},
+				{Label: "This month", Span: gadget.SpanThisMonth},
+				{Label: "Trade fair", Start: "2026-09-07", End: "2026-09-11"},
+			},
+		},
+		Default:    "2026-08-20",
+		DefaultEnd: "2026-08-23",
+		Submit: gadget.DateSubmit{Tool: "sandbox_schedule", Label: "Hold it",
+			ValueArg: "from", EndArg: "until", SuccessMessage: "Held."},
+		Cancel: &gadget.RejectSpec{},
+		Brand:  appBrand(),
+		Theme:  appTheme(),
+	}
+}
+
+func galleryDatePickerDropdowns() *gadget.DatePicker {
+	return &gadget.DatePicker{
+		URI:    "ui://preview/gallery-date-dropdowns",
+		Prompt: "When does the contract start?",
+		Body:   "Weekends are not working days.",
+		Calendar: &gadget.Calendar{
+			Min:             "2020-01-01",
+			Max:             "2030-12-31",
+			DisableWeekends: true,
+			MonthDropdowns:  true,
+			StartOn:         "2027-03-01",
+		},
+		Submit: gadget.DateSubmit{Tool: "sandbox_schedule", Label: "Set the date"},
+		Cancel: &gadget.RejectSpec{},
+		Brand:  appBrand(),
+		Theme:  appTheme(),
+	}
+}
+
+func galleryDatePickerRuntime() *gadget.DatePicker {
+	return &gadget.DatePicker{
+		URI:      "ui://preview/gallery-date-runtime",
+		Title:    "Availability",
+		Prompt:   "Which nights are you staying?",
+		Mode:     gadget.DateRange,
+		Calendar: &gadget.Calendar{WeekNumbers: true},
+		Details:  galleryChoiceDetails(),
+		Submit: gadget.DateSubmit{Tool: "sandbox_schedule", ValueArg: "from", EndArg: "until",
+			Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")}},
+		Cancel: &gadget.RejectSpec{},
+		Brand:  appBrand(),
+		Theme:  appTheme(),
+	}
+}
+
 // galleryThemeTokens overrides most of what a Theme can override at once, so
 // the difference from the default palette is unmistakable.
 func galleryThemeTokens() *gadget.Table {
@@ -1002,6 +1136,17 @@ func registerSandbox(s *mcp.Server, anchor gadget.Widget, formAnchor *gadget.For
 			return textResult("Shipped by " + in.Method + " (preview only)."), previewOut{}, nil
 		})
 
+	add(&mcp.Tool{Name: "sandbox_schedule", Description: "Preview-only date or date-range decision."},
+		func(_ context.Context, _ *mcp.CallToolRequest, in sandboxInput) (*mcp.CallToolResult, previewOut, error) {
+			switch {
+			case in.From != "" && in.Until != "":
+				return textResult("Held " + in.From + " to " + in.Until + " (preview only)."), previewOut{}, nil
+			case in.Date != "":
+				return textResult("Booked for " + in.Date + " (preview only)."), previewOut{}, nil
+			}
+			return textResult("No date was sent (preview only)."), previewOut{}, nil
+		})
+
 	add(&mcp.Tool{Name: "sandbox_extras", Description: "Preview-only add-on selection."},
 		func(_ context.Context, _ *mcp.CallToolRequest, in sandboxInput) (*mcp.CallToolResult, previewOut, error) {
 			return textResult("Added " + strings.Join(in.Extras, ", ") + " (preview only)."), previewOut{}, nil
@@ -1038,6 +1183,10 @@ type sandboxInput struct {
 	IDs     []int    `json:"ids,omitempty"`
 	Method  string   `json:"method,omitempty"`
 	Extras  []string `json:"extras,omitempty"`
+	// The date pickers send a day, or the two ends of a span.
+	Date  string `json:"date,omitempty"`
+	From  string `json:"from,omitempty"`
+	Until string `json:"until,omitempty"`
 	// The renamed-keys variant identifies records by code, so its actions
 	// send these instead.
 	Code  string   `json:"code,omitempty"`
@@ -1047,17 +1196,19 @@ type sandboxInput struct {
 // sandboxSave is what both gallery forms submit; each sends the subset of
 // fields it renders.
 type sandboxSave struct {
-	ID       string   `json:"id,omitempty"`
-	Account  string   `json:"account,omitempty"`
-	Name     string   `json:"name,omitempty"`
-	Email    string   `json:"email,omitempty"`
-	Role     string   `json:"role,omitempty"`
-	Scopes   []string `json:"scopes,omitempty"`
-	Seats    float64  `json:"seats,omitempty"`
-	StartsOn string   `json:"startsOn,omitempty"`
-	DigestAt string   `json:"digestAt,omitempty"`
-	Notes    string   `json:"notes,omitempty"`
-	Notify   bool     `json:"notify,omitempty"`
+	ID        string   `json:"id,omitempty"`
+	Account   string   `json:"account,omitempty"`
+	Name      string   `json:"name,omitempty"`
+	Email     string   `json:"email,omitempty"`
+	Role      string   `json:"role,omitempty"`
+	Scopes    []string `json:"scopes,omitempty"`
+	Seats     float64  `json:"seats,omitempty"`
+	StartsOn  string   `json:"startsOn,omitempty"`
+	TrialFrom string   `json:"trialFrom,omitempty"`
+	TrialTo   string   `json:"trialTo,omitempty"`
+	DigestAt  string   `json:"digestAt,omitempty"`
+	Notes     string   `json:"notes,omitempty"`
+	Notify    bool     `json:"notify,omitempty"`
 }
 
 func withoutIDs(ids ...int) []map[string]any {

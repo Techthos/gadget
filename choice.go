@@ -229,7 +229,17 @@ type ChoiceSubmit struct {
 	ValueArg string
 	// Args maps further tool argument names to their sources. Static and
 	// FromRow apply; FromSelection does not — a choice has no row selection.
+	// Ignored when ChatPrompt is set.
 	Args map[string]ArgSource
+	// ChatPrompt, when set, makes submitting post a user message (ui/message)
+	// instead of calling Tool directly, for hosts that answer a view-initiated
+	// call without opening the widget behind it. The reader's decision is
+	// appended to this text, since a choice's whole output is what they picked
+	// and ValueArg has no counterpart in a chat turn.
+	//
+	// Named apart from Choice.Prompt, which is the question put to the reader
+	// rather than a message sent on their behalf.
+	ChatPrompt string
 	// Variant overrides the submit button styling (VariantPrimary).
 	Variant ActionVariant
 	// SuccessMessage is shown in place of the controls once the call succeeds.
@@ -415,7 +425,11 @@ func (c *Choice) ToolMeta() map[string]any {
 // calls. Prompt, body and button labels are already in the markup.
 func (c *Choice) config() map[string]any {
 	submit := map[string]any{"tool": c.Submit.Tool, "valueArg": c.valueArg()}
-	if len(c.Submit.Args) > 0 {
+	if c.Submit.ChatPrompt != "" {
+		// The chat path never calls the tool from the view, so its args would
+		// be dead weight in the island.
+		submit["chatPrompt"] = c.Submit.ChatPrompt
+	} else if len(c.Submit.Args) > 0 {
 		submit["args"] = c.Submit.Args
 	}
 	if c.Submit.SuccessMessage != "" {

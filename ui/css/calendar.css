@@ -1,0 +1,416 @@
+/* The date grid (ui/src/calendar.ts), in both of its mountings: inline in the
+ * DatePicker widget, and inside a popup panel over a form's date fields. The
+ * grid itself is styled once and does not know which one it is in.
+ *
+ * A range is drawn as a continuous band rather than as a row of separate pills:
+ * the day cells carry the band (so it runs edge to edge, through the gaps) and
+ * the day buttons carry the two ends. */
+
+.gadget-cal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: calc(var(--gadget-space-unit) * 4);
+  /* The grid is a table of fixed columns; the numbers in it read badly with a
+   * proportional font's varying digit widths. */
+  font-variant-numeric: tabular-nums;
+}
+
+.gadget-cal-main {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gadget-space-unit) * 3);
+  min-width: 0;
+}
+
+/* --- Header ------------------------------------------------------------
+ * The two arrows sit at the edges with the caption between them, so the month
+ * name stays put as the reader travels rather than shifting with its length. */
+
+.gadget-cal-header {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--gadget-space-unit) * 2);
+}
+
+.gadget-cal-caption {
+  display: flex;
+  flex: 1 1 auto;
+  justify-content: center;
+  align-items: center;
+  gap: calc(var(--gadget-space-unit) * 2);
+  min-width: 0;
+}
+
+.gadget-cal-caption-text {
+  font-weight: 600;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.gadget-cal-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--gadget-color-border);
+  border-radius: var(--gadget-radius-s);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.gadget-cal-nav:hover:not(:disabled) {
+  border-color: var(--gadget-color-primary);
+}
+
+.gadget-cal-nav:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.gadget-cal-nav-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* The caption dropdowns are the gadget dropdown at a smaller size: a month name
+ * and a year, not a field. */
+.gadget-cal .gadget-dd-trigger {
+  padding-block: calc(var(--gadget-space-unit) * 0.5);
+  font-size: 0.875rem;
+}
+
+/* The upgrade copies author classes onto the trigger (see dropdown.ts), so the
+ * year caption can ask for room for four digits and a chevron. */
+.gadget-dd-trigger.gadget-cal-select--year {
+  min-width: 5.5rem;
+}
+
+/* --- The months -------------------------------------------------------- */
+
+/* Every month asked for is shown. Where two do not fit side by side they wrap
+ * under each other rather than one of them disappearing: a range picker's
+ * second month is the whole point of a range picker, and a reader who has to
+ * travel to see next month cannot see a span across the boundary at all. */
+.gadget-cal-months {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(var(--gadget-space-unit) * 5);
+}
+
+.gadget-cal-grid {
+  border-collapse: collapse;
+  /* Every column the same width, whatever the digits in it. */
+  table-layout: fixed;
+}
+
+.gadget-cal-month-name {
+  padding-bottom: calc(var(--gadget-space-unit) * 2);
+  font-weight: 600;
+  text-align: center;
+  caption-side: top;
+}
+
+.gadget-cal-weekday {
+  padding-bottom: calc(var(--gadget-space-unit) * 1);
+  width: 2.25rem;
+  color: var(--gadget-color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* Week numbers are a reference column, not part of the month: set apart by a
+ * rule and quieter than the days. */
+.gadget-cal-weeknum {
+  width: 1.75rem;
+  padding-inline-end: calc(var(--gadget-space-unit) * 1.5);
+  border-inline-end: 1px solid var(--gadget-color-border);
+  color: var(--gadget-color-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  text-align: end;
+}
+
+.gadget-cal-cell {
+  padding: 0;
+  text-align: center;
+}
+
+.gadget-cal-day {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--gadget-radius-s);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.gadget-cal-day:hover:not([aria-disabled="true"]) {
+  background: color-mix(in srgb, var(--gadget-color-primary) 12%, transparent);
+}
+
+/* Today is marked, not selected: a ring, so a selected today still reads as
+ * selected. */
+.gadget-cal-day--today {
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px var(--gadget-color-border);
+}
+
+.gadget-cal-day--disabled {
+  color: var(--gadget-color-text-muted);
+  opacity: 0.45;
+  cursor: default;
+  text-decoration: line-through;
+}
+
+/* Days the neighbouring month lends to keep the week whole: visible, so the
+ * week reads as a week, but plainly not on offer here. */
+.gadget-cal-outside {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  color: var(--gadget-color-text-muted);
+  font-size: 0.875rem;
+  opacity: 0.4;
+}
+
+/* --- A selected range -------------------------------------------------- */
+
+/* The band lives on the cell so it meets its neighbours with no gap between
+ * them; the ends are rounded off by the cells below. */
+.gadget-cal-cell--in-range {
+  background: color-mix(in srgb, var(--gadget-color-primary) 12%, transparent);
+}
+
+.gadget-cal-cell--start {
+  border-start-start-radius: var(--gadget-radius-s);
+  border-end-start-radius: var(--gadget-radius-s);
+}
+
+.gadget-cal-cell--end {
+  border-start-end-radius: var(--gadget-radius-s);
+  border-end-end-radius: var(--gadget-radius-s);
+}
+
+/* A week break cuts the band; each row's ends are rounded so it reads as one
+ * span continued rather than as one that leaks off the edge. */
+.gadget-cal-cell--in-range:first-of-type,
+.gadget-cal-cell--in-range:last-of-type {
+  border-radius: var(--gadget-radius-s);
+}
+
+/* The two ends are the selection proper. */
+.gadget-cal-day--start,
+.gadget-cal-day--end {
+  background: var(--gadget-color-primary);
+  border-color: var(--gadget-color-primary);
+  color: var(--gadget-color-primary-text);
+  font-weight: 600;
+}
+
+.gadget-cal-day--start:hover,
+.gadget-cal-day--end:hover {
+  background: var(--gadget-color-primary);
+}
+
+.gadget-cal-day:focus-visible {
+  outline: 2px solid var(--gadget-color-primary);
+  outline-offset: 1px;
+}
+
+/* --- Presets and the footer -------------------------------------------- */
+
+.gadget-cal-presets {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gadget-space-unit) * 1);
+  min-width: 8.5rem;
+}
+
+.gadget-cal-preset {
+  text-align: start;
+  background: transparent;
+  border-color: transparent;
+  font-size: 0.875rem;
+}
+
+.gadget-cal-preset:hover {
+  background: var(--gadget-color-surface);
+  border-color: var(--gadget-color-border);
+  filter: none;
+}
+
+.gadget-cal-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: calc(var(--gadget-space-unit) * 1);
+  border-top: 1px solid var(--gadget-color-border);
+}
+
+.gadget-cal-clear {
+  background: transparent;
+  border-color: transparent;
+  color: var(--gadget-color-text-muted);
+  font-size: 0.8125rem;
+}
+
+/* Once the decision is made the grid is a record of it, not a control. */
+.gadget-cal--locked {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* --- In a popup panel --------------------------------------------------
+ * The shared panel caps its height and scrolls; a calendar is a fixed block
+ * that must not be cut in half by that cap. */
+
+.gadget-cal-panel {
+  max-height: none;
+  overflow: visible;
+  padding: calc(var(--gadget-space-unit) * 3);
+  /* A popup is sized by its content, so without a ceiling two months would make
+   * a panel wider than the frame instead of wrapping inside it. */
+  max-width: calc(100vw - 1rem);
+}
+
+/* --- The trigger over a date field ------------------------------------- */
+
+.gadget-dt {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+
+/* A form field's control fills the field. */
+.gadget-field .gadget-dt {
+  display: flex;
+}
+
+/* The native inputs are the value holders and stay in the document — only out
+ * of view (see the same treatment in dropdown.css). Without the script they are
+ * the control, so this rule is the runtime's doing: it adds the class. */
+.gadget-dt-native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.gadget-dt-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--gadget-space-unit) * 2);
+  width: 100%;
+  min-width: 0;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.gadget-dt-trigger:hover:not(:disabled) {
+  border-color: var(--gadget-color-primary);
+}
+
+.gadget-dt-trigger[aria-expanded="true"] {
+  border-color: var(--gadget-color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gadget-color-primary) 20%, transparent);
+}
+
+.gadget-dt-trigger[aria-invalid="true"] {
+  border-color: var(--gadget-color-danger);
+}
+
+.gadget-dt-trigger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.gadget-dt-icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  color: var(--gadget-color-text-muted);
+}
+
+.gadget-dt-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gadget-dt-value--placeholder {
+  color: var(--gadget-color-text-muted);
+}
+
+/* Both date inputs of a range field, side by side — the layout of the fallback
+ * control, before the runtime puts a trigger over it. */
+.gadget-daterange {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--gadget-space-unit) * 2);
+  min-width: 0;
+}
+
+.gadget-daterange > .gadget-input {
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+
+/* Upgraded: the trigger is the only thing left with width to claim. */
+.gadget-daterange.gadget-dt > .gadget-dt-trigger {
+  flex: 1 1 auto;
+}
+
+@container gadget (max-width: 34rem) {
+  /* A rail beside the grid needs width there is none of here, so the presets
+   * lead as a wrapping row above it. Stacking is a direction change rather than
+   * a full-width basis: the popup panel is shrink-to-fit, and a 100% basis in a
+   * shrink-to-fit flex row only makes the row wider. */
+  .gadget-cal {
+    flex-direction: column;
+    gap: calc(var(--gadget-space-unit) * 3);
+  }
+
+  .gadget-cal-presets {
+    flex-direction: row;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gadget-cal-day,
+  .gadget-cal-nav,
+  .gadget-dt-trigger {
+    transition: none;
+  }
+}

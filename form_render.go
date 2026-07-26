@@ -113,6 +113,8 @@ func fieldNode(fd Field) g.Node {
 			attrs = append(attrs, h.Option(optAttrs...))
 		}
 		control = h.Select(attrs...)
+	case FDateRange:
+		control = dateRangeNode(fd, id)
 	case FCheckbox:
 		// Not controlAttrs: the box draws itself (ui/css/check.css) rather than
 		// wearing .gadget-input, and none of the text/number validation
@@ -126,7 +128,11 @@ func fieldNode(fd Field) g.Node {
 		}
 		control = checkboxNode(attrs...)
 	default: // text, number, date, time, readonly
-		attrs := append(controlAttrs(fd, id), h.Type(inputType(ft)))
+		attrs := controlAttrs(fd, id)
+		if ft == FDate {
+			attrs = append(attrs, dateBounds(fd.Calendar)...)
+		}
+		attrs = append(attrs, h.Type(inputType(ft)))
 		if ft == FReadonly {
 			attrs = append(attrs, h.ReadOnly())
 		}
@@ -158,6 +164,68 @@ func fieldNode(fd Field) g.Node {
 	}
 	nodes = append(nodes, h.P(h.Class("gadget-field-error"), htmlx.Data("error-for", fd.Name), g.Attr("hidden")))
 	return h.Div(nodes...)
+}
+
+// dateRangeNode renders a range field as its two value holders: a native date
+// input per end, named after the two tool arguments. The runtime hides them
+// behind one trigger and a range calendar (ui/src/calendar.ts) — but they stay
+// in the DOM, so the field keeps native constraint validation, and a document
+// whose script never runs still asks for both dates.
+func dateRangeNode(fd Field, id string) g.Node {
+	start, end := fd.rangeDefaults()
+	bounds := dateBounds(fd.Calendar)
+
+	label := fd.Label
+	if label == "" {
+		label = fd.Name
+	}
+
+	part := func(id, name, value, class, aria string) g.Node {
+		attrs := []g.Node{
+			h.Type("date"),
+			h.Name(name),
+			h.Class("gadget-input " + class),
+			h.Aria("label", aria),
+		}
+		if id != "" {
+			attrs = append(attrs, h.ID(id))
+		}
+		if fd.Required {
+			attrs = append(attrs, h.Required())
+		}
+		if value != "" {
+			attrs = append(attrs, h.Value(value))
+		}
+		return h.Input(append(attrs, bounds...)...)
+	}
+
+	// The field's own label addresses the start input by id, and the runtime
+	// moves that id onto the trigger it builds — the same handover the
+	// dropdown performs over a <select>. Each input also names itself, since
+	// without the script the two are all the reader gets.
+	return h.Div(
+		h.Class("gadget-daterange"),
+		htmlx.Data("daterange", fd.Name),
+		part(id, fd.Name, start, "gadget-daterange-start", label+" start date"),
+		part("", fd.endName(), end, "gadget-daterange-end", label+" end date"),
+	)
+}
+
+// dateBounds are the native min/max attributes a calendar's window implies.
+// The grid enforces the same window, but the attributes make the fallback
+// control and form.checkValidity() agree with it.
+func dateBounds(c *Calendar) []g.Node {
+	if c == nil {
+		return nil
+	}
+	var attrs []g.Node
+	if c.Min != "" {
+		attrs = append(attrs, h.Min(c.Min))
+	}
+	if c.Max != "" {
+		attrs = append(attrs, h.Max(c.Max))
+	}
+	return attrs
 }
 
 // controlAttrs renders the shared attributes incl. native validation.

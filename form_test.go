@@ -30,7 +30,11 @@ func canonicalForm() *Form {
 				Options: []Option{Opt("user"), {Value: "admin", Label: "Administrator"}}},
 			{Name: "tags", Label: "Tags", Type: FMultiSelect, Default: []string{"a"},
 				Options: []Option{Opt("a"), Opt("b"), Opt("c")}},
-			{Name: "birthday", Label: "Birthday", Type: FDate},
+			{Name: "birthday", Label: "Birthday", Type: FDate,
+				Calendar: &Calendar{Max: "2026-01-01", MonthDropdowns: true, FromYear: 1920, ToYear: 2026}},
+			{Name: "stay", Label: "Stay", Type: FDateRange, EndName: "stay_until", Required: true,
+				Default:  []string{"2026-08-20", "2026-08-23"},
+				Calendar: &Calendar{Min: "2026-08-01", Presets: []DatePreset{{Label: "This week", Span: SpanThisWeek}}}},
 			{Name: "alarm", Label: "Alarm", Type: FTime},
 			{Name: "id", Type: FHidden, Default: "42"},
 			{Name: "createdAt", Label: "Created", Type: FReadonly, Default: "2026-01-01"},
@@ -78,6 +82,15 @@ func TestFormGolden(t *testing.T) {
 		`multiple`,
 		`type="date"`,
 		`type="time"`,
+		// A date field's window is a native constraint too, so the fallback
+		// control and checkValidity() agree with the grid.
+		`max="2026-01-01" type="date"`,
+		// A range is its two value holders, named after the two tool arguments.
+		`<div class="gadget-daterange" data-gadget-daterange="stay">`,
+		`name="stay" class="gadget-input gadget-daterange-start" aria-label="Stay start date"`,
+		`name="stay_until" class="gadget-input gadget-daterange-end" aria-label="Stay end date"`,
+		`value="2026-08-20"`,
+		`value="2026-08-23"`,
 		`type="hidden" name="id" value="42"`,
 		`readonly`,
 		`data-gadget-error-for="name"`,
@@ -104,10 +117,21 @@ func TestFormConfigIsland(t *testing.T) {
 		`"submit":{"staticArgs":{"source":"widget"},"successMessage":"User saved.","tool":"save_user"}`,
 		`{"message":"Enter the full name.","name":"name","type":"text"}`,
 		`{"name":"tags","type":"multiselect"}`,
+		// A date field carries its grid: the runtime builds it, so nothing about
+		// it is in the markup.
+		`{"calendar":{"fromYear":1920,"max":"2026-01-01","mode":"single","monthDropdowns":true,"months":1,"toYear":2026},"name":"birthday","type":"date"}`,
+		`"endName":"stay_until"`,
+		`"presets":[{"label":"This week","span":"this-week"}]`,
+		`"mode":"range","months":2`,
+		`"required":true`,
 	} {
 		if !strings.Contains(cfg, want) {
 			t.Errorf("config island missing %s\nfull: %s", want, cfg)
 		}
+	}
+	// Only date fields carry a grid.
+	if strings.Contains(cfg, `{"calendar":{"mode":"single","months":1},"name":"alarm"`) {
+		t.Errorf("a time field must not carry a calendar: %s", cfg)
 	}
 }
 
@@ -150,6 +174,38 @@ func TestFormValidate(t *testing.T) {
 			f.Fields = []Field{{Name: "x", Type: "wizard"}}
 		},
 		"unsafe theme": func(f *Form) { f.Theme = &theme.Theme{ColorText: "x}</style>"} },
+		// A range's end argument shares the field namespace: two fields writing
+		// the same tool argument would send one value where the other is meant.
+		"end name collides with a field": func(f *Form) {
+			f.Fields = append(f.Fields, Field{Name: "stay_until"})
+		},
+		"end name collides with itself": func(f *Form) {
+			f.Fields = []Field{{Name: "x", Type: FDateRange, EndName: "x"}}
+		},
+		"end name without a range": func(f *Form) {
+			f.Fields = []Field{{Name: "x", Type: FDate, EndName: "y"}}
+		},
+		"calendar on a text field": func(f *Form) {
+			f.Fields = []Field{{Name: "x", Calendar: &Calendar{}}}
+		},
+		"malformed date default": func(f *Form) {
+			f.Fields = []Field{{Name: "x", Type: FDate, Default: "01.02.2026"}}
+		},
+		"backwards range default": func(f *Form) {
+			f.Fields = []Field{{Name: "x", Type: FDateRange, Default: []string{"2026-08-23", "2026-08-20"}}}
+		},
+		"range default outside the window": func(f *Form) {
+			f.Fields = []Field{{Name: "x", Type: FDateRange, Default: []string{"2026-07-01", "2026-08-20"},
+				Calendar: &Calendar{Min: "2026-08-01"}}}
+		},
+		"invalid calendar": func(f *Form) {
+			f.Fields = []Field{{Name: "x", Type: FDate, Calendar: &Calendar{Min: "yesterday"}}}
+		},
+		"range preset in a single-date field": func(f *Form) {
+			f.Fields = []Field{{Name: "x", Type: FDate, Calendar: &Calendar{
+				Presets: []DatePreset{{Label: "Fair", Start: "2026-09-07", End: "2026-09-11"}},
+			}}}
+		},
 	}
 
 	if err := canonicalForm().Validate(); err != nil {

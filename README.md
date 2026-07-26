@@ -88,8 +88,11 @@ host-themed table — sortable, filterable, paginated — inside the chat.
 - **Table**: typed columns (text/number/date/badge/link/actions), client-side
   sort/filter/pagination, row selection with bulk actions, per-row actions →
   MCP tool calls, inline destructive-action confirmation, empty/loading states.
-- **Form**: 10 field types, native + inline client validation, submit as a
+- **Form**: 11 field types, native + inline client validation, submit as a
   tool call, server-side field errors mapped inline, prefill for edit flows.
+- **DatePicker**: a date or a range, as a widget of its own or as a form field.
+  One calendar either way: bounded windows, blocked days, quick-range presets,
+  ISO week numbers, month/year travel, full keyboard control.
 - **Menu**: a launcher grid of tiles, one per UI-backed tool — the app's front
   door. Choosing a tile calls that tool so the host opens its widget.
 - **Host-aware theming**: `--gadget-*` design tokens defaulting to
@@ -105,7 +108,7 @@ host-themed table — sortable, filterable, paginated — inside the chat.
 
 ## Documentation
 
-- [Widget reference](docs/widgets.md) — Table, Form, Card, CardList, Menu, actions, data contract
+- [Widget reference](docs/widgets.md) — Table, Form, Card, CardList, Menu, Confirm, Choice, DatePicker, actions, data contract
 - [Theming](docs/theming.md) — tokens, host variables, dark mode
 - [Architecture](docs/architecture.md) — rendering model, runtime, security
 - [Preview server](docs/preview.md) — every widget as real MCP tools, for inspectors
@@ -113,8 +116,9 @@ host-themed table — sortable, filterable, paginated — inside the chat.
 ## Examples
 
 - `examples/demo` — complete MCP server (streamable HTTP or `-stdio`):
-  list/edit/save/delete/archive users. Point MCPJam or any MCP Apps host at
-  `http://localhost:8080/mcp`.
+  list/edit/save/delete/archive users, and book a follow-up call on a date
+  picker whose free days are computed per call. Point MCPJam or any MCP Apps
+  host at `http://localhost:8080/mcp`.
 - `examples/preview` — the widest MCP server: a small app with mutable state
   (customers, orders, forms, confirmations, choices) plus a gallery of every
   widget variant as its own tool. Built for driving from an MCP Apps capable

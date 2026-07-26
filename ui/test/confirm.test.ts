@@ -118,6 +118,50 @@ describe("confirm behavior", () => {
 		expect(status(root).hidden).toBe(true);
 	});
 
+	it("accepts through the chat when the accept carries a chatPrompt", async () => {
+		const root = confirmShell();
+		mountConfirm({
+			root,
+			config: config({
+				accept: { tool: "delete_user", chatPrompt: "Delete the account for Ada" },
+			}),
+			initialData: DATA,
+			bridge,
+		});
+
+		accept(root).click();
+		await flush();
+
+		expect(host.received(M.toolsCall)).toHaveLength(0);
+		expect(host.received(M.message)[0]!.params).toMatchObject({
+			role: "user",
+			content: [{ type: "text", text: "Delete the account for Ada" }],
+		});
+		// The decision is still made: the widget settles rather than staying armed.
+		expect(decision(root).hidden).toBe(true);
+		expect(outcome(root).textContent).toBe("Sent.");
+		expect(outcome(root).className).toContain("gadget-confirm-outcome--accepted");
+	});
+
+	it("re-arms when the host refuses the chat turn", async () => {
+		const root = confirmShell();
+		host.mute.add(M.message);
+		mountConfirm({
+			root,
+			config: config({
+				accept: { tool: "delete_user", chatPrompt: "Delete the account for Ada" },
+			}),
+			initialData: DATA,
+			bridge,
+		});
+
+		accept(root).click();
+		await new Promise((r) => setTimeout(r, 600)); // past the 500ms bridge timeout
+
+		expect(decision(root).hidden).toBe(false);
+		expect(status(root).textContent).toContain("timed out");
+	});
+
 	it("falls back to the result's text when no success message is configured", async () => {
 		const root = confirmShell();
 		host.onToolCall = () => ({ content: [{ type: "text", text: "Gone." }] });

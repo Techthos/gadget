@@ -511,6 +511,42 @@ describe("card behavior", () => {
 		expect(root.querySelector<HTMLElement>("[data-gadget-empty]")?.hidden).toBe(false);
 	});
 
+	it("posts a card action's prompt as a chat message instead of calling the tool", async () => {
+		const root = cardShell();
+		const withPrompt = {
+			...TEMPLATE,
+			footer: {
+				...TEMPLATE.footer,
+				actions: [
+					{
+						label: "Edit",
+						kind: "tool",
+						tool: "edit_user",
+						prompt: "Open the edit form for this user",
+					},
+				],
+			},
+		};
+		mountCard({
+			root,
+			config: cardConfig({ card: withPrompt }),
+			initialData: { rows: ROWS },
+			bridge,
+		});
+
+		root.querySelector<HTMLElement>('[data-gadget-action="0"]')!.click();
+		await flush();
+
+		expect(host.received(M.toolsCall)).toHaveLength(0);
+		expect(host.received(M.message)[0]!.params).toMatchObject({
+			role: "user",
+			content: [{ type: "text", text: "Open the edit form for this user" }],
+		});
+		// Nothing came back to apply, so the record and status are left alone.
+		expect(root.querySelector(".gadget-card-title")?.textContent).toBe(ROWS[0]!.name);
+		expect(root.querySelector<HTMLElement>("[data-gadget-status]")?.hidden).toBe(true);
+	});
+
 	it("fires a card action with FromRow args and applies the result", async () => {
 		const root = cardShell();
 		host.onToolCall = () => ({

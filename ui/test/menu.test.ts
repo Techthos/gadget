@@ -22,6 +22,9 @@ function menuShell(): HTMLElement {
       <button type="button" class="gadget-menu-item" data-gadget-menu-item="1">
         <span class="gadget-menu-label">Edit Ada</span>
       </button>
+      <button type="button" class="gadget-menu-item" data-gadget-menu-item="2">
+        <span class="gadget-menu-label">Invite</span>
+      </button>
     </div>`;
 	document.body.append(root);
 	return root;
@@ -30,7 +33,11 @@ function menuShell(): HTMLElement {
 function menuConfig(over: Record<string, unknown> = {}): Record<string, unknown> {
 	return {
 		widget: "menu",
-		items: [{ tool: "list_users" }, { tool: "edit_user", args: { id: 1 } }],
+		items: [
+			{ tool: "list_users" },
+			{ tool: "edit_user", args: { id: 1 } },
+			{ tool: "invite_user", prompt: "Start an invite for a new teammate" },
+		],
 		...over,
 	};
 }
@@ -145,6 +152,44 @@ describe("menu behavior", () => {
 		await flush();
 		expect(tiles(root).some((t) => t.disabled)).toBe(false);
 		expect(status(root).hidden).toBe(true);
+	});
+
+	it("posts the prompt as a chat message instead of calling the tool", async () => {
+		const root = menuShell();
+		mountMenu({ root, config: menuConfig(), initialData: null, bridge });
+
+		tiles(root)[2]!.click();
+		await flush();
+		expect(host.received(M.toolsCall)).toHaveLength(0);
+		expect(host.received(M.message)[0]!.params).toMatchObject({
+			role: "user",
+			content: [{ type: "text", text: "Start an invite for a new teammate" }],
+		});
+	});
+
+	it("re-arms the menu once the host accepts the prompt", async () => {
+		const root = menuShell();
+		mountMenu({ root, config: menuConfig(), initialData: null, bridge });
+
+		tiles(root)[2]!.click();
+		expect(tiles(root).every((t) => t.disabled)).toBe(true);
+		expect(status(root).textContent).toBe("Opening Invite…");
+
+		await flush();
+		expect(tiles(root).some((t) => t.disabled)).toBe(false);
+		expect(status(root).hidden).toBe(true);
+	});
+
+	it("surfaces a host that never answers the prompt", async () => {
+		const root = menuShell();
+		host.mute.add(M.message);
+		mountMenu({ root, config: menuConfig(), initialData: null, bridge });
+
+		tiles(root)[2]!.click();
+		await new Promise((r) => setTimeout(r, 600)); // past the 500ms bridge timeout
+		expect(status(root).textContent).toContain("timed out");
+		expect(status(root).className).toContain("gadget-status--error");
+		expect(tiles(root).some((t) => t.disabled)).toBe(false);
 	});
 
 	it("does nothing for a tile with no matching config entry", async () => {

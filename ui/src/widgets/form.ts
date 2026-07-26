@@ -1,6 +1,7 @@
 // Form widget behavior: native-validation gating, submit as an MCP tool
 // call, server-side field errors mapped inline, prefill from tool results.
 import type { MountContext } from "../index";
+import { enhanceDateFields, refreshDateFields, type CalendarCfg } from "../calendar";
 import { refreshDropdowns } from "../dropdown";
 import { CallToolResult, M } from "../protocol";
 
@@ -8,6 +9,11 @@ interface FieldCfg {
 	name: string;
 	type: string;
 	message?: string;
+	// Date fields only: the grid the field opens, and — for a range — the
+	// argument its end travels in.
+	calendar?: CalendarCfg;
+	endName?: string;
+	required?: boolean;
 }
 
 interface FormCfg {
@@ -34,6 +40,12 @@ export function mountForm(ctx: MountContext): void {
 	if (!formMaybe || !Array.isArray(cfg.fields)) return;
 	const form: HTMLFormElement = formMaybe;
 	const statusEl = root.querySelector<HTMLElement>("[data-gadget-status]");
+
+	// Every date field becomes a gadget calendar before anything reads the form.
+	// The native inputs survive the upgrade and stay the value holders, so
+	// everything below goes on driving them (see ui/src/calendar.ts).
+	const byName = new Map(cfg.fields.map((f) => [f.name, f]));
+	enhanceDateFields(form, (name) => byName.get(name) ?? null);
 
 	function controlFor(name: string): FormControl | null {
 		const el = form.elements.namedItem(name);
@@ -90,7 +102,10 @@ export function mountForm(ctx: MountContext): void {
 
 	function applyValues(values: Record<string, unknown>): void {
 		for (const f of cfg.fields) {
-			if (!(f.name in values)) continue;
+			// A range prefill may name either end, so the field is in play as
+			// soon as one of its two arguments is.
+			const end = f.type === "daterange" ? (f.endName ?? "") : "";
+			if (!(f.name in values) && !(end !== "" && end in values)) continue;
 			const control = controlFor(f.name);
 			if (!control) continue;
 			const v = values[f.name];
@@ -102,12 +117,22 @@ export function mountForm(ctx: MountContext): void {
 					opt.selected = wanted.includes(opt.value);
 				}
 			} else {
-				control.value = v === null || v === undefined ? "" : String(v);
+				control.value = text(v);
+				if (end !== "") {
+					const endControl = controlFor(end);
+					if (endControl) endControl.value = text(values[end]);
+				}
 			}
 		}
-		// A programmatic write fires no event, so the dropdowns built over the
-		// select fields cannot see the new prefill on their own.
+		// A programmatic write fires no event, so the controls built over the
+		// native ones — dropdowns over selects, calendars over date inputs —
+		// cannot see the new prefill on their own.
 		refreshDropdowns(form);
+		refreshDateFields(form);
+	}
+
+	function text(v: unknown): string {
+		return v === null || v === undefined ? "" : String(v);
 	}
 
 	function collectValues(): Record<string, unknown> {
@@ -121,6 +146,14 @@ export function mountForm(ctx: MountContext): void {
 				out[f.name] = [...control.selectedOptions].map((o) => o.value);
 			} else if (f.type === "number") {
 				if (control.value !== "") out[f.name] = Number(control.value);
+			} else if (f.type === "daterange") {
+				// Two flat arguments rather than one composite: a tool schema can
+				// declare two date strings, and a server can read them without
+				// unpacking anything.
+				out[f.name] = control.value;
+				const end = f.endName ?? "";
+				const endControl = end === "" ? null : controlFor(end);
+				if (endControl) out[end] = endControl.value;
 			} else {
 				out[f.name] = control.value;
 			}
@@ -129,13 +162,28 @@ export function mountForm(ctx: MountContext): void {
 	}
 
 	function validate(): boolean {
-		if (form.checkValidity()) return true;
+		let ok = form.checkValidity();
 		for (const f of cfg.fields) {
 			const control = controlFor(f.name);
 			if (control && !control.validity.valid) {
 				showFieldError(f.name, f.message ?? control.validationMessage);
 			}
+			if (f.type !== "daterange") continue;
+			const endControl = f.endName ? controlFor(f.endName) : null;
+			if (endControl && !endControl.validity.valid) {
+				showFieldError(f.name, f.message ?? endControl.validationMessage);
+			}
+			// An order no native constraint can express. The calendar cannot
+			// produce a backwards range, but the date inputs it stands in front
+			// of can — that is the fallback control, and it is still live.
+			if (control && endControl && control.value !== "" && endControl.value !== "") {
+				if (endControl.value < control.value) {
+					showFieldError(f.name, f.message ?? "The end date is before the start date.");
+					ok = false;
+				}
+			}
 		}
+		if (ok) return true;
 		showStatus("error", "Please fix the highlighted fields.");
 		return false;
 	}
@@ -210,6 +258,7 @@ export function mountForm(ctx: MountContext): void {
 	root.querySelector<HTMLElement>("[data-gadget-cancel]")?.addEventListener("click", () => {
 		form.reset();
 		refreshDropdowns(form);
+		refreshDateFields(form);
 		clearErrors();
 		showStatus("", "");
 	});

@@ -133,7 +133,16 @@ type AcceptSpec struct {
 	Label string
 	// Args maps tool argument names to their sources. Static and FromRow
 	// apply; FromSelection does not — a confirmation has no selection.
+	// Ignored when ChatPrompt is set.
 	Args map[string]ArgSource
+	// ChatPrompt, when set, makes accepting post this text as a user message
+	// (ui/message) instead of calling Tool directly, for hosts that answer a
+	// view-initiated call without opening the widget behind it. Write it as
+	// the request a user would type; the model then makes the call.
+	//
+	// Named apart from Confirm.Prompt, which is the question put to the
+	// reader rather than a message sent on their behalf.
+	ChatPrompt string
 	// Variant overrides the button styling derived from Severity.
 	Variant ActionVariant
 	// SuccessMessage is shown in place of the buttons once the call succeeds.
@@ -291,7 +300,11 @@ func (c *Confirm) ToolMeta() map[string]any {
 // already in the markup.
 func (c *Confirm) config() map[string]any {
 	accept := map[string]any{"tool": c.Accept.Tool}
-	if len(c.Accept.Args) > 0 {
+	if c.Accept.ChatPrompt != "" {
+		// The chat path never calls the tool from the view, so its args would
+		// be dead weight in the island.
+		accept["chatPrompt"] = c.Accept.ChatPrompt
+	} else if len(c.Accept.Args) > 0 {
 		accept["args"] = c.Accept.Args
 	}
 	if c.Accept.SuccessMessage != "" {

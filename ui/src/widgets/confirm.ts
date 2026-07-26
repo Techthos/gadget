@@ -26,7 +26,13 @@ interface ConfirmCfg {
 	rowsKey: string;
 	effectsKey: string;
 	rowId: string;
-	accept: { tool: string; args?: ActionCfg["args"]; successMessage?: string };
+	accept: {
+		tool: string;
+		args?: ActionCfg["args"];
+		/** Posts this as a user turn instead of calling tool. See AcceptSpec.ChatPrompt. */
+		chatPrompt?: string;
+		successMessage?: string;
+	};
 	reject?: { tool?: string; args?: ActionCfg["args"]; message: string };
 	details?: DescriptionItemCfg[];
 	effects?: EffectCfg[];
@@ -161,8 +167,30 @@ export function mountConfirm(ctx: MountContext): void {
 		}
 	}
 
+	// Hands the request to the host's chat instead of calling the tool: the
+	// model makes the call, so there is no result to apply — only the turn
+	// being accepted. Returns false when the host refused and the widget has
+	// re-armed for a retry.
+	async function chat(text: string): Promise<boolean> {
+		phase = "working";
+		syncButtons();
+		showStatus("loading", "Working…");
+		try {
+			await bridge.sendMessage(text);
+			return true;
+		} catch (e) {
+			fail(e instanceof Error ? e.message : String(e));
+			return false;
+		}
+	}
+
 	async function accept(): Promise<void> {
 		if (phase !== "deciding" || !guardsOk() || !cfg.accept?.tool) return;
+		if (cfg.accept.chatPrompt) {
+			if (!(await chat(cfg.accept.chatPrompt))) return;
+			settle(cfg.accept.successMessage || "Sent.", "accepted");
+			return;
+		}
 		const res = await call(cfg.accept.tool, cfg.accept.args, "The action failed.");
 		if (!res) return;
 		applyData(res);

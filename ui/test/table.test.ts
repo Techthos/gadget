@@ -239,6 +239,43 @@ describe("table behavior", () => {
     expect(pagination.hidden).toBe(false);
   });
 
+  it("posts a row action's prompt as a chat message instead of calling the tool", async () => {
+    const root = shell();
+    const cfg = config({
+      columns: [
+        { key: "name", label: "Name", type: "text", sortable: true },
+        {
+          key: "",
+          label: "",
+          type: "actions",
+          sortable: false,
+          actions: [
+            {
+              label: "Edit",
+              kind: "tool",
+              tool: "edit_user",
+              prompt: "Open the edit form for this user",
+            },
+          ],
+        },
+      ],
+    });
+    mountTable({ root, config: cfg, initialData: { rows: ROWS }, bridge });
+
+    openMenu(root, 'tbody [data-gadget-action-menu="1"]')[0]!.click();
+    await flush();
+
+    expect(host.received(M.toolsCall)).toHaveLength(0);
+    expect(host.received(M.message)[0]!.params).toMatchObject({
+      role: "user",
+      content: [{ type: "text", text: "Open the edit form for this user" }],
+    });
+    // Nothing came back to apply, so the rows are untouched and the working
+    // status is cleared.
+    expect(root.querySelectorAll("tbody tr")).toHaveLength(3);
+    expect(root.querySelector<HTMLElement>("[data-gadget-status]")!.hidden).toBe(true);
+  });
+
   it("fires row actions with FromRow args and applies returned rows", async () => {
     const root = shell();
     const cfg = config({

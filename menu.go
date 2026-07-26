@@ -12,12 +12,26 @@ import (
 // tile grid. Choosing it calls Tool with Args; the host answers by opening
 // that tool's own widget, so a menu item is navigation rather than an action
 // with a result of its own.
+//
+// That relies on the host opening the widget bound to a view-initiated
+// tools/call. A host that instead runs such a call out of band answers it
+// without opening anything, and the tile looks inert. Prompt switches the item
+// to the chat path for those hosts: the host posts the text as a user turn,
+// the model calls the tool, and the widget arrives as that call's result.
 type MenuItem struct {
-	// Tool is the MCP tool called when the item is chosen (required).
+	// Tool is the MCP tool called when the item is chosen (required). With
+	// Prompt set the call is the model's to make, so Tool documents what the
+	// item opens and still supplies the default Label.
 	Tool string
 	// Args are static arguments passed to Tool. Menu items carry no record,
-	// so unlike Action args these are fixed values, not row lookups.
+	// so unlike Action args these are fixed values, not row lookups. Ignored
+	// when Prompt is set — the model chooses the arguments there.
 	Args map[string]any
+	// Prompt, when set, makes the item ask the host to post this text as a
+	// user message (ui/message) instead of calling Tool itself. Write it as
+	// the request a user would type: the model reads it and decides which
+	// tool answers, so name what the item opens rather than the tool.
+	Prompt string
 	// Label is the tile heading. Defaults to Tool.
 	Label string
 	// Description is the supporting line under the label.
@@ -138,7 +152,11 @@ func (m *Menu) config() map[string]any {
 	items := make([]map[string]any, len(m.Items))
 	for i, item := range m.Items {
 		entry := map[string]any{"tool": item.Tool}
-		if len(item.Args) > 0 {
+		if item.Prompt != "" {
+			// A prompt item never calls the tool itself, so its args would be
+			// dead weight in the island.
+			entry["prompt"] = item.Prompt
+		} else if len(item.Args) > 0 {
 			entry["args"] = item.Args
 		}
 		items[i] = entry

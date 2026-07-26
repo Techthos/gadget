@@ -83,10 +83,16 @@ const (
 	FSelect      FieldType = "select"
 	FMultiSelect FieldType = "multiselect"
 	FDate        FieldType = "date"
+	FDateRange   FieldType = "daterange"
 	FTime        FieldType = "time"
 	FHidden      FieldType = "hidden"
 	FReadonly    FieldType = "readonly"
 )
+
+// dateFieldTypes are the field types that render a calendar. Both keep native
+// date inputs as their value holders, so a document whose script never runs
+// still has a working control.
+var dateFieldTypes = map[FieldType]bool{FDate: true, FDateRange: true}
 
 // Option is a choice in a select or multiselect field.
 type Option struct {
@@ -127,14 +133,26 @@ type Field struct {
 	// Required marks the field as mandatory.
 	Required bool
 	// Default is the initial value: string-like for most fields, bool for
-	// FCheckbox, []string for FMultiSelect.
+	// FCheckbox, []string for FMultiSelect, and []string{start, end} for
+	// FDateRange.
 	Default any
 	// Options are required for FSelect and FMultiSelect.
 	Options []Option
-	// Validation adds client-side constraints.
+	// Validation adds client-side constraints. Date fields take their bounds
+	// from Calendar instead.
 	Validation *Validation
 	// Rows sets the textarea height (FTextarea).
 	Rows int
+
+	// Calendar configures the grid an FDate or FDateRange field opens, exactly
+	// as it configures the standalone DatePicker widget: bounds, blocked days,
+	// presets, month travel. Nil is the zero value — one month for a date, two
+	// for a range, every day selectable.
+	Calendar *Calendar
+	// EndName is the tool-call argument carrying a range's end date
+	// (FDateRange only). Defaults to Name + "_end". It shares the field's
+	// namespace, so it must not collide with another field's Name.
+	EndName string
 }
 
 func (f Field) fieldType() FieldType {
@@ -142,6 +160,45 @@ func (f Field) fieldType() FieldType {
 		return FText
 	}
 	return f.Type
+}
+
+// dateMode is the calendar mode the field's type implies.
+func (f Field) dateMode() DateMode {
+	if f.fieldType() == FDateRange {
+		return DateRange
+	}
+	return DateSingle
+}
+
+// endName is the argument a range's end date travels in. Derived from Name
+// rather than required, so the common case is one line.
+func (f Field) endName() string {
+	if f.fieldType() != FDateRange {
+		return ""
+	}
+	if f.EndName != "" {
+		return f.EndName
+	}
+	return f.Name + "_end"
+}
+
+// rangeDefaults splits an FDateRange Default into its two ends. Anything else
+// than a two-element string list is no default at all.
+func (f Field) rangeDefaults() (string, string) {
+	switch x := f.Default.(type) {
+	case []string:
+		switch len(x) {
+		case 1:
+			return x[0], ""
+		case 2:
+			return x[0], x[1]
+		}
+	case [2]string:
+		return x[0], x[1]
+	case string:
+		return x, ""
+	}
+	return "", ""
 }
 
 // --- Widget implementation ---
@@ -171,24 +228,55 @@ func (f *Form) Validate() error {
 	if f.Submit.Tool == "" {
 		return fmt.Errorf("gadget: form %s: Submit.Tool is required", f.URI)
 	}
+	// One namespace for both: a range's end argument is as much a tool
+	// argument as any field name, and a collision would send one value where
+	// the tool expects the other.
 	seen := map[string]bool{}
+	claim := func(ctx, name, what string) error {
+		if seen[name] {
+			return fmt.Errorf("%s: duplicate %s %q", ctx, what, name)
+		}
+		seen[name] = true
+		return nil
+	}
 	for i, fd := range f.Fields {
 		ctx := fmt.Sprintf("gadget: form %s: field %d (%s)", f.URI, i, fd.Name)
 		if fd.Name == "" {
 			return fmt.Errorf("%s: name is required", ctx)
 		}
-		if seen[fd.Name] {
-			return fmt.Errorf("%s: duplicate field name %q", ctx, fd.Name)
+		if err := claim(ctx, fd.Name, "field name"); err != nil {
+			return err
 		}
-		seen[fd.Name] = true
 		switch fd.fieldType() {
-		case FText, FTextarea, FNumber, FCheckbox, FDate, FTime, FHidden, FReadonly:
+		case FText, FTextarea, FNumber, FCheckbox, FTime, FHidden, FReadonly:
 		case FSelect, FMultiSelect:
 			if len(fd.Options) == 0 {
 				return fmt.Errorf("%s: select fields need options", ctx)
 			}
+		case FDate, FDateRange:
+			if fd.fieldType() == FDateRange {
+				if err := claim(ctx, fd.endName(), "field name"); err != nil {
+					return err
+				}
+			}
+			start, end := fd.rangeDefaults()
+			if err := validateDefaultRange(ctx, start, end); err != nil {
+				return err
+			}
+			if err := fd.Calendar.validate(ctx+": calendar", fd.dateMode()); err != nil {
+				return err
+			}
+			if err := fd.Calendar.validateWithin(ctx, start, end); err != nil {
+				return err
+			}
 		default:
 			return fmt.Errorf("%s: unknown field type %q", ctx, fd.Type)
+		}
+		if fd.Calendar != nil && !dateFieldTypes[fd.fieldType()] {
+			return fmt.Errorf("%s: Calendar needs FDate or FDateRange", ctx)
+		}
+		if fd.EndName != "" && fd.fieldType() != FDateRange {
+			return fmt.Errorf("%s: EndName needs FDateRange", ctx)
 		}
 	}
 	if err := f.Brand.Validate(); err != nil {
@@ -227,6 +315,19 @@ func (f *Form) config() map[string]any {
 		}
 		if fd.Validation != nil && fd.Validation.Message != "" {
 			fc["message"] = fd.Validation.Message
+		}
+		// A date field's grid is runtime-built (month names come from the
+		// host's locale), so its configuration travels here rather than in the
+		// markup — the native inputs the runtime upgrades are the value
+		// holders, and they carry no calendar of their own.
+		if dateFieldTypes[fd.fieldType()] {
+			fc["calendar"] = fd.Calendar.config(fd.dateMode())
+			if end := fd.endName(); end != "" {
+				fc["endName"] = end
+			}
+			if fd.Required {
+				fc["required"] = true
+			}
 		}
 		fields[i] = fc
 	}

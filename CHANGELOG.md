@@ -1,5 +1,54 @@
 # Changelog
 
+## Unreleased
+
+- **New widget `DatePicker`**, and a calendar for forms. One grid, two
+  mountings: `DatePicker` renders it inline as a view of its own (a question, an
+  inline calendar, a line stating what is picked, submit and cancel — the same
+  frame as `Choice`, with the same terminal decision and re-arm-on-error
+  behaviour), while a `Form`'s `FDate` and the new `FDateRange` open it in a
+  popover over their native date inputs. The inputs survive the upgrade as the
+  value holders, exactly as a `<select>` does under the gadget dropdown, so
+  validation and submitted values are unchanged and a document whose script
+  never runs still has a working control.
+  Dates travel as `"YYYY-MM-DD"` throughout: `Submit.ValueArg` (default
+  `"date"`, or `"start"` in a range) and `Submit.EndArg` (default `"end"`) are
+  two flat string arguments, and a range field sends `Name` plus `EndName`
+  (default `Name + "_end"`). The host's time zone decides one thing only: which
+  day is today.
+- **New shared block `Calendar`**, configuring that grid for both: `Min`/`Max`
+  bounds, `Disabled` days (a range may not straddle one), `DisableWeekends`,
+  `Months` shown at once (1 for a date, 2 for a range; side by side where
+  there is room, wrapped under each other where there is not),
+  `WeekNumbers` (ISO 8601), `MonthDropdowns` with `FromYear`/`ToYear`,
+  `WeekStart`, `StartOn`, and `Presets`. A `DatePreset` names either a fixed
+  window or a `DateSpan` — `SpanToday`, `SpanLast7Days`, `SpanThisMonth`,
+  `SpanYearToDate` and the rest — resolved at runtime against the reader's
+  today, since a server cannot name those dates at registration time. Month and
+  weekday names, the first day of the week and the formatted value all come from
+  the host locale, so the grid is built at runtime and rebuilt on a host-context
+  change. Full keyboard control: one tab stop, arrows by day and week,
+  PageUp/PageDown by month (with Shift, by year), Home/End across the week.
+- A `DatePicker` reads its selection and its limits from one runtime key,
+  `ValueKey` (default `"value"`): `"YYYY-MM-DD"`, or
+  `{start, end, min, max, disabled}` — which days are still free is exactly what
+  changes between registration and the question, so `LoadTool` fetches it fresh.
+- **Widget actions can go through the chat.** `Action.Prompt` (row, bulk and
+  card actions), `MenuItem.Prompt`, and `ChatPrompt` on `Confirm`'s accept,
+  `Choice`'s submit and `DatePicker`'s submit ask the host to post a user
+  message (`ui/message`) instead of calling the tool from the view. It is for
+  hosts that answer a view-initiated `tools/call` out of band: they run the
+  call without opening the widget bound to it, so an action whose whole point
+  is opening another view looks inert. On the chat path the model makes the
+  call, so `Args` are ignored and left out of the config island — the text
+  should read as the request a user would type. A `Choice` appends what was
+  picked and a `DatePicker` the date, since a chat turn has no argument to
+  carry them. Link actions cannot set it.
+- Popups nest: a panel opened from inside another (the calendar's month and year
+  dropdowns) no longer closes its parent, and an outside press peels the stack
+  from the top.
+
+
 ## v0.5.0 - 2026-07-26
 
 - **`CardTemplate` is now three sections** (breaking): `Header`

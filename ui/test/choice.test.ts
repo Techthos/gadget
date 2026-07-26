@@ -231,6 +231,55 @@ describe("choice behavior", () => {
 		expect(outcome(root).className).toContain("gadget-choice-outcome--accepted");
 	});
 
+	it("submits through the chat with the decision appended to the prompt", async () => {
+		const root = choiceShell();
+		mountChoice({
+			root,
+			config: config({
+				submit: { tool: "ship_order", valueArg: "method", chatPrompt: "Ship order ORD-4471" },
+			}),
+			initialData: DATA,
+			bridge,
+		});
+
+		option(root, 1).click();
+		submit(root).click();
+		await flush();
+
+		expect(host.received(M.toolsCall)).toHaveLength(0);
+		// A chat turn has no argument to carry the decision, so it goes in the
+		// text — by label, since a person reads it.
+		expect(host.received(M.message)[0]!.params).toMatchObject({
+			role: "user",
+			content: [{ type: "text", text: "Ship order ORD-4471 — chose: Express" }],
+		});
+		expect(decision(root).hidden).toBe(true);
+		expect(outcome(root).textContent).toBe("Sent.");
+	});
+
+	it("lists every pick in the chat turn of a multiple choice", async () => {
+		const root = choiceShell();
+		mountChoice({
+			root,
+			config: config({
+				multiple: true,
+				submit: { tool: "ship_order", valueArg: "method", chatPrompt: "Use these methods" },
+			}),
+			initialData: DATA,
+			bridge,
+		});
+
+		option(root, 1).click();
+		submit(root).click();
+		await flush();
+
+		// "Standard" is the option's own default, so both are picked, in option
+		// order rather than click order.
+		expect(host.received(M.message)[0]!.params).toMatchObject({
+			content: [{ type: "text", text: "Use these methods — chose: Standard, Express" }],
+		});
+	});
+
 	it("falls back to the result's text when no success message is configured", async () => {
 		const root = choiceShell();
 		host.onToolCall = () => ({ content: [{ type: "text", text: "Shipped." }] });

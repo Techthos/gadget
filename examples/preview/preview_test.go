@@ -186,6 +186,34 @@ func TestScenarioMutates(t *testing.T) {
 		t.Errorf("the 5.1 kg parcel should not be flyable: %v", drone)
 	}
 
+	// The delivery window is computed against the day the tool runs, so it
+	// bounds the grid at call time rather than at registration time.
+	out = call(t, cs, "schedule_delivery", map[string]any{"id": 4474})
+	window, ok := out["value"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected a delivery window, got %v", out)
+	}
+	min, _ := window["min"].(string)
+	max, _ := window["max"].(string)
+	if min == "" || max == "" || min >= max {
+		t.Fatalf("expected a forward window, got %v", window)
+	}
+	if blocked, _ := window["disabled"].([]any); len(blocked) != 2 {
+		t.Fatalf("expected the two stocktaking days, got %v", window["disabled"])
+	}
+	if _, seeded := window["start"]; seeded {
+		t.Errorf("an order with no delivery date must not preselect one: %v", window)
+	}
+	// Booking one records it, and the next call opens on what was booked.
+	if res := callText(t, cs, "set_delivery_date", map[string]any{"id": 4474, "date": min}); !strings.Contains(res, min) {
+		t.Errorf("set_delivery_date = %q, want the booked day", res)
+	}
+	out = call(t, cs, "schedule_delivery", map[string]any{"id": 4474})
+	window, _ = out["value"].(map[string]any)
+	if window["start"] != min {
+		t.Errorf("expected the booked day back, got %v", window)
+	}
+
 	call(t, cs, "reset_demo", nil)
 	if after := rowCount(t, call(t, cs, "list_customers", nil)); after != before {
 		t.Fatalf("after reset: %d rows, want %d", after, before)
@@ -233,6 +261,26 @@ func call(t *testing.T, cs *mcp.ClientSession, name string, args map[string]any)
 		t.Fatalf("%s: %v", name, err)
 	}
 	return out
+}
+
+// callText is call for the tools that answer in prose rather than in
+// structuredContent.
+func callText(t *testing.T, cs *mcp.ClientSession, name string, args map[string]any) string {
+	t.Helper()
+	res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: name, Arguments: args})
+	if err != nil {
+		t.Fatalf("%s: %v", name, err)
+	}
+	if res.IsError {
+		t.Fatalf("%s: tool reported an error: %v", name, res.Content)
+	}
+	var b strings.Builder
+	for _, c := range res.Content {
+		if text, ok := c.(*mcp.TextContent); ok {
+			b.WriteString(text.Text)
+		}
+	}
+	return b.String()
 }
 
 func mustResources(t *testing.T, cs *mcp.ClientSession) []*mcp.Resource {

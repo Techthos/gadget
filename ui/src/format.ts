@@ -12,6 +12,12 @@ export function getLocale(): string | undefined {
   return currentLocale;
 }
 
+/** The host's time zone, when it named one. The calendar needs it to know
+ * which day is today: the server's midnight is not the reader's. */
+export function getTimeZone(): string | undefined {
+  return currentTimeZone;
+}
+
 /**
  * Formats a cell value by column type and format spec.
  * Number formats: "int" | "decimal:<digits>" | "percent" | "currency:<code>".

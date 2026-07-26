@@ -48,7 +48,7 @@ Consequences for you as a library user:
 
 | Package | Import path | Role |
 |---|---|---|
-| `gadget` | `github.com/techthos/gadget` | Widget definitions (`Table`, `Form`, `Card`, `CardList`, `Menu`, `Confirm`, `Choice`, `Action`, columns, fields) + `RowsOf` |
+| `gadget` | `github.com/techthos/gadget` | Widget definitions (`Table`, `Form`, `Card`, `CardList`, `Menu`, `Confirm`, `Choice`, `DatePicker`, `Action`, columns, fields) + `RowsOf` |
 | `theme` | `github.com/techthos/gadget/theme` | `Theme` struct → CSS design-token overrides |
 | `uispec` | `github.com/techthos/gadget/uispec` | MCP Apps spec constants and `_meta` types (zero deps) |
 | `gosdk` | `github.com/techthos/gadget/gosdk` | Adapter for the official `github.com/modelcontextprotocol/go-sdk` — the **only** package importing an MCP SDK |
@@ -278,14 +278,17 @@ type Field struct {
     Required    bool
     Default     any         // initial value: string-like for most; bool for FCheckbox; []string (or string) for FMultiSelect
     Options     []Option    // REQUIRED for FSelect / FMultiSelect
-    Validation  *Validation // client-side constraints
+    Validation  *Validation // client-side constraints (date fields take bounds from Calendar instead)
     Rows        int         // textarea height (FTextarea), default 3
+
+    Calendar *Calendar // FDate / FDateRange only: the grid the field opens (see 3.16.1)
+    EndName  string    // FDateRange only: argument carrying the range's end. Default Name + "_end"
 }
 ```
 
 **Field types** (`FieldType`): `FText` (`"text"`, zero-value default),
 `FTextarea`, `FNumber`, `FCheckbox`, `FSelect`, `FMultiSelect`, `FDate`,
-`FTime`, `FHidden`, `FReadonly`.
+`FDateRange`, `FTime`, `FHidden`, `FReadonly`.
 
 `FSelect` and `FMultiSelect` render as the gadget dropdown: the runtime
 upgrades the `<select>` into a styled trigger and popup listbox (keyboard
@@ -296,6 +299,16 @@ page-size chooser — is the same control.
 
 If a `Placeholder` is set on a select field, it is the empty-state text of the
 trigger.
+
+`FDate` and `FDateRange` render the gadget calendar (the same grid the
+`DatePicker` widget renders inline, configured by `Field.Calendar` — see 3.16.1):
+the runtime upgrades the native date input into a trigger showing the date in
+the host's locale, with the grid in a popover, while the input stays the value
+holder. A document whose script never runs still has a working date control.
+`FDateRange` renders two date inputs, named `Name` and `EndName`, and submits
+two flat `"YYYY-MM-DD"` arguments; its `Default` is `[]string{start, end}`. An
+optional date field's popover offers a Clear button. `Placeholder` is the
+trigger's empty-state text.
 
 ```go
 type Option struct {
@@ -328,6 +341,8 @@ type Validation struct {
 | `FCheckbox` | `bool` |
 | `FNumber` | number (**omitted entirely when empty**) |
 | `FMultiSelect` | `[]string` |
+| `FDate` | `string` `"YYYY-MM-DD"` (`""` when empty) |
+| `FDateRange` | two arguments: `Name` = start, `EndName` = end, both `"YYYY-MM-DD"` |
 | everything else — including `FHidden` and `FReadonly` | `string` (parse server-side, e.g. hidden numeric IDs arrive as `"3"`) |
 
 ### 3.7 `Action`
@@ -347,7 +362,8 @@ type Action struct {
     Label   string               // REQUIRED
     Kind    ActionKind           // ActionTool (default) | ActionLink
     Tool    string               // MCP tool name (REQUIRED for ActionTool)
-    Args    map[string]ArgSource // tool argument name -> value source
+    Args    map[string]ArgSource // tool argument name -> value source; ignored when Prompt is set
+    Prompt  string               // post this text as a user turn instead of calling Tool (ActionTool only)
     HrefKey string               // row field holding the URL (REQUIRED for ActionLink; opens via ui/open-link)
     Confirm string               // when set: inline two-phase confirmation with this text before firing
     Variant ActionVariant        // VariantDefault ("") | VariantPrimary | VariantDanger
@@ -375,6 +391,47 @@ validation/marshaling.
   `structuredContent` contains `RowsKey`, the table re-renders with the
   returned rows and clears the selection.** Therefore: mutating tools
   (delete/archive/…) should return the updated full row list.
+
+#### The chat path (`Prompt` / `ChatPrompt`)
+
+An action normally calls its tool from the view, and the widget handles the
+result. That works when the tool answers with data. When it answers with a
+widget of its own — an edit form, a detail view — opening it is the host's job,
+and a host that runs a view-initiated `tools/call` out of band opens nothing:
+the tool runs, and the user sees no change.
+
+Setting the prompt field routes that action through the host's chat instead.
+The view sends `ui/message` with the text as a user turn, the model calls the
+tool, and the widget arrives as that call's result. The field is named `Prompt`
+on `Action` and `MenuItem`, and `ChatPrompt` on `AcceptSpec`, `ChoiceSubmit`
+and `DateSubmit` — those widgets already use `Prompt` for the question put to
+the reader.
+
+Common to all of them:
+
+- Write it as the request a user would type. The model decides which tool
+  answers, so `Tool` documents what the action opens and stays required.
+- `Args` are dropped from the config island: the model chooses the arguments.
+- The text is fixed and carries no row values — the model works out which
+  record is meant from the conversation.
+- There is no tool result to inspect, so the widget reports only that the turn
+  was accepted, and shows an error if the host refused it.
+- Link actions may not set `Prompt` (validation error): a link already
+  navigates on its own.
+
+`Choice` and `DatePicker` append the reader's decision to the text, because a
+chat turn has no argument to carry it and the decision is the whole point of
+those widgets:
+
+```go
+// Choice, reader picked "Express":
+//   "Ship order ORD-4471 — chose: Express"
+// DatePicker over a range:
+//   "Book the room — chose: 2026-07-20 to 2026-07-24"
+```
+
+Dates go as ISO regardless of the locale the grid rendered, and options go by
+label rather than value, since a person reads the turn.
 
 ### 3.8 `RowsOf`
 
@@ -535,7 +592,8 @@ type Menu struct {
 
 type MenuItem struct {
     Tool         string         // MCP tool called when the item is chosen (required)
-    Args         map[string]any // static arguments passed to Tool
+    Args         map[string]any // static arguments passed to Tool; ignored when Prompt is set
+    Prompt       string         // post this text as a user turn instead of calling Tool
     Label        string         // tile heading; defaults to Tool
     Description  string         // supporting line under the label
     IconSVG      string         // inline <svg> markup shown above the label
@@ -569,13 +627,32 @@ gosdk.AddWidgetToolFor(server, menu,
 `MenuItem.Args` are fixed values, not row lookups: a menu tile has no record
 behind it, so `Static`/`FromRow`/`FromSelection` do not apply here.
 
+**`Prompt`: the chat launch path.** A plain tile assumes the host opens the
+widget bound to a view-initiated `tools/call`. Not every host does: one that
+runs such a call out of band answers it and opens nothing, so the tile shows
+its "Opening …" status for the length of the call and then looks inert. Setting
+`Prompt` routes that tile through the host's chat instead — the view sends
+`ui/message` with the text as a user turn, the model calls the tool, and the
+widget arrives as that call's result:
+
+```go
+{Tool: "list_customers", Label: "Customers",
+ Prompt: "Show me the customer list"},
+```
+
+Write `Prompt` as the request a user would type. The model decides which tool
+answers it, so `Tool` documents intent and supplies the default `Label`, and
+`Args` are dropped from the config island — the model chooses the arguments.
+One menu may mix both kinds of tile freely.
+
 Runtime behavior: the whole grid goes inert while a tile's call is in flight
 (a second tile would race the first one's view swap), a `loading` status reads
 "Opening &lt;label&gt;…", and a tool result that comes back with `isError` is
 shown in the status region with the menu left usable. Nothing else is rendered
-from the result — the host is expected to take over the view. Tile width comes
-from the `--gadget-menu-tile-min` token (default `11rem`), overridable per
-widget through `theme.Theme.Extra`.
+from the result — the host is expected to take over the view. A `Prompt` tile
+carries no tool result to inspect, so it clears its status as soon as the host
+accepts the turn. Tile width comes from the `--gadget-menu-tile-min` token
+(default `11rem`), overridable per widget through `theme.Theme.Extra`.
 
 Documents are self-contained, so `IconSVG` is inline markup, never a URL — the
 same trust level and the same checks as `Brand.LogoSVG`.
@@ -659,7 +736,8 @@ type Effect struct {
 type AcceptSpec struct {
     Tool           string               // MCP tool called on accept (required)
     Label          string               // defaults to "Confirm"
-    Args           map[string]ArgSource // Static / FromRow only
+    Args           map[string]ArgSource // Static / FromRow only; ignored when ChatPrompt is set
+    ChatPrompt     string               // post this text as a user turn instead of calling Tool
     Variant        ActionVariant        // overrides the variant derived from Severity
     SuccessMessage string               // shown in place of the buttons on success
 }
@@ -772,7 +850,8 @@ type ChoiceSubmit struct {
     Tool           string               // MCP tool called on submit (required)
     Label          string               // defaults to "Continue"
     ValueArg       string               // argument carrying the decision; defaults to "choice"
-    Args           map[string]ArgSource // Static / FromRow only
+    Args           map[string]ArgSource // Static / FromRow only; ignored when ChatPrompt is set
+    ChatPrompt     string               // post this plus the decision as a user turn instead of calling Tool
     Variant        ActionVariant        // defaults to VariantPrimary
     SuccessMessage string               // shown in place of the controls on success
 }
@@ -844,10 +923,141 @@ Runtime behavior:
   stay gone, even if the host pushes further results (which still refresh the
   details and options).
 
-### 3.16 `Brand`
+### 3.16 `DatePicker`
 
-Identifies the application a widget belongs to. Available on `Table`, `Form`,
-`Card`, `CardList` and `Menu` as the `Brand` field; one `*Brand` is typically
+A date, or the span between two, as the whole question. The standalone form of
+the calendar a form's `FDate`/`FDateRange` fields open: use the widget when the
+date *is* the question, the field when it is one answer among several. Picking
+is local — only the submit button calls a tool.
+
+```go
+type DatePicker struct {
+    URI    string   // ui:// resource URI (required)
+    Title  string   // toolbar + document title
+    Prompt string   // headline question (required)
+    Body   string   // supporting prose under the prompt
+
+    Mode     DateMode  // DateSingle (zero value) or DateRange
+    Calendar *Calendar // the grid; nil is the zero value (see 3.16.1)
+
+    Default    string // preselected date "YYYY-MM-DD" (the start, in a range)
+    DefaultEnd string // preselected end of the span (DateRange only)
+
+    Details Descriptions // describes the record the question is about (rows[0])
+
+    Submit DateSubmit   // required
+    Cancel *RejectSpec  // nil renders no declining button
+
+    ValueKey string // structuredContent key with the selection and runtime bounds. Default "value"
+    RowsKey  string // structuredContent key with the context record. Default "rows"
+    RowID    string // record field used for FromRow args. Default "id"
+
+    InitialData map[string]any
+    LoadTool    string         // read tool called once on load, replacing InitialData
+    LoadArgs    map[string]any
+    Brand       *Brand
+    Theme       *theme.Theme
+    UI          *uispec.ResourceUIMeta
+}
+
+type DateSubmit struct {
+    Tool           string               // REQUIRED
+    Label          string               // default "Continue"
+    ValueArg       string               // argument carrying the date. Default "date"; "start" in a range
+    EndArg         string               // argument carrying the end. Default "end". DateRange only
+    Args           map[string]ArgSource // Static and FromRow only (no FromSelection); ignored when ChatPrompt is set
+    ChatPrompt     string               // post this plus the picked date as a user turn instead of calling Tool
+    Variant        ActionVariant        // default VariantPrimary
+    SuccessMessage string               // shown in place of the controls on success
+}
+
+type DateMode string
+const (
+    DateSingle DateMode = ""      // one date
+    DateRange  DateMode = "range" // a start and an end
+)
+```
+
+- **The grid is inline**, not behind a trigger. Submit renders `disabled`
+  server-side and stays disabled until the selection is complete (both ends, in
+  a range), so a document whose script never runs offers no call it cannot make.
+- **Dates are days, not instants.** Everything travels as `"YYYY-MM-DD"`. The
+  host's time zone decides one thing only: which day is today.
+- **Submitting** sends `ValueArg` (and `EndArg` in a range) as flat strings
+  alongside the `Static`/`FromRow` args. On success the controls are replaced by
+  `SuccessMessage` (or the result's text); a result with `isError` re-arms the
+  widget so a transient failure can be retried.
+- **Cancelling** calls `Cancel.Tool` when set, then settles with `Message`.
+- **Runtime state** arrives under `ValueKey`: either `"YYYY-MM-DD"`, or an
+  object carrying the selection *and* the grid's limits —
+  `{start?, end?, min?, max?, disabled?}`. A selection pushed after the decision
+  is ignored; the outcome stays.
+- **The decision is terminal**, exactly as in `Confirm` and `Choice`.
+
+#### 3.16.1 `Calendar`
+
+A shared block, not a widget: one grid configuration for the `DatePicker`
+widget and for a form's date fields. A nil `*Calendar` is the zero value — one
+month (two in a range), every day selectable.
+
+```go
+type Calendar struct {
+    Min      string   // earliest selectable day "YYYY-MM-DD"
+    Max      string   // latest selectable day
+    Disabled []string // individual days that cannot be picked
+    DisableWeekends bool // blocks every Saturday and Sunday
+
+    Months         int       // months shown at once; default 1 (single) / 2 (range), max 4
+    WeekNumbers    bool      // leading column of ISO 8601 week numbers
+    MonthDropdowns bool      // month + year dropdowns in place of the caption
+    FromYear, ToYear int     // bound the year dropdown; default: the years of Min/Max
+    WeekStart      WeekStart // default: the host locale's own first day
+
+    StartOn string // month the grid opens on while nothing is selected
+
+    Presets []DatePreset // named shortcuts beside the grid
+}
+
+type WeekStart string
+const (
+    WeekStartLocale   WeekStart = "" // the host locale's first day (default)
+    WeekStartMonday   WeekStart = "monday"
+    WeekStartSunday   WeekStart = "sunday"
+    WeekStartSaturday WeekStart = "saturday"
+)
+
+type DatePreset struct {
+    Label string   // REQUIRED
+    Span  DateSpan // a window relative to the reader's today
+    Start string   // or a fixed window "YYYY-MM-DD"
+    End   string   // DateRange only
+}
+```
+
+`DateSpan` values, resolved at runtime against the reader's today (a server
+cannot name those dates at registration time): `SpanToday`, `SpanYesterday`,
+`SpanTomorrow`, `SpanLast7Days`, `SpanLast30Days`, `SpanLast90Days`,
+`SpanNext7Days`, `SpanNext30Days`, `SpanThisWeek`, `SpanLastWeek`,
+`SpanThisMonth`, `SpanLastMonth`, `SpanThisYear`, `SpanYearToDate`. In a
+single-date calendar a preset picks the day its window opens on.
+
+- **Blocked days bound a range too**: a span may not straddle one, so a second
+  click across a taken day starts a new range instead.
+- **Keyboard**: one tab stop for the grid, arrows by day/week, PageUp/PageDown
+  by month (Shift: by year), Home/End across the week, Enter or Space to pick,
+  Escape to close a popover. A blocked day still takes focus.
+- **Every month asked for is shown**: side by side where the widget has room,
+  wrapped under each other where it has not. A range picker whose second month
+  is a month's travel away cannot show a span across the boundary at all.
+- **Locale**: month and weekday names, the first day of the week and the
+  formatted value come from the host's locale, which is why the grid is built at
+  runtime and rebuilt when the host context changes.
+- In a form, `Min`/`Max` also render as the date inputs' native `min`/`max`.
+
+### 3.17 `Brand`
+
+Identifies the application a widget belongs to. Available on every widget as the
+`Brand` field; one `*Brand` is typically
 shared across every widget of a server. It always renders at the top left of the
 widget chrome, as the first item of the toolbar, before the title.
 
@@ -870,7 +1080,7 @@ hands the URL to `ui/openLink`.
 
 A brand makes the toolbar appear even when `Title` is empty.
 
-### 3.17 Validation rules (what `Validate()` / `Document()` reject)
+### 3.18 Validation rules (what `Validate()` / `Document()` reject)
 
 Table:
 - `URI` must be a well-formed `ui://` URI with a non-empty path.
@@ -887,8 +1097,14 @@ Table:
 
 Form:
 - `URI` as above; at least one field; `Submit.Tool` required.
-- Field `Name` required and unique.
+- Field `Name` required and unique. An `FDateRange` field's `EndName` shares
+  that namespace: it must not collide with another field's `Name`, nor with its
+  own.
 - `FSelect`/`FMultiSelect` require non-empty `Options`.
+- `Calendar` requires `FDate` or `FDateRange`; `EndName` requires `FDateRange`.
+- Date defaults must be `"YYYY-MM-DD"`, must not run backwards, and must be days
+  the field's own `Calendar` allows.
+- `Calendar` validated as below.
 - `Theme` must pass `theme.Validate()`.
 
 Card / CardList (via `CardTemplate`):
@@ -944,6 +1160,34 @@ Choice:
 - An empty `Options` list is legal: options may arrive at runtime.
 - `Theme` must pass `theme.Validate()`.
 
+DatePicker:
+- `URI` as above; `Prompt` required; `Submit.Tool` required.
+- `Mode`, when set, must be `DateRange`.
+- `Submit.Args` / `Cancel.Args`: built with `Static` or `FromRow`;
+  `FromSelection` is rejected (a date has no row selection).
+- `Submit.Args` cannot contain `Submit.ValueArg` or `Submit.EndArg`, and the two
+  cannot be the same name.
+- `Submit.EndArg` and `DefaultEnd` require `Mode: DateRange`.
+- `Cancel.Args` require `Cancel.Tool`.
+- `Default`/`DefaultEnd` must be `"YYYY-MM-DD"`, `DefaultEnd` requires
+  `Default`, the span cannot run backwards, and neither day may be outside
+  `Calendar.Min`/`Max` or in `Calendar.Disabled`.
+- `Details` validated as `Descriptions` (below).
+- `Calendar` validated as below.
+- `Theme` must pass `theme.Validate()`.
+
+Calendar (wherever embedded):
+- `Min`, `Max`, `Disabled` entries and `StartOn` must be `"YYYY-MM-DD"`;
+  `Max >= Min`.
+- No empty `Disabled` entry, and no `Disabled` day outside `Min`/`Max` — a day
+  blocked where nothing can be picked means the two disagree.
+- `Months` between 1 and 4 (0 = the default for the mode).
+- `WeekStart`, when set, must be a `WeekStart*` constant.
+- `FromYear`/`ToYear` must be four-digit years with `ToYear >= FromYear`.
+- Presets: `Label` required; exactly one of `Span` and `Start`/`End`; `Span`
+  must be a `Span*` constant; `End` requires `Start`, requires a range
+  calendar, and cannot precede `Start`.
+
 Descriptions (wherever embedded):
 - Item `Label` required.
 - Exactly one of `Key` and `Text` per item; a `Text` item must be `ColText`.
@@ -981,6 +1225,8 @@ Widgets read all runtime data from the tool result's `structuredContent`:
 | Confirm | `effects` (`EffectsKey`) | `[]object` | side effects: `{text, detail?, value?, severity?}`; replaces the authored list |
 | Choice | `rows` (`RowsKey`) | `[]object` | the record the question is about (`rows[0]`) |
 | Choice | `options` (`OptionsKey`) | `[]object` | what is on offer: `{value, label?, summary?, body?, bullets?, details?, badge?, badgeVariant?, default?, disabled?}` where `details` is `[{label, value}]`; replaces the authored list |
+| DatePicker | `value` (`ValueKey`) | `"YYYY-MM-DD"` or `{start?, end?, min?, max?, disabled?}` | the selection, and the window it may move in: bounds and days already taken |
+| DatePicker | `rows` (`RowsKey`) | `[]object` | the record the question is about (`rows[0]`) |
 | Menu | — | — | reads nothing; tiles are authored and server-rendered |
 
 `Card`/`CardList` share the `rows` contract with `Table`: an action or tool

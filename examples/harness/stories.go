@@ -101,6 +101,21 @@ const (
     }
   ]
 }`
+
+	// A selection plus the window it may move in: the runtime takes the bounds
+	// and the blocked days from the same object as the dates.
+	pushDates = `{
+  "rows": [
+    { "id": 4471, "reference": "BKG-4471", "name": "Ada Lovelace" }
+  ],
+  "value": {
+    "start": "2026-08-20",
+    "end": "2026-08-23",
+    "min": "2026-08-01",
+    "max": "2026-10-31",
+    "disabled": ["2026-08-27", "2026-08-28", "2026-08-29"]
+  }
+}`
 )
 
 // catalog returns every story, in rail order. Src is filled in by stories().
@@ -187,6 +202,11 @@ func catalog() []story {
 			Payload: pushEmptyRows, build: func() gadget.Widget { return menuPlain() },
 		},
 		{
+			ID: "menu-prompt", Group: "Menu", Label: "Chat tiles",
+			Desc:    "Prompt items post a ui/message user turn instead of calling the tool.",
+			Payload: pushEmptyRows, build: func() gadget.Widget { return menuPrompt() },
+		},
+		{
 			ID: "confirm-danger", Group: "Confirm", Label: "Destructive",
 			Desc:    "Details, side effects, and both guards: tick the box and type ada@example.com.",
 			Payload: pushEffects, build: func() gadget.Widget { return confirmDanger() },
@@ -221,6 +241,132 @@ func catalog() []story {
 			Desc:    "Ships with no options; push a result to load what is on offer.",
 			Payload: pushOptions, build: func() gadget.Widget { return choiceRuntime() },
 		},
+		{
+			ID: "datepicker-single", Group: "Date picker", Label: "One date",
+			Desc:    "A single date with presets, a bounded window and two blocked days.",
+			Payload: pushDates, build: func() gadget.Widget { return datePicker() },
+		},
+		{
+			ID: "datepicker-range", Group: "Date picker", Label: "A range",
+			Desc:    "Two months side by side, week numbers, and quick ranges beside the grid.",
+			Payload: pushDates, build: func() gadget.Widget { return datePickerRange() },
+		},
+		{
+			ID: "datepicker-dropdowns", Group: "Date picker", Label: "Month and year",
+			Desc:    "Caption dropdowns for a date far from today, with weekends blocked.",
+			Payload: pushDates, build: func() gadget.Widget { return datePickerDropdowns() },
+		},
+		{
+			ID: "datepicker-runtime", Group: "Date picker", Label: "Runtime availability",
+			Desc:    "Ships with no selection; push a result to load the window and the days already taken.",
+			Payload: pushDates, build: func() gadget.Widget { return datePickerRuntime() },
+		},
+	}
+}
+
+// --- Date picker stories ---
+
+func datePicker() *gadget.DatePicker {
+	return &gadget.DatePicker{
+		URI:    "ui://harness/datepicker",
+		Title:  "Delivery",
+		Prompt: "When should we deliver order ORD-4471?",
+		Body:   "The depot needs one working day's notice.",
+		Calendar: &gadget.Calendar{
+			Min:      "2026-08-01",
+			Max:      "2026-10-31",
+			Disabled: []string{"2026-08-14", "2026-08-15"},
+			Presets: []gadget.DatePreset{
+				{Label: "Today", Span: gadget.SpanToday},
+				{Label: "Tomorrow", Span: gadget.SpanTomorrow},
+			},
+		},
+		Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
+			{Label: "Order", Key: "reference"},
+			{Label: "Recipient", Key: "name"},
+		}},
+		Submit: gadget.DateSubmit{
+			Tool:           "schedule_delivery",
+			Label:          "Book it",
+			Args:           map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+			SuccessMessage: "Booked.",
+		},
+		Cancel: &gadget.RejectSpec{Label: "Decide later", Message: "Nothing was booked."},
+		InitialData: map[string]any{
+			"rows": []map[string]any{{"id": 4471, "reference": "ORD-4471", "name": "Ada Lovelace"}},
+		},
+		Brand: demoBrand(),
+		Theme: demoTheme(),
+	}
+}
+
+func datePickerRange() *gadget.DatePicker {
+	return &gadget.DatePicker{
+		URI:    "ui://harness/datepicker-range",
+		Title:  "Booking",
+		Prompt: "Which nights should we hold the suite?",
+		Mode:   gadget.DateRange,
+		Calendar: &gadget.Calendar{
+			Min:         "2026-08-01",
+			Max:         "2026-12-31",
+			Disabled:    []string{"2026-08-27", "2026-08-28", "2026-08-29"},
+			WeekNumbers: true,
+			Presets: []gadget.DatePreset{
+				{Label: "This week", Span: gadget.SpanThisWeek},
+				{Label: "Next 7 days", Span: gadget.SpanNext7Days},
+				{Label: "This month", Span: gadget.SpanThisMonth},
+				{Label: "Trade fair", Start: "2026-09-07", End: "2026-09-11"},
+			},
+		},
+		Default:    "2026-08-20",
+		DefaultEnd: "2026-08-23",
+		Submit: gadget.DateSubmit{
+			Tool:           "hold_room",
+			Label:          "Hold it",
+			ValueArg:       "from",
+			EndArg:         "until",
+			SuccessMessage: "Held.",
+		},
+		Cancel: &gadget.RejectSpec{Label: "Cancel", Message: "Nothing was held."},
+		Brand:  demoBrand(),
+		Theme:  demoTheme(),
+	}
+}
+
+func datePickerDropdowns() *gadget.DatePicker {
+	return &gadget.DatePicker{
+		URI:    "ui://harness/datepicker-dropdowns",
+		Prompt: "When does the contract start?",
+		Body:   "Weekends are not working days.",
+		Calendar: &gadget.Calendar{
+			Min:             "2020-01-01",
+			Max:             "2030-12-31",
+			DisableWeekends: true,
+			MonthDropdowns:  true,
+			WeekStart:       gadget.WeekStartMonday,
+			StartOn:         "2027-03-01",
+		},
+		Submit: gadget.DateSubmit{Tool: "set_start_date", Label: "Set the date"},
+		Cancel: &gadget.RejectSpec{},
+		Brand:  demoBrand(),
+		Theme:  demoTheme(),
+	}
+}
+
+func datePickerRuntime() *gadget.DatePicker {
+	return &gadget.DatePicker{
+		URI:      "ui://harness/datepicker-runtime",
+		Title:    "Availability",
+		Prompt:   "Which nights are you staying?",
+		Mode:     gadget.DateRange,
+		Calendar: &gadget.Calendar{WeekNumbers: true},
+		Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
+			{Label: "Booking", Key: "reference"},
+		}},
+		Submit: gadget.DateSubmit{Tool: "hold_room", ValueArg: "from", EndArg: "until"},
+		Cancel: &gadget.RejectSpec{},
+		Brand:  demoBrand(),
+		Theme:  demoTheme(),
 	}
 }
 
@@ -523,7 +669,17 @@ func formCreate() *gadget.Form {
 				Default: []string{"read"}},
 			{Name: "seats", Label: "Seats", Type: gadget.FNumber, Default: "3",
 				Validation: &gadget.Validation{Min: num(1), Max: num(50), Step: num(1)}},
-			{Name: "startsOn", Label: "Starts on", Type: gadget.FDate, Default: "2026-08-01"},
+			{Name: "startsOn", Label: "Starts on", Type: gadget.FDate, Default: "2026-08-01",
+				Calendar: &gadget.Calendar{Min: "2026-01-01", MonthDropdowns: true, FromYear: 2026, ToYear: 2030}},
+			{Name: "trialFrom", Label: "Trial period", Type: gadget.FDateRange, EndName: "trialTo",
+				Description: "The dates the free trial covers.",
+				Calendar: &gadget.Calendar{
+					Min: "2026-01-01",
+					Presets: []gadget.DatePreset{
+						{Label: "Next 7 days", Span: gadget.SpanNext7Days},
+						{Label: "Next 30 days", Span: gadget.SpanNext30Days},
+					},
+				}},
 			{Name: "digestAt", Label: "Daily digest", Type: gadget.FTime, Default: "09:00"},
 			{Name: "notes", Label: "Notes", Type: gadget.FTextarea, Rows: 3,
 				Placeholder: "Anything the team should know"},
@@ -587,6 +743,42 @@ func menuPlain() *gadget.Menu {
 			{Tool: "archive_users"},
 		},
 		Brand: demoBrand(),
+	}
+}
+
+// menuPrompt mixes both launch paths: the first tile calls its tool the usual
+// way, the other two hand the request to the host's chat. Hosts that answer a
+// view-initiated tools/call out of band open nothing for the first tile and a
+// real turn for the rest, which is the difference the story exists to show.
+func menuPrompt() *gadget.Menu {
+	return &gadget.Menu{
+		URI:   "ui://harness/menu-prompt",
+		Title: "Harness app",
+		Intro: "The first tile calls its tool; the others ask the chat to open it.",
+		Items: []gadget.MenuItem{
+			{
+				Tool: "list_users", Label: "Users (direct)",
+				Description:  "Plain tools/call — needs a host that opens the bound widget.",
+				Badge:        "call",
+				BadgeVariant: gadget.BadgeInfo,
+			},
+			{
+				Tool: "list_users", Label: "Users (chat)",
+				Description:  "Posts a user turn and lets the model open the table.",
+				Prompt:       "Show me the user directory",
+				Badge:        "chat",
+				BadgeVariant: gadget.BadgeNeutral,
+			},
+			{
+				Tool: "edit_user", Label: "Edit Ada (chat)",
+				Description:  "The model picks the arguments, so none are declared here.",
+				Prompt:       "Open the edit form for Ada Lovelace",
+				Badge:        "chat",
+				BadgeVariant: gadget.BadgeNeutral,
+			},
+		},
+		Brand: demoBrand(),
+		Theme: demoTheme(),
 	}
 }
 
