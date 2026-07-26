@@ -1,16 +1,26 @@
-# Standalone image for the gadget widget harness.
+# Standalone image for the gadget widget harness and preview MCP server.
 #
 # It takes no build context: the builder clones the repository itself, so the
 # Dockerfile can be built straight from a URL or piped in on its own.
 #
-#   docker build -t gadget-harness https://github.com/Techthos/gadget.git#main:examples/harness
-#   docker build -t gadget-harness - < examples/harness/Dockerfile
-#   docker run --rm -p 8090:8090 gadget-harness
+#   docker build -t gadget https://github.com/Techthos/gadget.git#main:examples/harness
+#   docker build -t gadget - < examples/harness/Dockerfile
 #
-# Then open http://localhost:8090.
+# The image carries two binaries and defaults to the harness:
+#
+#   docker run --rm -p 8090:8090 gadget                      # harness, http://localhost:8090
+#   docker run --rm -p 8081:8081 --entrypoint /preview gadget \
+#     -addr :8081 -sandbox -cors -session-timeout 30m        # MCP at http://localhost:8081/mcp
+#
+# -sandbox gives every MCP session its own copy of the scenario data, so a
+# publicly reachable preview stays read-only in the sense that matters: a
+# visitor can press every button, and nothing they do is visible to anyone
+# else. -cors lets browser-based MCP clients connect cross-origin.
+#
+# docker-compose.yml in this directory runs both from the one image.
 #
 # Build a different branch, tag or commit:
-#   docker build -t gadget-harness --build-arg GIT_REF=v0.2.0 - < examples/harness/Dockerfile
+#   docker build -t gadget --build-arg GIT_REF=v0.2.0 - < examples/harness/Dockerfile
 #
 # The clone layer is cached; to pick up new commits on the same ref, pass
 # --no-cache or --build-arg CACHEBUST="$(date +%s)".
@@ -33,17 +43,20 @@ RUN echo "cachebust ${CACHEBUST}" >/dev/null && \
         git clone "${REPO_URL}" . && git checkout --detach "${GIT_REF}"; }; }
 
 RUN go mod download
-# Static binary so the runtime stage can be scratch. The harness serves only
-# embedded assets, so it needs nothing else from the filesystem.
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/harness ./examples/harness
+# Static binaries so the runtime stage can be scratch. Both serve only
+# embedded assets and in-memory fixtures, so they need nothing else from the
+# filesystem.
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/harness ./examples/harness && \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/preview ./examples/preview
 
 FROM scratch
 
 COPY --from=build /out/harness /harness
+COPY --from=build /out/preview /preview
 
-# No shell in the image, so there is no HEALTHCHECK; probe http://host:8090/
-# from outside instead.
-EXPOSE 8090
+# No shell in the image, so there is no HEALTHCHECK. Probe the harness at
+# http://host:8090/ and the preview at http://host:8081/healthz from outside.
+EXPOSE 8090 8081
 USER 65532:65532
 ENTRYPOINT ["/harness"]
 CMD ["-addr", ":8090"]

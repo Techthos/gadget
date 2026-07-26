@@ -15,9 +15,16 @@ import (
 // declares the MCP Apps extension, which is what a UI-capable inspector does.
 func connect(t *testing.T) *mcp.ClientSession {
 	t.Helper()
+	return connectTo(t, newServer(true, true, false))
+}
+
+// connectTo is connect against a server the caller built, which is how the
+// -sandbox arrangement is tested: one server per session.
+func connectTo(t *testing.T, server *mcp.Server) *mcp.ClientSession {
+	t.Helper()
 	ctx := context.Background()
 	ct, st := mcp.NewInMemoryTransports()
-	if _, err := newServer(true, true, false).Connect(ctx, st, nil); err != nil {
+	if _, err := server.Connect(ctx, st, nil); err != nil {
 		t.Fatal(err)
 	}
 	caps := &mcp.ClientCapabilities{}
@@ -182,6 +189,24 @@ func TestScenarioMutates(t *testing.T) {
 	call(t, cs, "reset_demo", nil)
 	if after := rowCount(t, call(t, cs, "list_customers", nil)); after != before {
 		t.Fatalf("after reset: %d rows, want %d", after, before)
+	}
+}
+
+// TestSandboxIsolatesSessions covers what -sandbox promises a hosted preview:
+// a server built per session carries its own store, so one visitor's delete
+// is invisible to the next.
+func TestSandboxIsolatesSessions(t *testing.T) {
+	a := connectTo(t, newServer(true, true, false))
+	b := connectTo(t, newServer(true, true, false))
+
+	before := rowCount(t, call(t, b, "list_customers", nil))
+	call(t, a, "delete_customer", map[string]any{"id": 1})
+
+	if after := rowCount(t, call(t, a, "list_customers", nil)); after != before-1 {
+		t.Fatalf("session a: %d rows after its own delete, want %d", after, before-1)
+	}
+	if after := rowCount(t, call(t, b, "list_customers", nil)); after != before {
+		t.Fatalf("session b saw session a's delete: %d rows, want %d", after, before)
 	}
 }
 

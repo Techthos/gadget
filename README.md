@@ -127,6 +127,19 @@ host-themed table — sortable, filterable, paginated — inside the chat.
   handshake, replies to tool calls, and simulates tool results/errors and
   theme changes. `go run ./examples/harness`, open `http://localhost:8090`.
 
+Both of the last two run from one container image, so the widgets can be put
+on a URL for other people to try in their own chat client:
+
+```sh
+curl -O https://raw.githubusercontent.com/Techthos/gadget/main/examples/harness/docker-compose.yml
+docker compose up -d      # harness on :8090, preview MCP on :8081/mcp
+```
+
+The preview service runs with `-sandbox`, which gives every MCP session its
+own copy of the scenario data: visitors can use every writing tool, and no
+one's edits reach anyone else. See
+[docs/preview.md](docs/preview.md#hosting-it-publicly).
+
 ## Development
 
 The TypeScript/CSS runtime lives in `ui/` and is bundled with esbuild into

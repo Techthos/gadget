@@ -1,8 +1,11 @@
-# Runs the gadget widget harness.
+# Runs the gadget widget harness and the preview MCP server, both from one
+# image.
 #
 #   docker compose -f examples/harness/docker-compose.yml up -d --build
 #
-# Then open http://localhost:8090.
+# Then open http://localhost:8090 for the harness, and point an MCP Apps
+# capable chat client at http://localhost:8081/mcp (or the public URL a proxy
+# maps to it) for the preview server.
 #
 # Like the Dockerfile, this needs no checkout: the build context is the remote
 # repository, so the file works on its own on any host with Docker.
@@ -10,31 +13,64 @@
 #   curl -O https://raw.githubusercontent.com/Techthos/gadget/main/examples/harness/docker-compose.yml
 #   docker compose up -d
 #
+# Both services declare the same build and image, so the image is built once
+# and the second build is a cache hit.
+#
 # To rebuild after new commits on the ref:
 #   docker compose build --no-cache && docker compose up -d
 
+x-build: &build
+  context: https://github.com/Techthos/gadget.git#main:examples/harness
+  args:
+    # Branch, tag or commit to serve.
+    GIT_REF: main
+
+x-hardening: &hardening
+  restart: unless-stopped
+  read_only: true
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
 services:
   harness:
-    build:
-      context: https://github.com/Techthos/gadget.git#main:examples/harness
-      args:
-        # Branch, tag or commit to serve.
-        GIT_REF: main
-    image: gadget-harness:local
+    build: *build
+    image: gadget:local
     # Publish on the host. Bind to 127.0.0.1 instead (127.0.0.1:8090:8090) when
     # a reverse proxy in front terminates TLS.
     ports:
       - "8090:8090"
-    restart: unless-stopped
-    read_only: true
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+    <<: *hardening
     # The image is scratch — no shell or curl — so a container-side healthcheck
     # is not possible; probe http://<host>:8090/ from outside.
 
-# Fronting it with Traefik? Drop the ports mapping and add, on the service:
+  preview:
+    build: *build
+    image: gadget:local
+    entrypoint: ["/preview"]
+    command:
+      - -addr
+      - :8081
+      # One scenario store per MCP session: visitors can use every writing
+      # tool, and no one sees anyone else's edits.
+      - -sandbox
+      # Sandboxed stores are freed when their session is closed, so idle ones
+      # must not accumulate.
+      - -session-timeout
+      - 30m
+      # Let browser-based MCP clients connect from another origin.
+      - -cors
+      # Do not log every visitor's tool calls to stderr.
+      - -quiet
+      # Behind a reverse proxy on the same host that connects over loopback,
+      # add -behind-proxy too, or the SDK rejects the forwarded Host header.
+    ports:
+      - "8081:8081"
+    <<: *hardening
+    # Probe http://<host>:8081/healthz from outside.
+
+# Fronting these with Traefik? Drop the ports mappings and add, per service:
 #
 #   labels:
 #     - "traefik.enable=true"
@@ -43,3 +79,7 @@ services:
 #     - "traefik.http.routers.harness.tls.certresolver=letsencrypt"
 #     - "traefik.http.services.harness.loadbalancer.server.port=8090"
 #   networks: [proxy]
+#
+# and the same for preview on port 8081 with its own host rule. Traefik
+# forwards over the bridge network, not loopback, so -behind-proxy is not
+# needed there.

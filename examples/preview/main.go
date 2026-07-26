@@ -18,11 +18,18 @@
 //
 //	go run ./examples/preview -stdio
 //
+// Exposed publicly it should run with -sandbox, which gives every MCP session
+// its own store: visitors still exercise the writing tools in full, but no
+// one's edits reach anyone else's widgets.
+//
 // Flags:
 //
-//	-addr   HTTP listen address (default :8081)
-//	-mode   which tools to register: all, scenario or gallery (default all)
-//	-quiet  do not log tool calls to stderr
+//	-addr             HTTP listen address (default :8081)
+//	-mode             which tools to register: all, scenario or gallery (default all)
+//	-quiet            do not log tool calls to stderr
+//	-sandbox          give every session its own scenario store
+//	-session-timeout  close idle sessions after this long (0 = never)
+//	-cors             answer preflights and allow any origin
 package main
 
 import (
@@ -33,6 +40,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -45,6 +53,10 @@ func main() {
 	stdio := flag.Bool("stdio", false, "serve over stdio instead of HTTP")
 	mode := flag.String("mode", "all", "which tools to register: all, scenario or gallery")
 	quiet := flag.Bool("quiet", false, "do not log tool calls to stderr")
+	sandbox := flag.Bool("sandbox", false, "give every session its own scenario store")
+	sessionTimeout := flag.Duration("session-timeout", 0, "close sessions idle for this long (0 = never)")
+	cors := flag.Bool("cors", false, "answer CORS preflights and allow any origin")
+	behindProxy := flag.Bool("behind-proxy", false, "accept non-localhost Host headers on a loopback listener (needed behind a reverse proxy on the same host)")
 	flag.Parse()
 
 	scenario := *mode == "all" || *mode == "scenario"
@@ -53,24 +65,76 @@ func main() {
 		log.Fatalf("preview: unknown -mode %q (want all, scenario or gallery)", *mode)
 	}
 
-	server := newServer(scenario, gallery, !*quiet)
-
 	if *stdio {
 		// Logging goes to stderr, which stdio hosts keep clear of the
 		// protocol stream on stdout.
-		if err := server.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
+		if err := newServer(scenario, gallery, !*quiet).Run(context.Background(), &mcp.StdioTransport{}); err != nil {
 			log.Fatal(err)
 		}
 		return
 	}
 
-	handler := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return server }, nil)
-	mux := http.NewServeMux()
-	mux.Handle("/mcp", handler)
+	// getServer runs once per new session. Sharing one server (and so one
+	// store) is what you want locally; -sandbox builds a fresh one instead,
+	// so a public deployment hands every visitor their own copy of the
+	// scenario data to mutate.
+	getServer := func(*http.Request) *mcp.Server { return newServer(scenario, gallery, !*quiet) }
+	if !*sandbox {
+		shared := newServer(scenario, gallery, !*quiet)
+		getServer = func(*http.Request) *mcp.Server { return shared }
+	}
 
-	log.Printf("gadget preview server on http://localhost%s/mcp (mode %s, spec %s)", *addr, *mode, uispec.SpecVersion)
+	handler := mcp.NewStreamableHTTPHandler(getServer, &mcp.StreamableHTTPOptions{
+		// Sandboxed stores live for as long as their session does, so a
+		// public deployment needs idle ones reaped.
+		SessionTimeout: *sessionTimeout,
+		// The SDK rejects a non-localhost Host on a loopback listener as a
+		// DNS rebinding attempt. That is the right default for a server a
+		// user runs locally, and wrong for one a reverse proxy on the same
+		// host forwards to.
+		DisableLocalhostProtection: *behindProxy,
+	})
+	mux := http.NewServeMux()
+	mux.Handle("/mcp", withCORS(handler, *cors))
+	// Something for a proxy or uptime probe to hit: the image is scratch, so
+	// there is no shell to run a container-side healthcheck in.
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = w.Write([]byte("ok\n"))
+	})
+
+	log.Printf("gadget preview server on http://localhost%s/mcp (mode %s, spec %s, sandbox %t)", *addr, *mode, uispec.SpecVersion, *sandbox)
 	log.Printf("inspector: npx @modelcontextprotocol/inspector, then connect over Streamable HTTP to that URL")
-	log.Fatal(http.ListenAndServe(*addr, mux))
+	srv := &http.Server{
+		Addr:              *addr,
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+	log.Fatal(srv.ListenAndServe())
+}
+
+// withCORS lets browser-based MCP clients reach the endpoint from another
+// origin. Off unless asked for: it only matters when the server is published,
+// and everything it exposes is a demo fixture with no credentials attached.
+func withCORS(next http.Handler, on bool) http.Handler {
+	if !on {
+		return next
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("Access-Control-Allow-Origin", "*")
+		h.Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+		h.Set("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization, Last-Event-ID, Mcp-Session-Id, MCP-Protocol-Version")
+		// Clients read the session id off the initialize response, and
+		// cross-origin JS cannot see a header that is not exposed.
+		h.Set("Access-Control-Expose-Headers", "Mcp-Session-Id")
+		h.Set("Access-Control-Max-Age", "86400")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func newServer(scenario, gallery, logCalls bool) *mcp.Server {

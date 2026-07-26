@@ -61,10 +61,17 @@ real: submit `taken@example.com` to see a field error come back.
 | `-stdio` | off | Serve over stdio instead of HTTP |
 | `-mode` | `all` | Register `all`, `scenario` or `gallery` tools |
 | `-quiet` | off | Do not log tool calls to stderr |
+| `-sandbox` | off | Give every MCP session its own scenario store |
+| `-session-timeout` | `0` | Close sessions idle for this long (`0` never closes) |
+| `-cors` | off | Answer CORS preflights and allow any origin |
+| `-behind-proxy` | off | Accept a forwarded Host header on a loopback listener |
 
 Tool calls are logged to stderr by default, including the ones widgets make.
 That log is usually the fastest way to see which tool a button fired and with
 what arguments.
+
+The last four flags exist for hosting the server rather than running it
+locally; see [Hosting it publicly](#hosting-it-publicly).
 
 ## Running it under the MCP Inspector
 
@@ -126,3 +133,47 @@ Nothing here is inspector-specific. The same endpoint works as a Claude custom
 connector, and with MCPJam or any other MCP Apps host; `-stdio` covers hosts
 that spawn servers. A host that does not implement the Apps extension still
 sees ordinary tools returning text and structured content.
+
+## Hosting it publicly
+
+Put the endpoint on a URL and anyone with an MCP Apps capable chat client can
+try the widgets without cloning anything. `examples/harness/Dockerfile` builds
+both the harness and this server into one scratch image, and
+`examples/harness/docker-compose.yml` runs them side by side — the harness on
+8090, the preview MCP on 8081. Neither needs a checkout: the build context is
+the repository URL.
+
+```sh
+curl -O https://raw.githubusercontent.com/Techthos/gadget/main/examples/harness/docker-compose.yml
+docker compose up -d
+```
+
+Visitors then connect to `https://your-host/mcp`.
+
+The scenario half writes to a store, which a shared deployment must not let
+one visitor's edits leak out of. `-sandbox` builds a fresh server, and so a
+fresh store, per MCP session: every writing tool works in full, and what a
+visitor deletes or ships is theirs alone. That is the read-only property worth
+having here — the deployment is read-only, the demo is not, so forms still
+validate and confirmations still confirm. Nothing is persisted either way;
+the process holds the only copy.
+
+The other three flags cover the surroundings:
+
+- `-session-timeout 30m` — a sandboxed store lives as long as its session, so
+  idle ones need reaping.
+- `-cors` — browser-based clients cannot reach the endpoint cross-origin
+  without it. Server-side clients (Claude custom connectors among them) do not
+  care.
+- `-behind-proxy` — the SDK rejects a non-localhost `Host` on a loopback
+  listener as a DNS rebinding attempt. Needed when a reverse proxy on the same
+  host forwards over 127.0.0.1; not needed for a proxy on a Docker network.
+
+Add `-quiet` unless you want every visitor's tool calls on stderr. Health
+probes can hit `/healthz`, which the image has no shell to check from inside.
+
+Two caveats for a public URL. The endpoint is unauthenticated, so anyone who
+finds it can call the tools and hold a session; put it behind whatever your
+proxy offers if that matters. And each live session holds its own fixture
+data in memory, so session count is what to watch, with `-session-timeout`
+bounding it.
