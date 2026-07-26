@@ -20,6 +20,7 @@ make build        # build the example servers into ./bin (BIN_DIR=… to move it
 make clean        # remove ./bin
 make inspect      # preview server + MCP Inspector, already connected
 make inspect-demo # the same, in front of examples/demo on :8080
+make screenshots  # rescreenshot every widget story into docs/assets
 ```
 
 - Single Go test: `go test ./ -run TestName` (or `go test ./internal/htmlx -run TestName`, etc.)
@@ -77,4 +78,5 @@ JSON-RPC method names live in `ui/src/spec-constants.json`, consumed by TS and m
 
 - `examples/demo` — complete MCP server (streamable HTTP or `-stdio`) at `http://localhost:8080/mcp`.
 - `examples/preview` — the widest MCP server, for driving from an MCP Apps capable inspector: `make preview`, endpoint `http://localhost:8081/mcp`. A scenario half (Acme Dispatch, mutable state, `scenario.go`) and a gallery half (one tool + resource per widget variant, `gallery.go`); `-mode` picks one or both, tool calls log to stderr. `examples/preview/preview_test.go` reads every resource and walks the app over an in-memory session, so a broken widget config fails `make test-go`. Details in `docs/preview.md`.
+- `scripts/screenshots.mjs` — `make screenshots` starts its own harness, drives an installed Chrome over the DevTools protocol (no npm dependency, no download) and writes `docs/assets/preview/<story>[-dark].png` for every story plus the images the README embeds. Flags via `SHOT_FLAGS`, e.g. `make screenshots SHOT_FLAGS="--only table"`; unchanged bytes are not rewritten. Render widths per story live in the `WIDTHS` table at the top of the script.
 - `examples/harness` — fake MCP Apps host in one HTML page with a story browser: `go run ./examples/harness`, open `http://localhost:8090`. Stories (widget variants) live in `examples/harness/stories.go` and are served at `/story/<id>`; the page renders the selected one in a sandboxed iframe, answers the handshake, logs traffic, follows size-changed, and simulates tool results/errors and theme changes. Stories render frameless (`theme.Transparent`) by default; the top bar's "Frameless" toggle switches to the framed variant (`?transparent=0`).

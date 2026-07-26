@@ -1,4 +1,4 @@
-.PHONY: assets build clean harness preview inspect inspect-demo test test-go test-ui typecheck verify-dist vet
+.PHONY: assets build clean harness preview inspect inspect-demo screenshots test test-go test-ui typecheck verify-dist vet
 
 # Where make build puts the example binaries.
 BIN_DIR ?= bin
@@ -82,6 +82,16 @@ inspect:
 	SERVER_PORT=$(INSPECTOR_PROXY_PORT) \
 	MCP_AUTO_OPEN_ENABLED=false \
 	npx -y $(INSPECTOR_PKG)
+
+# Rescreenshot every widget story into docs/assets. Starts its own harness and
+# drives an installed Chrome over the DevTools protocol -- Node and a Chrome
+# are the only requirements, nothing is installed. Pass flags through with
+# SHOT_FLAGS, e.g.
+#   make screenshots SHOT_FLAGS="--only table --themes light"
+# See node scripts/screenshots.mjs --help.
+screenshots:
+	@command -v node >/dev/null 2>&1 || { echo "make screenshots needs node (22+)"; exit 1; }
+	node scripts/screenshots.mjs $(SHOT_FLAGS)
 
 # The same, in front of the small demo server (examples/demo) instead.
 inspect-demo:

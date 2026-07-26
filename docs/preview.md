@@ -134,6 +134,45 @@ Notes:
   right when the host leaves the iframe element unpainted. Hosts that paint a
   background behind it will show that background instead of nothing.
 
+## Screenshots
+
+`make screenshots` rebuilds every image under `docs/assets` from the harness
+stories, so the pictures in the README and the docs are never hand-captured:
+
+```sh
+make screenshots
+make screenshots SHOT_FLAGS="--only table --themes light"
+node scripts/screenshots.mjs --help
+```
+
+The script starts its own harness on a free port, drives an already installed
+Chrome over the DevTools protocol (Node's built-in WebSocket speaks it — there
+is no npm dependency and no browser download), and writes
+`docs/assets/preview/<story>.png` plus a `-dark` variant per story, at 2x. The
+five images the README embeds are rewritten from the same shots. Files whose
+bytes did not change are left alone, so a re-run on an untouched tree leaves
+the working copy clean.
+
+Each story is loaded with a small MCP Apps host shim injected ahead of the
+page's own scripts, so the widget completes the `ui/initialize` handshake and
+renders with the theme, locale (`en-US`) and time zone (`UTC`) a host would
+send — the same context `examples/harness` uses for its theme toggle. Stories
+that ship without a snapshot on purpose (`confirm-runtime`, `choice-runtime`,
+`datepicker-runtime`) get their push-panel payload delivered as a
+`ui/notifications/tool-result` before the shot; the empty-state stories do not,
+because the empty rendering is what they document.
+
+Two knobs live at the top of `scripts/screenshots.mjs`: `WIDTHS`, the render
+width per story or group — widgets lay themselves out against the room they are
+given, so this is what decides how many columns a `Descriptions` keeps or
+whether a `Choice` moves its description into the side panel — and
+`README_SHOTS`, which story feeds which README image.
+
+Rendering depends on the fonts installed on the machine (widgets ask for
+`system-ui`), so a run on a different OS can rewrite every file even when
+nothing in the library changed. Regenerate on the machine that produced the
+committed set, or accept the whole-set diff.
+
 ## Other hosts
 
 Nothing here is inspector-specific. The same endpoint works as a Claude custom

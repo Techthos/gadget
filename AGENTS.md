@@ -7,7 +7,8 @@ docs live in `docs/architecture.md`, `docs/widgets.md`, `docs/theming.md`.
 
 - **Module**: `github.com/techthos/gadget` (Go >= 1.25)
 - **What it is**: prebuilt, parameterized, interactive HTML widgets (**Table**,
-  **CardList**, **Card**, **Form**) for **MCP Apps** — the official MCP UI extension
+  **CardList**, **Card**, **Form**, **Menu**, **Confirm**, **Choice**,
+  **DatePicker**) for **MCP Apps** — the official MCP UI extension
   (`io.modelcontextprotocol/ui`, spec `2026-01-26`). Widgets render as fully
   self-contained HTML documents (inline CSS + JS, no external references)
   served as `ui://` template resources from a Go MCP server. Hosts (Claude,
@@ -115,8 +116,8 @@ result's `structuredContent`; the widget reads its data from there.
 
 ### 3.1 The `Widget` interface
 
-`*Table`, `*Form`, `*Card`, `*CardList`, `*Menu`, `*Confirm`, and `*Choice`
-implement:
+`*Table`, `*Form`, `*Card`, `*CardList`, `*Menu`, `*Confirm`, `*Choice`, and
+`*DatePicker` implement:
 
 ```go
 type Widget interface {
@@ -1015,7 +1016,7 @@ type Calendar struct {
 
     StartOn string // month the grid opens on while nothing is selected
 
-    Presets []DatePreset // named shortcuts beside the grid
+    Presets []DatePreset // named shortcuts, beside the grid or above it
 }
 
 type WeekStart string
@@ -1040,6 +1041,13 @@ cannot name those dates at registration time): `SpanToday`, `SpanYesterday`,
 `SpanNext7Days`, `SpanNext30Days`, `SpanThisWeek`, `SpanLastWeek`,
 `SpanThisMonth`, `SpanLastMonth`, `SpanThisYear`, `SpanYearToDate`. In a
 single-date calendar a preset picks the day its window opens on.
+
+A preset is measured against `Min`/`Max` and the blocked days as they stand when
+the widget is read, and is shown as unavailable where it has nothing to offer. A
+range preset overlapping the bounds is trimmed to them ("last 30 days" against a
+calendar opening on the 1st picks the days of it there are); one wholly outside
+them, or straddling a blocked day, is switched off. A single-date preset is
+never moved: it picks the day it names or is switched off.
 
 - **Blocked days bound a range too**: a span may not straddle one, so a second
   click across a taken day starts a new range instead.
@@ -1233,6 +1241,23 @@ Widgets read all runtime data from the tool result's `structuredContent`:
 result whose `structuredContent` contains `RowsKey` re-renders the widget
 (`CardList` also clears the selection), so the same `list_users`/`delete_user`
 tools drive a table or a card list interchangeably.
+
+### Status messages come from the result's text content
+
+Where a widget shows "the result's text" — the status bar, and the settled
+outcome of `Confirm`/`Choice`/`DatePicker` — it takes the first text content
+block that reads as a message. Blank blocks and blocks that are a serialized
+JSON object or array are skipped, and the widget's own wording is used instead
+("Done", "Saved.", `SuccessMessage`, …). That matters because a handler which
+returns only structured output gets its `structuredContent` mirrored into a text
+block automatically (the spec suggests it; the go-sdk does it whenever the
+handler leaves `Content` empty) — that payload is data, not a message, and never
+reaches the status bar. To control the wording, set `Content` explicitly with a
+short sentence, or use the widget's `SuccessMessage`.
+
+The same holds for a failed call: the error message is shown when it reads as
+one, and a blank or JSON-payload message is replaced by the widget's own
+wording ("The action failed.", "The request failed.", "Could not open …").
 
 With the go-sdk typed handlers, your `Out` struct's JSON form becomes
 `structuredContent` — so match the JSON tags to these keys:
@@ -1509,7 +1534,7 @@ self-contained and satisfy the spec's default locked-down policy. Only set
 The core emits plain spec-shaped values; adapt to any Go MCP implementation:
 
 ```go
-w := table // or form, card, cardlist; any gadget.Widget
+w := table // or form, card, cardlist, menu, confirm, choice, datepicker
 
 doc, err := w.Document() // render once (validates); serve from memory
 d := w.Descriptor()      // d.URI, d.Name (derived: "ui://demo/users" -> "demo-users"),
@@ -1567,15 +1592,24 @@ d := w.Descriptor()      // d.URI, d.Name (derived: "ui://demo/users" -> "demo-u
 
 ## 10. Examples and manual testing
 
-- `examples/demo` — complete runnable MCP server (users table with row/bulk
-  actions, the same users as a card carousel, + edit form with server-side
-  validation, prefill, string-ID parsing). `go run ./examples/demo -addr :8080`
-  (streamable HTTP at `/mcp`) or `go run ./examples/demo -stdio`. Point MCPJam,
-  Claude custom connectors, or any MCP Apps host at `http://localhost:8080/mcp`.
+- `examples/demo` — complete runnable MCP server (menu launcher, users table
+  with row/bulk actions, the same users as a card carousel, edit form with
+  server-side validation, prefill and string-ID parsing, a confirmation, and a
+  date picker whose selectable window is computed per call).
+  `go run ./examples/demo -addr :8080` (streamable HTTP at `/mcp`) or
+  `go run ./examples/demo -stdio`. Point MCPJam, Claude custom connectors, or
+  any MCP Apps host at `http://localhost:8080/mcp`.
+- `examples/preview` — the widest MCP server, for driving from an MCP Apps
+  capable inspector: `make preview` (or `make inspect`, which starts the MCP
+  Inspector already connected), endpoint `http://localhost:8081/mcp`. Two
+  halves: a small stateful application (Acme Dispatch — customers and orders,
+  mutable across calls) and a gallery with one tool and resource per widget
+  variant; `-mode` picks one or both. Details in `docs/preview.md`.
 - `examples/harness` — a fake MCP Apps host in one HTML page, with a story
-  browser: a rail of widget variants (table, cardlist, card, form, menu, plus
-  empty states and a long list) defined in `examples/harness/stories.go` and
-  served one per route (`/story/<id>`, catalog at `/stories.json`). It renders
+  browser: a rail of widget variants (table, cardlist, card, descriptions,
+  form, menu, confirm, choice, date picker, plus empty states and a long list)
+  defined in `examples/harness/stories.go` and served one per route
+  (`/story/<id>`, catalog at `/stories.json`). It renders
   the selected story in a sandboxed iframe at a chosen viewport width, answers
   the `ui/initialize` handshake, logs all JSON-RPC traffic (expandable
   entries), follows `ui/notifications/size-changed`, and simulates tool
@@ -1595,8 +1629,12 @@ make vet          # go vet ./...
 make assets       # npm ci + rebuild the TS/CSS bundle into internal/assets/dist
 make verify-dist  # rebuild assets, fail if committed dist drifted (CI does this)
 make build        # build the example servers into ./bin (Go only, no Node)
+make clean        # remove ./bin
+make harness      # the fake MCP Apps host on :8090
+make preview      # the preview MCP server on :8081
 make inspect      # the preview server with the MCP Inspector in front of it
 make inspect-demo # the same, in front of examples/demo on :8080
+make screenshots  # rescreenshot every widget story into docs/assets
 ```
 
 After editing anything under `ui/` (src or css), run `make assets` and commit
