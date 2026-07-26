@@ -31,6 +31,15 @@ describe("applyHostContext", () => {
     expect(document.documentElement.getAttribute("data-gadget-theme")).toBe("dark");
   });
 
+  it("pins the root color scheme to the host theme so the canvas stays transparent", () => {
+    applyHostContext({ theme: "dark" });
+    expect(document.documentElement.style.colorScheme).toBe("dark");
+    applyHostContext({ theme: "light" });
+    expect(document.documentElement.style.colorScheme).toBe("light");
+    applyHostContext({ theme: "purple" as never });
+    expect(document.documentElement.style.colorScheme).toBe("light");
+  });
+
   it("injects host fonts once and replaces on update", () => {
     applyHostContext({ styles: { css: { fonts: "@font-face{font-family:A}" } } });
     applyHostContext({ styles: { css: { fonts: "@font-face{font-family:B}" } } });

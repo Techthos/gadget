@@ -4,7 +4,7 @@ import { mountTable } from "../src/widgets/table";
 import { M } from "../src/protocol";
 import { FakeHost, flush } from "./fake-host";
 
-function shell({ selection = false, bulk = 0, pageSizes = [] as number[] } = {}): HTMLElement {
+function shell({ selection = false, bulk = false, pageSizes = [] as number[] } = {}): HTMLElement {
   document.body.innerHTML = "";
   const root = document.createElement("div");
   root.className = "gadget-root";
@@ -13,19 +13,24 @@ function shell({ selection = false, bulk = 0, pageSizes = [] as number[] } = {})
     <div class="gadget-toolbar">
       <input type="search" data-gadget-filter="">
       ${
-        bulk > 0
+        bulk
           ? `<div data-gadget-bulk="" hidden><span data-gadget-bulk-count=""></span>` +
-            Array.from({ length: bulk }, (_, i) => `<button type="button" data-gadget-bulk-action="${i}">Bulk${i}</button>`).join("") +
+            `<button type="button" data-gadget-bulk-menu="" aria-haspopup="menu" aria-expanded="false">Actions</button>` +
             `</div>`
           : ""
       }
     </div>
     <div data-gadget-status="" hidden></div>
-    <table><thead><tr>
+    <div class="gadget-table-sort"><select data-gadget-sort-select="">
+      <option value="">Sort…</option>
+      <option value="name|asc">Name ↑</option>
+      <option value="name|desc">Name ↓</option>
+    </select></div>
+    <div class="gadget-table-wrap"><table class="gadget-table" role="table"><thead><tr>
       ${selection ? `<th><input type="checkbox" data-gadget-select-all=""></th>` : ""}
       <th aria-sort="none" data-gadget-sort="name"><button type="button">Name</button></th>
       <th aria-sort="none" data-gadget-sort="age"><button type="button">Age</button></th>
-    </tr></thead><tbody data-gadget-rows=""></tbody></table>
+    </tr></thead><tbody data-gadget-rows=""></tbody></table></div>
     <div data-gadget-empty="" hidden><h3>No records yet</h3></div>
     <div data-gadget-pagination="" hidden>
       ${
@@ -41,6 +46,12 @@ function shell({ selection = false, bulk = 0, pageSizes = [] as number[] } = {})
     </div>`;
   document.body.append(root);
   return root;
+}
+
+/** Opens an action menu and returns its items, in order. */
+function openMenu(root: HTMLElement, selector: string): HTMLElement[] {
+  root.querySelector<HTMLElement>(selector)!.click();
+  return [...root.querySelectorAll<HTMLElement>(".gadget-action-panel [data-gadget-action-index]")];
 }
 
 function config(over: Record<string, unknown> = {}): Record<string, unknown> {
@@ -86,6 +97,58 @@ describe("table behavior", () => {
     bridge.dispose();
     host.dispose();
     document.body.innerHTML = "";
+  });
+
+  // jsdom has no layout, so the two widths the decision rests on are stubbed.
+  it("stacks rows only when the columns do not fit the wrap", async () => {
+    const root = shell();
+    const wrap = root.querySelector<HTMLElement>(".gadget-table-wrap") as HTMLElement;
+    const table = root.querySelector<HTMLElement>(".gadget-table") as HTMLElement;
+    let needed = 300;
+    Object.defineProperty(wrap, "clientWidth", { configurable: true, get: () => 500 });
+    Object.defineProperty(table, "scrollWidth", { configurable: true, get: () => needed });
+
+    mountTable({ root, config: config(), initialData: { rows: ROWS }, bridge });
+    expect(root.hasAttribute("data-gadget-stacked")).toBe(false);
+
+    // Same pane, wider columns: the verdict follows the content.
+    needed = 800;
+    root.querySelector<HTMLInputElement>("[data-gadget-filter]")!.dispatchEvent(
+      new Event("input", { bubbles: true }),
+    );
+    await new Promise((r) => setTimeout(r, 200));
+    expect(root.hasAttribute("data-gadget-stacked")).toBe(true);
+
+    // …and back, so crossing the threshold is not one-way.
+    needed = 300;
+    root.querySelector<HTMLInputElement>("[data-gadget-filter]")!.dispatchEvent(
+      new Event("input", { bubbles: true }),
+    );
+    await new Promise((r) => setTimeout(r, 200));
+    expect(root.hasAttribute("data-gadget-stacked")).toBe(false);
+  });
+
+  it("labels every cell so stacked rows can reprint the header", () => {
+    const root = shell();
+    mountTable({ root, config: config(), initialData: { rows: ROWS }, bridge });
+    const cells = [...root.querySelectorAll("tbody tr:first-child td")];
+    expect(cells.map((c) => c.getAttribute("data-gadget-label"))).toEqual(["Name", "Age"]);
+    expect(cells.every((c) => c.getAttribute("role") === "cell")).toBe(true);
+  });
+
+  it("sorts from the compact control and keeps the header in step", async () => {
+    const root = shell();
+    mountTable({ root, config: config(), initialData: { rows: ROWS }, bridge });
+    const sel = root.querySelector<HTMLSelectElement>("[data-gadget-sort-select]") as HTMLSelectElement;
+    sel.value = "name|desc";
+    sel.dispatchEvent(new Event("change", { bubbles: true }));
+    await flush();
+
+    const names = [...root.querySelectorAll('td[data-gadget-label="Name"]')].map((c) => c.textContent);
+    expect(names).toEqual([...names].sort().reverse());
+    expect(
+      root.querySelector('th[data-gadget-sort="name"]')?.getAttribute("aria-sort"),
+    ).toBe("descending");
   });
 
   it("renders initial rows from the data island", () => {
@@ -203,7 +266,9 @@ describe("table behavior", () => {
     });
     mountTable({ root, config: cfg, initialData: { rows: ROWS }, bridge });
 
-    root.querySelector<HTMLElement>('tbody [data-gadget-action="1:0"]')!.click();
+    const items = openMenu(root, 'tbody [data-gadget-action-menu="1"]');
+    expect(items.map((el) => el.textContent)).toEqual(["Delete"]);
+    items[0]!.click();
     await flush();
 
     const calls = host.received(M.toolsCall);
@@ -219,7 +284,7 @@ describe("table behavior", () => {
     expect(status.className).toContain("gadget-status--success");
   });
 
-  it("requires a second click for confirm actions", async () => {
+  it("requires a second choice for confirm actions", async () => {
     const root = shell();
     const cfg = config({
       columns: [
@@ -237,19 +302,22 @@ describe("table behavior", () => {
     });
     mountTable({ root, config: cfg, initialData: { rows: ROWS }, bridge });
 
-    const btn = root.querySelector<HTMLElement>('tbody [data-gadget-action="1:0"]')!;
-    btn.click();
+    const item = openMenu(root, 'tbody [data-gadget-action-menu="1"]')[0]!;
+    item.click();
     await flush();
     expect(host.received(M.toolsCall)).toHaveLength(0);
-    expect(btn.hasAttribute("data-gadget-armed")).toBe(true);
-    expect(btn.textContent).toBe("Really delete?");
-    btn.click();
+    expect(item.hasAttribute("data-gadget-armed")).toBe(true);
+    expect(item.textContent).toBe("Really delete?");
+    // The menu stays open while the question is standing.
+    expect(root.querySelector<HTMLElement>(".gadget-action-panel")!.hidden).toBe(false);
+    item.click();
     await flush();
     expect(host.received(M.toolsCall)).toHaveLength(1);
+    expect(root.querySelector<HTMLElement>(".gadget-action-panel")!.hidden).toBe(true);
   });
 
   it("selects rows, shows bulk actions, and resolves FromSelection args", async () => {
-    const root = shell({ selection: true, bulk: 1 });
+    const root = shell({ selection: true, bulk: true });
     const cfg = config({
       selection: {
         bulk: [
@@ -274,7 +342,7 @@ describe("table behavior", () => {
     expect(bulkBar.hidden).toBe(false);
     expect(root.querySelector("[data-gadget-bulk-count]")?.textContent).toBe("3 selected");
 
-    root.querySelector<HTMLElement>('[data-gadget-bulk-action="0"]')!.click();
+    openMenu(root, "[data-gadget-bulk-menu]")[0]!.click();
     await flush();
     const calls = host.received(M.toolsCall);
     expect(calls).toHaveLength(1);

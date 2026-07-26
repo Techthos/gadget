@@ -1,0 +1,284 @@
+/* Choice: a question, the options answering it, and the case for the one in
+ * hand. The description block sits beside the list when the widget has room
+ * for two readable columns and under the selected option when it does not —
+ * the runtime measures and puts --split or --stacked on the card, so the two
+ * layouts are styled here and never both at once.
+ *
+ * The server-rendered class is --auto, which reads as stacked: a document
+ * whose script never ran shows one honest column. */
+
+.gadget-choice-prompt {
+  padding: calc(var(--gadget-space-unit) * 4);
+}
+
+.gadget-choice-question {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.gadget-choice-lede {
+  margin: calc(var(--gadget-space-unit) * 1) 0 0;
+  color: var(--gadget-color-text-muted);
+}
+
+/* The prompt and the record it is about are one block: no rule between a
+ * question and the facts it is asked against. */
+.gadget-choice-prompt + .gadget-descriptions {
+  padding-top: 0;
+}
+
+/* --- The two columns ---------------------------------------------------
+ * One frame, two layouts. Stacked keeps the panel out of the flow entirely
+ * rather than letting an empty column claim half the width. */
+
+.gadget-choice-body {
+  display: grid;
+  gap: calc(var(--gadget-space-unit) * 4);
+  padding: calc(var(--gadget-space-unit) * 4);
+  border-top: 1px solid var(--gadget-color-border);
+}
+
+.gadget-choice--split .gadget-choice-body {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+}
+
+.gadget-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gadget-space-unit) * 2);
+  min-width: 0;
+}
+
+/* --- One option --------------------------------------------------------
+ * A row is the whole hit area: the control, the label, and — stacked — the
+ * description that unfolds once it is chosen. */
+
+.gadget-choice-option {
+  display: flex;
+  align-items: flex-start;
+  gap: calc(var(--gadget-space-unit) * 3);
+  padding: calc(var(--gadget-space-unit) * 3);
+  border: 1px solid var(--gadget-color-border);
+  border-radius: var(--gadget-radius-m);
+  background: var(--gadget-color-bg);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.gadget-choice-option:hover:not(.gadget-choice-option--disabled) {
+  border-color: var(--gadget-color-primary);
+}
+
+.gadget-choice-option--selected {
+  border-color: var(--gadget-color-primary);
+  background: color-mix(in srgb, var(--gadget-color-primary) 6%, var(--gadget-color-bg));
+}
+
+.gadget-choice-option--disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+/* Split only: which option the panel is describing. In the stacked layout the
+ * unfolded description already says it. */
+.gadget-choice--split .gadget-choice-option--active {
+  box-shadow: inset 0 0 0 1px var(--gadget-color-primary);
+}
+
+.gadget-choice-mark {
+  margin-top: 0.1rem;
+}
+
+/* The radio, drawn from the same tokens as the checkbox in check.css: the
+ * native input is stripped of its appearance and keeps every behaviour. */
+.gadget-choice-mark--radio {
+  display: inline-flex;
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.gadget-choice-radio {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border: 1.5px solid var(--gadget-color-border);
+  border-radius: 50%;
+  background: var(--gadget-color-bg);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.gadget-choice-radio:hover:not(:disabled) {
+  border-color: var(--gadget-color-primary);
+}
+
+/* The dot is an inset ring rather than a child element, so the control stays
+ * one node and one hit area. */
+.gadget-choice-radio:checked {
+  border-color: var(--gadget-color-primary);
+  box-shadow: inset 0 0 0 0.25rem var(--gadget-color-primary);
+}
+
+.gadget-choice-radio:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.gadget-choice-text {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gadget-space-unit) * 1);
+  min-width: 0;
+}
+
+.gadget-choice-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: calc(var(--gadget-space-unit) * 2);
+}
+
+.gadget-choice-label {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.gadget-choice-summary {
+  color: var(--gadget-color-text-muted);
+  font-size: 0.8125rem;
+}
+
+/* --- The description ---------------------------------------------------
+ * Same block in both layouts: in the panel it stands alone, inside an option
+ * it is set off from the row above it. */
+
+.gadget-choice-panel {
+  padding: calc(var(--gadget-space-unit) * 4);
+  border: 1px solid var(--gadget-color-border);
+  border-radius: var(--gadget-radius-m);
+  background: var(--gadget-color-surface);
+  min-width: 0;
+  /* Keeps the case for the option in view while a long list is scrolled. */
+  position: sticky;
+  top: calc(var(--gadget-space-unit) * 4);
+}
+
+.gadget-choice-option .gadget-choice-info {
+  margin-top: calc(var(--gadget-space-unit) * 2);
+  padding-top: calc(var(--gadget-space-unit) * 3);
+  border-top: 1px solid var(--gadget-color-border);
+}
+
+/* The panel names the option it is about; inside the option the label is one
+ * line above and repeating it is noise. */
+.gadget-choice-option .gadget-choice-info-title {
+  display: none;
+}
+
+.gadget-choice-info-title {
+  margin: 0 0 calc(var(--gadget-space-unit) * 2);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.gadget-choice-info-body {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.gadget-choice-bullets {
+  margin: calc(var(--gadget-space-unit) * 2) 0 0;
+  padding-inline-start: calc(var(--gadget-space-unit) * 4);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gadget-space-unit) * 1);
+  font-size: 0.875rem;
+}
+
+.gadget-choice-bullets li::marker {
+  color: var(--gadget-color-text-muted);
+}
+
+/* The detail list is already a padded block elsewhere; here it is nested in
+ * one, so it contributes only its top gap. */
+.gadget-choice-details.gadget-descriptions {
+  padding: calc(var(--gadget-space-unit) * 3) 0 0;
+  gap: calc(var(--gadget-space-unit) * 2.5) calc(var(--gadget-space-unit) * 4);
+  --gadget-desc-min: 8rem;
+}
+
+/* --- Deciding ---------------------------------------------------------- */
+
+.gadget-choice-hint {
+  margin: 0;
+  padding: 0 calc(var(--gadget-space-unit) * 4) calc(var(--gadget-space-unit) * 3);
+  color: var(--gadget-color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.gadget-choice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: calc(var(--gadget-space-unit) * 2);
+  padding: calc(var(--gadget-space-unit) * 3) calc(var(--gadget-space-unit) * 4);
+  border-top: 1px solid var(--gadget-color-border);
+}
+
+/* What is left once the decision is made, in place of the controls. */
+.gadget-choice-outcome {
+  margin: 0;
+  padding: calc(var(--gadget-space-unit) * 3) calc(var(--gadget-space-unit) * 4);
+  border-top: 1px solid var(--gadget-color-border);
+  overflow-wrap: anywhere;
+}
+
+.gadget-choice-outcome--accepted {
+  color: var(--gadget-color-success);
+}
+
+.gadget-choice-outcome--declined {
+  color: var(--gadget-color-text-muted);
+}
+
+@container gadget (max-width: 34rem) {
+  .gadget-choice-prompt,
+  .gadget-choice-body,
+  .gadget-choice-actions,
+  .gadget-choice-outcome {
+    padding-inline: calc(var(--gadget-space-unit) * 3);
+  }
+
+  .gadget-choice-hint {
+    padding-inline: calc(var(--gadget-space-unit) * 3);
+  }
+
+  /* Full-width stacked buttons, submit on top: at this width a right-aligned
+   * pair is two small targets in the corner. */
+  .gadget-choice-actions {
+    flex-direction: column-reverse;
+  }
+
+  .gadget-choice-actions .gadget-btn {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gadget-choice-option,
+  .gadget-choice-radio {
+    transition: none;
+  }
+}

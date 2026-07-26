@@ -64,18 +64,12 @@ th[aria-sort="descending"] .gadget-sort-btn::after {
   color: var(--gadget-color-primary);
 }
 
+/* One trigger wide, whatever the row's actions are: the column carries no data
+ * and should not take width from the ones that do. */
 .gadget-td-actions {
+  width: 1px;
   white-space: nowrap;
   text-align: end;
-}
-
-.gadget-td-actions .gadget-btn {
-  padding: calc(var(--gadget-space-unit) * 0.75) calc(var(--gadget-space-unit) * 2);
-  font-size: 0.8125rem;
-}
-
-.gadget-td-actions .gadget-btn + .gadget-btn {
-  margin-inline-start: calc(var(--gadget-space-unit) * 1.5);
 }
 
 .gadget-bulk {
@@ -89,10 +83,20 @@ th[aria-sort="descending"] .gadget-sort-btn::after {
   color: var(--gadget-color-text-muted);
 }
 
+/* Sort control for stacked rows: a select over the same sortable columns as
+ * the header buttons. While there is a header row to click, it is redundant —
+ * the stacked rules below are what reveal it. */
+.gadget-table-sort {
+  display: none;
+}
+
 .gadget-pagination {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  /* Wrapping beats shrinking: the pager's parts are all at their minimum
+   * legible size already, so a cramped bar must take a second row. */
+  flex-wrap: wrap;
   gap: calc(var(--gadget-space-unit) * 3);
   padding: calc(var(--gadget-space-unit) * 2.5) calc(var(--gadget-space-unit) * 4);
   border-top: 1px solid var(--gadget-color-border);
@@ -101,4 +105,135 @@ th[aria-sort="descending"] .gadget-sort-btn::after {
 .gadget-page-info {
   font-size: 0.8125rem;
   color: var(--gadget-color-text-muted);
+}
+
+/* --- Stacked rows -----------------------------------------------------
+ * A table cannot be narrower than the sum of its columns, so when the columns
+ * do not fit it stops being a grid: each row becomes a label/value block that
+ * fits any width, with the header row's labels reprinted per cell from
+ * data-gadget-label.
+ *
+ * The switch is NOT a width breakpoint. How much room a table needs is a
+ * property of its columns, not of the pane: five columns of email addresses
+ * overflow 600px while three short ones are comfortable at 320px. So the
+ * runtime measures (see updateStacking in ui/src/widgets/table.ts) and sets
+ * this attribute; CSS only describes the two shapes.
+ *
+ * The ARIA roles the runtime writes into the markup exist for exactly this —
+ * `display: block` strips a table's implicit roles, and the explicit ones
+ * carry the structure through unchanged. */
+/* Nothing overflows horizontally any more, and a scroll container here
+ * would clip the row blocks' focus rings. */
+.gadget-root[data-gadget-stacked] .gadget-table-wrap {
+  overflow-x: visible;
+}
+
+.gadget-root[data-gadget-stacked] .gadget-table,
+.gadget-root[data-gadget-stacked] .gadget-table tbody,
+.gadget-root[data-gadget-stacked] .gadget-table tr,
+.gadget-root[data-gadget-stacked] .gadget-table td {
+  display: block;
+}
+
+/* Every label it holds now travels with its own cell. */
+.gadget-root[data-gadget-stacked] .gadget-table thead {
+  display: none;
+}
+
+/* …and with the header row goes the only way to sort, so the toolbar's
+ * control takes over. */
+.gadget-root[data-gadget-stacked] .gadget-table-sort {
+  display: flex;
+  flex: 1 1 auto;
+}
+
+.gadget-root[data-gadget-stacked] .gadget-table tr {
+  position: relative;
+  padding: calc(var(--gadget-space-unit) * 3);
+  border-bottom: 1px solid var(--gadget-color-border);
+}
+
+.gadget-root[data-gadget-stacked] .gadget-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.gadget-root[data-gadget-stacked] .gadget-table tbody tr:hover {
+  background: color-mix(in srgb, var(--gadget-color-surface) 55%, transparent);
+}
+
+.gadget-root[data-gadget-stacked] .gadget-table td {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--gadget-space-unit) * 3);
+  padding: calc(var(--gadget-space-unit) * 0.5) 0;
+  border-bottom: none;
+  overflow-wrap: anywhere;
+}
+
+.gadget-root[data-gadget-stacked] .gadget-table td[data-gadget-label]::before {
+  content: attr(data-gadget-label);
+  flex: none;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--gadget-color-text-muted);
+}
+
+/* Column alignment described a grid that no longer exists; every value now
+ * sits at the end of its own line. */
+.gadget-root[data-gadget-stacked] .gadget-table td.gadget-align-end,
+.gadget-root[data-gadget-stacked] .gadget-table td.gadget-align-center {
+  text-align: start;
+}
+
+/* The checkbox rides in the block's top corner instead of spending a whole
+ * line on itself. */
+.gadget-root[data-gadget-stacked] .gadget-table .gadget-td-select {
+  position: absolute;
+  inset-block-start: calc(var(--gadget-space-unit) * 3);
+  inset-inline-end: calc(var(--gadget-space-unit) * 3);
+  width: auto;
+  padding: 0;
+}
+
+/* …so the first value has to stay clear of it: the box it vacated plus a
+ * gap wide enough that the value does not read as the checkbox's label. */
+.gadget-root[data-gadget-stacked] .gadget-table tr:has(.gadget-td-select) > td:nth-child(2) {
+  padding-inline-end: calc(var(--gadget-space-unit) * 8);
+}
+
+/* The cell is a flex row here, so the column width rule above means nothing;
+ * the trigger sits at the end of the block, past its label. */
+.gadget-root[data-gadget-stacked] .gadget-table .gadget-td-actions {
+  width: auto;
+  align-items: center;
+  padding-top: calc(var(--gadget-space-unit) * 2);
+}
+
+/* Pushed to the end of the block whether or not the column named itself, so
+ * the trigger sits in the same place in every stacked row. */
+.gadget-root[data-gadget-stacked] .gadget-table .gadget-td-actions .gadget-action-trigger {
+  margin-inline-start: auto;
+}
+
+/* Pagination is a pane-width question, not a column-width one: the pager fits
+ * one line in any pane roomy enough, stacked rows or not. */
+@container gadget (max-width: 34rem) {
+  .gadget-pagination {
+    padding-inline: calc(var(--gadget-space-unit) * 3);
+    row-gap: calc(var(--gadget-space-unit) * 2.5);
+  }
+
+  /* Page size on its own row, the pager on the next: three controls plus a
+   * count do not fit one line at this width. */
+  .gadget-page-size {
+    flex: 1 1 100%;
+    justify-content: space-between;
+    margin-inline-end: 0;
+  }
+
+  /* Centres the count between the two pager buttons. */
+  .gadget-page-info {
+    margin-inline: auto;
+  }
 }

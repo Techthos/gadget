@@ -7,7 +7,14 @@ import { HOST_CONTEXT_EVENT } from "../host";
 import { Row, rowsFrom } from "../data";
 import { clear } from "../dom";
 import { CallToolResult, M } from "../protocol";
-import { ActionCfg, CardTemplateCfg, renderCard, resolveArgs, textOf } from "./card-common";
+import {
+	ActionCfg,
+	CardTemplateCfg,
+	renderCard,
+	resolveArgs,
+	templateActions,
+	textOf,
+} from "./card-common";
 
 interface CardCfg {
 	widget: string;
@@ -27,7 +34,8 @@ export function mountCard(ctx: MountContext): void {
 	const { root, bridge } = ctx;
 
 	const hostEl = root.querySelector<HTMLElement>("[data-gadget-card]");
-	if (!hostEl || typeof cfg.card !== "object") return;
+	if (!hostEl || typeof cfg.card !== "object" || typeof cfg.card.header !== "object") return;
+	const actions = templateActions(cfg.card);
 	const host: HTMLElement = hostEl;
 	const statusEl = root.querySelector<HTMLElement>("[data-gadget-status]");
 	const emptyEl = root.querySelector<HTMLElement>("[data-gadget-empty]");
@@ -109,7 +117,7 @@ export function mountCard(ctx: MountContext): void {
 		if (!(target instanceof Element)) return;
 		const btn = target.closest<HTMLElement>("[data-gadget-action]");
 		if (btn && host.contains(btn)) {
-			const action = cfg.card.actions?.[Number(btn.getAttribute("data-gadget-action"))];
+			const action = actions[Number(btn.getAttribute("data-gadget-action"))];
 			if (action) armOrFire(btn, action);
 			return;
 		}

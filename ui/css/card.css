@@ -45,7 +45,46 @@
  * only reachable snap position is the start, so the browser pulls every
  * programmatic scroll straight back and the next control appears dead. */
 .gadget-card-strip > .gadget-card-item {
-  flex: 0 0 var(--gadget-card-width);
+  /* Never wider than the strip itself: in a narrow pane one card fills the
+   * width exactly, instead of a fixed 17rem card hanging over the edge with
+   * its values clipped and no way to scroll the tail into view. */
+  flex: 0 0 min(var(--gadget-card-width), 100%);
+}
+
+/* Tail tile of a LoadMore strip. Narrower than a card and dashed, so it reads
+ * as the end of the run rather than another record in it. */
+.gadget-card-more {
+  flex: 0 0 min(9rem, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--gadget-space-unit) * 1);
+  font: inherit;
+  color: var(--gadget-color-text-muted);
+  background: none;
+  border: 1px dashed var(--gadget-color-border);
+  border-radius: var(--gadget-radius-m);
+  padding: calc(var(--gadget-space-unit) * 3.5);
+  cursor: pointer;
+}
+
+.gadget-card-more:hover:not(:disabled) {
+  border-color: var(--gadget-color-primary);
+}
+
+.gadget-card-more:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.gadget-card-more-label {
+  font-weight: 600;
+  color: var(--gadget-color-primary);
+}
+
+.gadget-card-more-count {
+  font-size: 0.8125rem;
 }
 
 .gadget-carousel-nav {
@@ -87,14 +126,27 @@
   }
 }
 
+/* A card is three stacked sections — header, content, footer — separated by
+ * one rhythm. --gadget-card-spacing is that rhythm: it is both the gap
+ * between sections and their inset, so a section can be padded edge to edge
+ * (or run edge to edge) without going out of step with the ones above it. */
 .gadget-card-item {
+  --gadget-card-spacing: calc(var(--gadget-space-unit) * 3.5);
   display: flex;
   flex-direction: column;
-  gap: calc(var(--gadget-space-unit) * 3);
+  gap: var(--gadget-card-spacing);
   border: 1px solid var(--gadget-color-border);
   border-radius: var(--gadget-radius-m);
   background: var(--gadget-color-bg);
-  padding: calc(var(--gadget-space-unit) * 3.5);
+  padding-block: var(--gadget-card-spacing);
+}
+
+/* The inset lives on the sections, not the card, so a section that wants the
+ * full width has it. */
+.gadget-card-item-header,
+.gadget-card-content,
+.gadget-card-item-footer {
+  padding-inline: var(--gadget-card-spacing);
 }
 
 .gadget-card-item-header {
@@ -114,13 +166,14 @@
   overflow-wrap: anywhere;
 }
 
-.gadget-card-subtitle {
+.gadget-card-description {
   color: var(--gadget-color-text-muted);
   font-size: 0.8125rem;
   overflow-wrap: anywhere;
 }
 
-.gadget-card-badge {
+/* The header's single end slot: a status badge or a button. */
+.gadget-card-action {
   flex: none;
 }
 
@@ -129,29 +182,46 @@
   margin-top: calc(var(--gadget-space-unit) * 0.5);
 }
 
-.gadget-card-fields {
-  margin: 0;
+.gadget-card-content {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--gadget-space-unit) * 1.5);
-}
-
-.gadget-card-field {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
   gap: calc(var(--gadget-space-unit) * 3);
+  min-width: 0;
 }
 
-.gadget-card-field dt {
+.gadget-card-text {
+  margin: 0;
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+/* The detail list is the shared Descriptions block; inside a card the section
+ * already carries the inset, and one column is all a card's width allows. */
+.gadget-card-items {
+  padding: 0;
+  gap: calc(var(--gadget-space-unit) * 2);
+}
+
+.gadget-card-item-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--gadget-space-unit) * 2);
+  /* Footers line up across a row of cards of unequal height. */
+  margin-top: auto;
+}
+
+/* Only when something precedes it: a card whose footer follows the header
+ * directly reads as one block, and a rule there would cut it in half. */
+.gadget-card-content + .gadget-card-item-footer {
+  border-top: 1px solid var(--gadget-color-border);
+  padding-top: var(--gadget-card-spacing);
+}
+
+.gadget-card-note {
   color: var(--gadget-color-text-muted);
   font-size: 0.8125rem;
-  flex: none;
-}
-
-.gadget-card-field dd {
-  margin: 0;
-  text-align: end;
+  margin-inline-end: auto;
   overflow-wrap: anywhere;
 }
 
@@ -160,12 +230,26 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: calc(var(--gadget-space-unit) * 2);
-  margin-top: auto;
+  margin-inline-start: auto;
 }
 
 .gadget-card-item-actions .gadget-btn {
   padding: calc(var(--gadget-space-unit) * 0.75) calc(var(--gadget-space-unit) * 2.5);
   font-size: 0.8125rem;
+}
+
+/* Compact tier: give the cards their room back from the chrome. The strip
+ * needs no layout change — a card is already sized to the strip, so one fills
+ * the pane and the rest stay a swipe away. */
+@container gadget (max-width: 34rem) {
+  .gadget-card-host,
+  .gadget-card-strip {
+    padding: calc(var(--gadget-space-unit) * 3);
+  }
+
+  .gadget-card-item {
+    --gadget-card-spacing: calc(var(--gadget-space-unit) * 3);
+  }
 }
 
 .gadget-cards-selectall {

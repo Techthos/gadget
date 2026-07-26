@@ -1,0 +1,45 @@
+/* Descriptions: a label/value detail list, rendered by the runtime into a
+ * server-rendered <dl>. There are no layout options — the list gets as many
+ * columns as the widget's own width allows and collapses to one in a narrow
+ * chat pane, so one document reads in either. The trigger is the item floor
+ * below, not the viewport: this list is sized by whatever room its widget
+ * was given. */
+
+.gadget-descriptions {
+  margin: 0;
+  padding: calc(var(--gadget-space-unit) * 4);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--gadget-desc-min), 1fr));
+  gap: calc(var(--gadget-space-unit) * 3) calc(var(--gadget-space-unit) * 5);
+}
+
+/* Label above value, not beside it: in a column this narrow a shared line
+ * leaves the value a few characters wide. */
+.gadget-desc-item {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gadget-space-unit) * 0.5);
+  min-width: 0;
+}
+
+.gadget-desc-label {
+  color: var(--gadget-color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.gadget-desc-value {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The stand-in for a value the record does not carry. */
+.gadget-desc-value--missing {
+  color: var(--gadget-color-text-muted);
+}
+
+@container gadget (max-width: 34rem) {
+  .gadget-descriptions {
+    padding: calc(var(--gadget-space-unit) * 3);
+    gap: calc(var(--gadget-space-unit) * 2.5);
+  }
+}

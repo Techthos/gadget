@@ -11,28 +11,19 @@
 //
 // Data reaches the DOM through textContent only (see dom.ts); option labels
 // are no exception.
-import { clear, h } from "./dom";
+import { clear, h, icon } from "./dom";
+import { openPopup, popupHost, positionPanel, releasePopup, type Popup } from "./popup";
 
-const SVG_NS = "http://www.w3.org/2000/svg";
-const CHEVRON_PATH = "M4 6.5 8 10.5 12 6.5";
+export const CHEVRON_PATH = "M4 6.5 8 10.5 12 6.5";
 const CHECK_PATH = "M3.5 8.5 6.5 11.5 12.5 5";
-// Gap between the trigger and its panel, and the room a panel needs below the
-// trigger before it flips above it.
-const PANEL_GAP_PX = 4;
 // A typed run this far apart starts a new typeahead search.
 const TYPEAHEAD_RESET_MS = 600;
 
-interface Dropdown {
-  wrap: HTMLElement;
-  panel: HTMLElement;
+interface Dropdown extends Popup {
   sync(): void;
-  close(focus?: boolean): void;
-  position(): void;
 }
 
 const registry = new WeakMap<HTMLSelectElement, Dropdown>();
-let openDropdown: Dropdown | null = null;
-let globalsBound = false;
 let seq = 0;
 
 /** Upgrades every <select> under root that is not already a dropdown. */
@@ -61,7 +52,6 @@ export function refreshDropdowns(root: ParentNode): void {
 export function enhanceSelect(select: HTMLSelectElement): void {
   const parent = select.parentNode;
   if (!parent || registry.has(select)) return;
-  bindGlobals();
 
   const id = `gadget-dd-${++seq}`;
   const multiple = select.multiple;
@@ -98,15 +88,20 @@ export function enhanceSelect(select: HTMLSelectElement): void {
   if (ariaLabel !== null) trigger.setAttribute("aria-label", ariaLabel);
 
   const valueEl = h("span", { class: "gadget-dd-value" });
-  trigger.append(valueEl, icon(CHEVRON_PATH, "gadget-dd-chevron"));
+  trigger.append(valueEl, icon("gadget-dd-chevron", CHEVRON_PATH));
   wrap.append(trigger);
 
-  const panel = h("div", { class: "gadget-dd-panel", id, role: "listbox", hidden: true });
+  const panel = h("div", {
+    class: "gadget-pop-panel gadget-dd-panel",
+    id,
+    role: "listbox",
+    hidden: true,
+  });
   if (multiple) panel.setAttribute("aria-multiselectable", "true");
-  // The panel is a sibling of the widget chrome, not a child of the field: the
-  // card chrome clips its overflow, and a panel nested inside it would be cut
-  // off at the card's edge.
-  const host: HTMLElement = select.closest<HTMLElement>(".gadget-root") ?? document.body;
+  // The panel hangs off the widget root rather than the field: the card chrome
+  // clips its overflow, and a panel nested inside it would be cut off at the
+  // card's edge (see popup.ts).
+  const host = popupHost(select);
   host.append(panel);
 
   let optionEls: HTMLElement[] = [];
@@ -125,7 +120,7 @@ export function enhanceSelect(select: HTMLSelectElement): void {
         "aria-disabled": opt.disabled ? "true" : null,
       });
       el.append(
-        icon(CHECK_PATH, "gadget-dd-check"),
+        icon("gadget-dd-check", CHECK_PATH),
         h("span", { class: "gadget-dd-option-label" }, opt.text),
       );
       panel.append(el);
@@ -172,19 +167,7 @@ export function enhanceSelect(select: HTMLSelectElement): void {
   }
 
   function position(): void {
-    const t = trigger.getBoundingClientRect();
-    const h0 = host.getBoundingClientRect();
-    panel.style.minWidth = `${t.width}px`;
-    panel.style.left = `${t.left - h0.left}px`;
-    // Below the trigger unless the viewport has no room for it there and the
-    // space above is better.
-    const height = panel.offsetHeight;
-    const above =
-      window.innerHeight - t.bottom < height + PANEL_GAP_PX && t.top > height + PANEL_GAP_PX;
-    panel.classList.toggle("gadget-dd-panel--above", above);
-    panel.style.top = above
-      ? `${t.top - h0.top - height - PANEL_GAP_PX}px`
-      : `${t.bottom - h0.top + PANEL_GAP_PX}px`;
+    positionPanel(trigger, panel, host, { matchWidth: true });
   }
 
   function isOpen(): boolean {
@@ -193,16 +176,15 @@ export function enhanceSelect(select: HTMLSelectElement): void {
 
   function open(): void {
     if (isOpen() || select.disabled) return;
-    openDropdown?.close();
     panel.hidden = false;
     trigger.setAttribute("aria-expanded", "true");
-    openDropdown = dd;
+    openPopup(dd);
     position();
     setActive(select.selectedIndex >= 0 ? select.selectedIndex : step(-1, 1));
   }
 
   function close(focus = false): void {
-    if (openDropdown === dd) openDropdown = null;
+    releasePopup(dd);
     if (!isOpen()) return;
     panel.hidden = true;
     trigger.setAttribute("aria-expanded", "false");
@@ -339,45 +321,9 @@ export function enhanceSelect(select: HTMLSelectElement): void {
     });
   }
 
-  const dd: Dropdown = { wrap, panel, sync, close, position };
+  const dd: Dropdown = { anchor: wrap, panel, sync, close, position };
   registry.set(select, dd);
   buildOptions();
   sync();
 }
 
-function bindGlobals(): void {
-  if (globalsBound || typeof document === "undefined") return;
-  globalsBound = true;
-
-  document.addEventListener(
-    "pointerdown",
-    (ev) => {
-      const dd = openDropdown;
-      const target = ev.target;
-      if (!dd || !(target instanceof Node)) return;
-      if (!dd.wrap.contains(target) && !dd.panel.contains(target)) dd.close();
-    },
-    true,
-  );
-
-  const reposition = (): void => openDropdown?.position();
-  window.addEventListener("resize", reposition);
-  window.addEventListener("scroll", reposition, true);
-}
-
-/** Inline single-path icon. Documents are self-contained: no icon is a URL. */
-function icon(path: string, cls: string): SVGElement {
-  const svg = document.createElementNS(SVG_NS, "svg");
-  svg.setAttribute("class", cls);
-  svg.setAttribute("viewBox", "0 0 16 16");
-  svg.setAttribute("fill", "none");
-  svg.setAttribute("stroke", "currentColor");
-  svg.setAttribute("stroke-width", "1.75");
-  svg.setAttribute("stroke-linecap", "round");
-  svg.setAttribute("stroke-linejoin", "round");
-  svg.setAttribute("aria-hidden", "true");
-  const p = document.createElementNS(SVG_NS, "path");
-  p.setAttribute("d", path);
-  svg.append(p);
-  return svg;
-}

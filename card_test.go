@@ -15,20 +15,29 @@ import (
 // canonicalTemplate exercises every card template slot.
 func canonicalTemplate() CardTemplate {
 	return CardTemplate{
-		TitleKey:    "name",
-		SubtitleKey: "email",
-		Badge: Badge("status", "Status", map[string]BadgeVariant{
-			"active": BadgeSuccess,
-			"banned": BadgeDanger,
-		}),
-		Fields: []Column{
-			Number("balance", "Balance", "currency:EUR"),
-			Date("createdAt", "Created", "date"),
-			Link("website", "Website"),
+		Header: CardHeader{
+			TitleKey:       "name",
+			DescriptionKey: "email",
+			Badge: Badge("status", "Status", map[string]BadgeVariant{
+				"active": BadgeSuccess,
+				"banned": BadgeDanger,
+			}),
 		},
-		Actions: []Action{
-			{Label: "Edit", Tool: "edit_user", Args: map[string]ArgSource{"id": FromRow("id")}, Variant: VariantPrimary},
-			{Label: "Delete", Tool: "delete_user", Confirm: "Really delete?", Args: map[string]ArgSource{"id": FromRow("id")}, Variant: VariantDanger},
+		Content: CardContent{
+			TextKey: "bio",
+			Items: Descriptions{Items: []DescriptionItem{
+				{Label: "Balance", Key: "balance", Type: ColNumber, Format: "currency:EUR"},
+				{Label: "Created", Key: "createdAt", Type: ColDate, Format: "date"},
+				{Label: "Website", Key: "website", Type: ColLink, Link: &LinkSpec{HrefKey: "website"}},
+				{Label: "Plan", Text: "Free"},
+			}},
+		},
+		Footer: CardFooter{
+			Text: "Balances update hourly.",
+			Actions: []Action{
+				{Label: "Edit", Tool: "edit_user", Args: map[string]ArgSource{"id": FromRow("id")}, Variant: VariantPrimary},
+				{Label: "Delete", Tool: "delete_user", Confirm: "Really delete?", Args: map[string]ArgSource{"id": FromRow("id")}, Variant: VariantDanger},
+			},
 		},
 	}
 }
@@ -151,10 +160,16 @@ func TestCardConfigIsland(t *testing.T) {
 		`"widget":"card"`,
 		`"rowsKey":"rows"`,
 		`"rowId":"id"`,
+		`"header":{`,
 		`"titleKey":"name"`,
-		`"subtitleKey":"email"`,
+		`"descriptionKey":"email"`,
 		`"badge":{`,
+		`"content":{`,
+		`"textKey":"bio"`,
 		`"link":{"hrefKey":"website"}`,
+		`"text":"Free"`,
+		`"footer":{`,
+		`"text":"Balances update hourly."`,
 		`"confirm":"Really delete?"`,
 		`"empty":{"title":"No user","body":"Nothing selected."}`,
 	} {
@@ -215,21 +230,32 @@ func TestCardToolMetaAndDescriptor(t *testing.T) {
 
 func TestCardValidate(t *testing.T) {
 	cases := map[string]func(*Card){
-		"bad URI scheme":  func(c *Card) { c.URI = "https://x" },
-		"no title key":    func(c *Card) { c.Template.TitleKey = "" },
-		"field no key":    func(c *Card) { c.Template.Fields = []Column{{Label: "X"}} },
-		"link no hrefKey": func(c *Card) { c.Template.Fields = []Column{{Label: "X", Type: ColLink}} },
-		"actions in fields": func(c *Card) {
-			c.Template.Fields = []Column{ActionsColumn(Action{Label: "X", Tool: "x"})}
+		"bad URI scheme": func(c *Card) { c.URI = "https://x" },
+		"no title key":   func(c *Card) { c.Template.Header.TitleKey = "" },
+		"description key and text": func(c *Card) {
+			c.Template.Header.Description = "Fixed"
 		},
-		"non-badge badge": func(c *Card) { c.Template.Badge = Text("status", "Status") },
-		"duplicate field key": func(c *Card) {
-			c.Template.Fields = append(c.Template.Fields, Number("balance", "Balance2"))
+		"item no key":     func(c *Card) { c.Template.Content.Items.Items = []DescriptionItem{{Label: "X"}} },
+		"item no label":   func(c *Card) { c.Template.Content.Items.Items = []DescriptionItem{{Key: "x"}} },
+		"link no hrefKey": func(c *Card) { c.Template.Content.Items.Items = []DescriptionItem{{Label: "X", Type: ColLink}} },
+		"non-badge badge": func(c *Card) { c.Template.Header.Badge = Text("status", "Status") },
+		"badge and header action": func(c *Card) {
+			c.Template.Header.Action = &Action{Label: "Open", Tool: "open_user"}
 		},
-		"selection arg in card action": func(c *Card) {
-			c.Template.Actions = []Action{{Label: "X", Tool: "x", Args: map[string]ArgSource{"ids": FromSelection("id")}}}
+		"duplicate item key": func(c *Card) {
+			c.Template.Content.Items.Items = append(c.Template.Content.Items.Items,
+				DescriptionItem{Label: "Balance again", Key: "balance", Type: ColNumber})
 		},
-		"action no label": func(c *Card) { c.Template.Actions = []Action{{Tool: "x"}} },
+		"content text key and text": func(c *Card) { c.Template.Content.Text = "Fixed" },
+		"footer text key and text":  func(c *Card) { c.Template.Footer.TextKey = "note" },
+		"selection arg in header action": func(c *Card) {
+			c.Template.Header.Badge = Column{}
+			c.Template.Header.Action = &Action{Label: "X", Tool: "x", Args: map[string]ArgSource{"ids": FromSelection("id")}}
+		},
+		"selection arg in footer action": func(c *Card) {
+			c.Template.Footer.Actions = []Action{{Label: "X", Tool: "x", Args: map[string]ArgSource{"ids": FromSelection("id")}}}
+		},
+		"action no label": func(c *Card) { c.Template.Footer.Actions = []Action{{Tool: "x"}} },
 		"unsafe theme":    func(c *Card) { c.Theme = &theme.Theme{ColorText: "red}</style>"} },
 	}
 	if err := canonicalCard().Validate(); err != nil {
@@ -247,11 +273,17 @@ func TestCardValidate(t *testing.T) {
 func TestCardListValidate(t *testing.T) {
 	cases := map[string]func(*CardList){
 		"bad URI scheme":        func(l *CardList) { l.URI = "https://x" },
-		"no title key":          func(l *CardList) { l.Template.TitleKey = "" },
+		"no title key":          func(l *CardList) { l.Template.Header.TitleKey = "" },
 		"negative page size":    func(l *CardList) { l.PageSize = -1 },
 		"page size option zero": func(l *CardList) { l.PageSizes = []int{10, 0} },
 		"page sizes unpaginated": func(l *CardList) {
 			l.PageSize, l.PageSizes = 0, []int{10}
+		},
+		"load more unpaginated": func(l *CardList) {
+			l.PageSize, l.PageSizes, l.LoadMore = 0, nil, true
+		},
+		"load more with page sizes": func(l *CardList) {
+			l.PageSize, l.PageSizes, l.LoadMore = 5, []int{5, 10}, true
 		},
 		"default sort no key":  func(l *CardList) { l.DefaultSort = &SortSpec{} },
 		"bulk action no label": func(l *CardList) { l.Selection = &SelectionConfig{Bulk: []Action{{Tool: "x"}}} },

@@ -36,6 +36,32 @@ func TestCSSEmission(t *testing.T) {
 	}
 }
 
+func TestTransparentEmission(t *testing.T) {
+	th := Theme{Transparent: true}
+	got := th.CSS()
+	want := `:root{--gadget-page-pad:0}.gadget-root{--gadget-color-page:transparent}`
+	if got != want {
+		t.Errorf("CSS():\n got %q\nwant %q", got, want)
+	}
+	if err := th.Validate(); err != nil {
+		t.Errorf("Validate() = %v, want nil", err)
+	}
+	// Transparent wins over the individual knobs it subsumes.
+	th = Theme{Transparent: true, ColorPage: "#fff", PagePad: "2rem"}
+	if got := th.CSS(); got != want {
+		t.Errorf("Transparent with overrides:\n got %q\nwant %q", got, want)
+	}
+}
+
+func TestPageTokensEmission(t *testing.T) {
+	th := Theme{ColorPage: "#faf7f2", PagePad: "0"}
+	got := th.CSS()
+	want := `:root{--gadget-page-pad:0}.gadget-root{--gadget-color-page:#faf7f2}`
+	if got != want {
+		t.Errorf("CSS():\n got %q\nwant %q", got, want)
+	}
+}
+
 func TestUnsafeValuesSkippedAndReported(t *testing.T) {
 	th := Theme{
 		ColorText:    "red}</style><script>alert(1)</script>",

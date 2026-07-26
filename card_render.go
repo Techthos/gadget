@@ -84,7 +84,10 @@ func (l *CardList) shell() g.Node {
 			l.toolbar(),
 			carouselNode(),
 			emptyStateNode(l.Empty),
-			paginationNode(pageSizeOptions(l.PageSize, l.PageSizes), l.PageSize),
+			// LoadMore grows the strip in place, so there is no page to move
+			// between and no bar to move with — the runtime appends its tile
+			// to the strip instead.
+			g.If(!l.LoadMore, paginationNode(pageSizeOptions(l.PageSize, l.PageSizes), l.PageSize)),
 			statusNode(),
 		),
 	)
@@ -128,7 +131,7 @@ func (l *CardList) toolbar() g.Node {
 	}
 	if l.Selection != nil {
 		items = append(items, h.Label(h.Class("gadget-cards-selectall"),
-			h.Input(h.Type("checkbox"), htmlx.Data("select-all", ""), h.Aria("label", "Select all cards")),
+			checkboxNode(htmlx.Data("select-all", ""), h.Aria("label", "Select all cards")),
 			g.Text("Select all"),
 		))
 	}

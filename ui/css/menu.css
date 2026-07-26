@@ -80,3 +80,16 @@
   font-size: 0.8125rem;
   overflow-wrap: anywhere;
 }
+
+/* The grid already reflows to one column here; this only stops the chrome
+ * from eating a tenth of the width on each side. */
+@container gadget (max-width: 34rem) {
+  .gadget-menu {
+    padding: calc(var(--gadget-space-unit) * 3);
+    gap: calc(var(--gadget-space-unit) * 2);
+  }
+
+  .gadget-menu-intro {
+    padding: calc(var(--gadget-space-unit) * 3) calc(var(--gadget-space-unit) * 3) 0;
+  }
+}

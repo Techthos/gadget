@@ -1,10 +1,12 @@
 /* Base widget chrome. All rules are scoped under .gadget-root and reference
  * semantic tokens only — except the body reset below: the document is fully
  * gadget-owned, and the default body MARGIN sits outside body.scrollHeight,
- * clipping the bottom of auto-resized host iframes. Padding measures. */
+ * clipping the bottom of auto-resized host iframes. Padding measures.
+ * The document canvas is left unpainted so a host page shows through; see the
+ * color-scheme note in tokens.css for the one thing that overrides that. */
 body {
   margin: 0;
-  padding: 8px;
+  padding: var(--gadget-page-pad);
 }
 
 .gadget-root,
@@ -24,9 +26,16 @@ body {
   /* Anchor for dropdown panels, which are positioned here rather than inside
    * the card chrome that would clip them. */
   position: relative;
+  /* Widgets lay themselves out against the room they were given, not the
+   * viewport: the same document is dropped into a narrow chat pane and a wide
+   * panel, and only the element itself knows which. Every responsive rule in
+   * this bundle is an @container query on this name — grep "container gadget".
+   * inline-size only, so block size stays content-driven and the size-changed
+   * reports keep measuring real content height. */
+  container: gadget / inline-size;
   font-family: var(--gadget-font);
   color: var(--gadget-color-text);
-  background: var(--gadget-color-bg);
+  background: var(--gadget-color-page);
   font-size: 0.875rem;
   line-height: 1.45;
 }
@@ -52,6 +61,20 @@ body {
   font-weight: 600;
   margin: 0;
   margin-inline-end: auto;
+  /* Ellipsis rather than a two-line title pushing the controls around. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The filter is the toolbar's elastic item: it takes the slack at a
+ * comfortable width and drops to its own full-width row when the toolbar
+ * runs out (a 10rem basis is wider than the remaining space long before the
+ * input itself would become unusable). */
+.gadget-filter {
+  flex: 1 1 10rem;
+  min-width: 0;
 }
 
 .gadget-btn {
@@ -262,4 +285,39 @@ img.gadget-brand-logo {
 .gadget-brand--link:hover .gadget-brand-name {
   color: var(--gadget-color-text);
   text-decoration: underline;
+}
+
+/* --- Compact tier -----------------------------------------------------
+ * Under 34rem the widget has roughly a phone's worth of room: side-by-side
+ * layouts stop fitting and the generous chrome padding is a meaningful share
+ * of the line length. Shared chrome tightens here; the structural changes
+ * (the table restacking, the carousel card sizing) live with their widgets in
+ * table.css and card.css, keyed off the same 34rem. */
+@container gadget (max-width: 34rem) {
+  .gadget-toolbar {
+    gap: calc(var(--gadget-space-unit) * 2);
+    padding: calc(var(--gadget-space-unit) * 3);
+  }
+
+  /* Its own row: sharing one with the title leaves neither enough to read. */
+  .gadget-filter {
+    flex-basis: 100%;
+  }
+
+  /* Bulk actions are the widest thing the toolbar can hold, and they appear
+   * only once rows are selected — giving them a row of their own keeps that
+   * appearance from reflowing everything above them. */
+  .gadget-bulk {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+  }
+
+  .gadget-statusbar,
+  .gadget-empty {
+    padding-inline: calc(var(--gadget-space-unit) * 3);
+  }
+
+  .gadget-empty {
+    padding-block: calc(var(--gadget-space-unit) * 6);
+  }
 }

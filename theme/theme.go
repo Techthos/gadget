@@ -39,6 +39,24 @@ type Theme struct {
 	// (default 0.25rem). Increase for a roomier layout, decrease for density.
 	SpaceUnit string
 
+	// Transparent removes the page fill and the gutter to the iframe edge, so
+	// the frame itself becomes invisible: only the widget's card, with its
+	// rounded corners, sits on the host UI. Card, tile, control and overlay
+	// surfaces are untouched and stay opaque. Equivalent to ColorPage
+	// "transparent" plus PagePad "0".
+	//
+	// It also requires the host to leave the iframe element unpainted (no
+	// background, no border); see docs/theming.md.
+	Transparent bool
+
+	// ColorPage overrides the page fill alone, leaving cards, controls and
+	// overlays on ColorBackground. Ignored when Transparent is set.
+	ColorPage string
+
+	// PagePad is the gutter between the widget and the iframe edge
+	// (default 8px). Ignored when Transparent is set.
+	PagePad string
+
 	// Extra adds or overrides raw custom properties. Keys must start with
 	// "--gadget-". Use it for tokens without a dedicated field.
 	Extra map[string]string
@@ -50,6 +68,12 @@ var tokenFields = []struct {
 	value func(*Theme) string
 }{
 	{"--gadget-color-bg", func(t *Theme) string { return t.ColorBackground }},
+	{"--gadget-color-page", func(t *Theme) string {
+		if t.Transparent {
+			return "transparent"
+		}
+		return t.ColorPage
+	}},
 	{"--gadget-color-surface", func(t *Theme) string { return t.ColorSurface }},
 	{"--gadget-color-text", func(t *Theme) string { return t.ColorText }},
 	{"--gadget-color-text-muted", func(t *Theme) string { return t.ColorTextMuted }},
@@ -67,29 +91,56 @@ var tokenFields = []struct {
 	{"--gadget-space-unit", func(t *Theme) string { return t.SpaceUnit }},
 }
 
-// CSS renders the theme as a ".gadget-root { ... }" declaration block, or ""
-// when nothing is set. Entries that fail Validate are skipped; call Validate
-// to surface them as errors.
+// rootFields are document-level tokens: they must land on :root because the
+// body gutter is outside the widget element.
+var rootFields = []struct {
+	name  string
+	value func(*Theme) string
+}{
+	{"--gadget-page-pad", func(t *Theme) string {
+		if t.Transparent {
+			return "0"
+		}
+		return t.PagePad
+	}},
+}
+
+// CSS renders the theme as declaration blocks (":root { … }" for
+// document-level tokens, ".gadget-root { … }" for widget tokens), or "" when
+// nothing is set. Entries that fail Validate are skipped; call Validate to
+// surface them as errors.
 func (t *Theme) CSS() string {
 	if t == nil {
 		return ""
 	}
-	var decls []string
-	for _, f := range tokenFields {
-		if v := f.value(t); v != "" && safeValue(v) {
-			decls = append(decls, f.name+":"+v)
-		}
+	var out strings.Builder
+	if decls := collect(t, rootFields); len(decls) > 0 {
+		out.WriteString(":root{" + strings.Join(decls, ";") + "}")
 	}
+	decls := collect(t, tokenFields)
 	for _, k := range sortedKeys(t.Extra) {
 		v := t.Extra[k]
 		if strings.HasPrefix(k, "--gadget-") && safeKey(k) && v != "" && safeValue(v) {
 			decls = append(decls, k+":"+v)
 		}
 	}
-	if len(decls) == 0 {
-		return ""
+	if len(decls) > 0 {
+		out.WriteString(".gadget-root{" + strings.Join(decls, ";") + "}")
 	}
-	return ".gadget-root{" + strings.Join(decls, ";") + "}"
+	return out.String()
+}
+
+func collect(t *Theme, fields []struct {
+	name  string
+	value func(*Theme) string
+}) []string {
+	var decls []string
+	for _, f := range fields {
+		if v := f.value(t); v != "" && safeValue(v) {
+			decls = append(decls, f.name+":"+v)
+		}
+	}
+	return decls
 }
 
 // Validate reports invalid Extra keys and unsafe values that CSS() would
@@ -98,9 +149,14 @@ func (t *Theme) Validate() error {
 	if t == nil {
 		return nil
 	}
-	for _, f := range tokenFields {
-		if v := f.value(t); v != "" && !safeValue(v) {
-			return fmt.Errorf("theme: unsafe value for %s: %q", f.name, v)
+	for _, fields := range [][]struct {
+		name  string
+		value func(*Theme) string
+	}{rootFields, tokenFields} {
+		for _, f := range fields {
+			if v := f.value(t); v != "" && !safeValue(v) {
+				return fmt.Errorf("theme: unsafe value for %s: %q", f.name, v)
+			}
 		}
 	}
 	for _, k := range sortedKeys(t.Extra) {

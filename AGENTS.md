@@ -48,7 +48,7 @@ Consequences for you as a library user:
 
 | Package | Import path | Role |
 |---|---|---|
-| `gadget` | `github.com/techthos/gadget` | Widget definitions (`Table`, `Form`, `Card`, `CardList`, `Menu`, `Action`, columns, fields) + `RowsOf` |
+| `gadget` | `github.com/techthos/gadget` | Widget definitions (`Table`, `Form`, `Card`, `CardList`, `Menu`, `Confirm`, `Choice`, `Action`, columns, fields) + `RowsOf` |
 | `theme` | `github.com/techthos/gadget/theme` | `Theme` struct → CSS design-token overrides |
 | `uispec` | `github.com/techthos/gadget/uispec` | MCP Apps spec constants and `_meta` types (zero deps) |
 | `gosdk` | `github.com/techthos/gadget/gosdk` | Adapter for the official `github.com/modelcontextprotocol/go-sdk` — the **only** package importing an MCP SDK |
@@ -115,7 +115,8 @@ result's `structuredContent`; the widget reads its data from there.
 
 ### 3.1 The `Widget` interface
 
-`*Table`, `*Form`, `*Card`, `*CardList`, and `*Menu` implement:
+`*Table`, `*Form`, `*Card`, `*CardList`, `*Menu`, `*Confirm`, and `*Choice`
+implement:
 
 ```go
 type Widget interface {
@@ -190,7 +191,7 @@ type Column struct {
     Format   string                  // see formats below
     Badge    map[string]BadgeVariant // ColBadge: cell value -> variant
     Link     *LinkSpec               // ColLink config
-    Actions  []Action                // ColActions: per-row buttons
+    Actions  []Action                // ColActions: per-row actions, shown in a "⋯" menu
     Width    string                  // CSS width, e.g. "12rem", "20%"
 }
 ```
@@ -331,9 +332,15 @@ type Validation struct {
 
 ### 3.7 `Action`
 
-An `Action` is a user-triggerable operation: a per-row button
+An `Action` is a user-triggerable operation: a per-row action
 (`ActionsColumn`), a bulk action over selected rows (`SelectionConfig.Bulk`),
 or a link.
+
+In a `Table`, both kinds are reached through a menu rather than a strip of
+buttons: an actions column renders one "⋯" trigger per row, and the bulk bar
+renders a single "Actions" trigger beside the selection count. `Confirm` is
+asked inside that menu, on the item itself. `Card`/`CardList` actions are
+still buttons.
 
 ```go
 type Action struct {
@@ -388,22 +395,47 @@ Errors if the value doesn't marshal to a JSON array of objects.
 
 ### 3.9 `CardTemplate`
 
-Shared by `Card` and `CardList`: describes how one record renders as a card.
+Shared by `Card` and `CardList`: describes how one record renders as a card,
+in three sections rendered in this order. Only `Header` is required; a section
+with nothing in it is not rendered at all.
 
 ```go
 type CardTemplate struct {
-    TitleKey    string   // REQUIRED: row field shown as the card title
-    SubtitleKey string   // optional row field shown under the title
-    Badge       Column   // optional status badge (build with gadget.Badge); present when its Key is set — must be a badge column
-    Fields      []Column // label/value body rows: text/number/date/badge/link columns (NOT actions)
-    Actions     []Action // footer buttons; FromSelection args are invalid here (bulk actions belong to CardList.Selection)
+    Header  CardHeader  // REQUIRED (it holds the title)
+    Content CardContent // the card body
+    Footer  CardFooter  // the bottom section
+}
+
+type CardHeader struct {
+    TitleKey       string  // REQUIRED: row field shown as the card title
+    DescriptionKey string  // row field shown under the title
+    Description    string  // fixed text under the title, instead of DescriptionKey
+    Badge          Column  // status badge for the header's end slot (build with gadget.Badge); present when its Key is set — must be a badge column
+    Action         *Action // button for the header's end slot, instead of Badge
+}
+
+type CardContent struct {
+    TextKey string       // row field rendered as a paragraph of body text
+    Text    string       // fixed body prose, instead of TextKey
+    Items   Descriptions // label/value detail rows (the shared Descriptions block)
+}
+
+type CardFooter struct {
+    TextKey string   // row field shown as a footer note
+    Text    string   // fixed footer note, instead of TextKey
+    Actions []Action // footer buttons; FromSelection args are invalid here (bulk actions belong to CardList.Selection)
 }
 ```
 
-`Fields` reuse the same `Column` type and constructors as tables
-(`gadget.Text`/`Number`/`Date`/`Badge`/`Link`) and are Intl-formatted with the
-same format strings; they render as label/value pairs rather than table cells.
-`ColActions` columns are rejected in `Fields` — use `Actions`.
+- The header has **one** end slot: set `Badge` or `Action`, never both.
+- `Content.Items` is the same `Descriptions` block used by `Confirm`, so card
+  fields carry the same types, `Format` strings, badge maps and links as a
+  table column, and a value the record does not carry renders as `—`.
+- Text slots are either/or: `DescriptionKey`/`Description`,
+  `Content.TextKey`/`Content.Text` and `Footer.TextKey`/`Footer.Text` each
+  reject being set together.
+- Action buttons are indexed header-first, then footer — relevant only to the
+  runtime, not to callers.
 
 ### 3.10 `Card`
 
@@ -449,8 +481,9 @@ type CardList struct {
 
     PageSize    int              // > 0 enables client-side pagination; 0 disables; < 0 invalid
     PageSizes   []int            // alternative page sizes offered in a dropdown on the pagination bar; entries > 0; needs PageSize > 0; PageSize is added if absent; empty renders no chooser
+    LoadMore    bool             // grow the strip instead of paging it: starts at PageSize records and appends PageSize more per "Load more" tile at the end of the strip, in place of the pagination bar; needs PageSize > 0; cannot be combined with PageSizes
     DefaultSort *SortSpec        // pre-sort records on load (Key required when set)
-    Filterable  bool             // adds a client-side text filter box (matches title, subtitle, and field values)
+    Filterable  bool             // adds a client-side text filter box (matches title, description, body text, and content item values)
     Selection   *SelectionConfig // per-card checkboxes + bulk actions (FromSelection resolves across selected cards)
     Empty       EmptyState
 
@@ -463,10 +496,10 @@ type CardList struct {
 }
 ```
 
-The sort control is a dropdown over the template's **sortable body fields**
-(text/number/date `Fields`; badge/link fields and the title/subtitle are not
-offered) — no config needed. `DefaultSort` sets the initial order and may
-reference any field key.
+The sort control is a dropdown over the template's **sortable content items**
+(text/number/date `Content.Items` reading a record field; badge/link items,
+fixed-text items and the header slots are not offered) — no config needed.
+`DefaultSort` sets the initial order and may reference any field key.
 
 Carousel behavior is automatic: prev/next controls appear only when the cards
 overflow the available width and disable at each end, the strip is draggable
@@ -547,7 +580,271 @@ widget through `theme.Theme.Extra`.
 Documents are self-contained, so `IconSVG` is inline markup, never a URL — the
 same trust level and the same checks as `Brand.LogoSVG`.
 
-### 3.13 `Brand`
+### 3.13 `Descriptions`
+
+A label/value detail list. **Not a widget**: no URI, no `Document()`, not
+registerable. It is a shared block embedded by value, used by `Confirm`, `Choice` (both
+for the record and per option) and a card's content section.
+
+```go
+type Descriptions struct {
+    Items []DescriptionItem
+}
+
+type DescriptionItem struct {
+    Label  string                  // required
+    Key    string                  // record field holding the value
+    Text   string                  // fixed authored value, used instead of Key
+    Type   ColumnType              // ColText (default), ColNumber, ColDate, ColBadge, ColLink
+    Format string                  // same Intl format strings as Column.Format
+    Badge  map[string]BadgeVariant // value -> variant (ColBadge)
+    Link   *LinkSpec               // ColLink; URL comes from the record
+    Align  Align
+}
+```
+
+Exactly one of `Key` and `Text` per item. A `Key` value is read from the
+record at runtime and typed/Intl-formatted exactly like a table cell; a `Text`
+value is authored in Go and always plain text. `ColActions` is not a valid
+item type.
+
+There are no layout options by design: the list flows into as many columns as
+the widget's own width allows and collapses to one in a narrow pane. The item
+floor is the `--gadget-desc-min` token (default `12rem`), overridable through
+`theme.Theme.Extra`. A data-bound value the record does not carry renders as an
+em dash rather than vanishing.
+
+### 3.14 `Confirm`
+
+An approval widget: one question, the record it is about, the side effects of
+answering yes, and exactly two outcomes. The long form of `Action.Confirm`.
+
+```go
+type Confirm struct {
+    URI      string        // ui:// resource URI (required)
+    Title    string        // toolbar + document title
+    Prompt   string        // headline question (required)
+    Body     string        // supporting prose
+    Severity BadgeVariant  // BadgeInfo (default) | BadgeWarning | BadgeDanger
+
+    Details Descriptions   // the record, bound to rows[0]
+    Effects []Effect       // side effects; runtime EffectsKey replaces them
+
+    Acknowledge   string   // checkbox label that must be ticked to enable accept
+    TypeToConfirm string   // phrase that must be typed to enable accept
+
+    Accept AcceptSpec      // required
+    Reject *RejectSpec     // nil renders no declining button
+
+    RowsKey    string      // default "rows"
+    EffectsKey string      // default "effects"
+    RowID      string      // default "id"
+
+    InitialData map[string]any  // baked structuredContent snapshot
+    LoadTool    string          // read tool called once on load
+    LoadArgs    map[string]any
+
+    Brand *Brand
+    Theme *theme.Theme
+    UI    *uispec.ResourceUIMeta
+}
+
+type Effect struct {
+    Text     string        // the consequence (required)
+    Detail   string        // secondary line
+    Value    string        // magnitude at the row end ("128", "4 people")
+    Severity BadgeVariant  // colors the row's dot; defaults to BadgeNeutral
+}
+
+type AcceptSpec struct {
+    Tool           string               // MCP tool called on accept (required)
+    Label          string               // defaults to "Confirm"
+    Args           map[string]ArgSource // Static / FromRow only
+    Variant        ActionVariant        // overrides the variant derived from Severity
+    SuccessMessage string               // shown in place of the buttons on success
+}
+
+type RejectSpec struct {
+    Label   string               // defaults to "Cancel"
+    Tool    string               // optional; without it the server never hears the "no"
+    Args    map[string]ArgSource // Static / FromRow only
+    Message string               // terminal text; defaults to "Cancelled."
+}
+```
+
+```go
+confirm := &gadget.Confirm{
+    URI:      "ui://demo/delete-user",
+    Prompt:   "Delete Ada Lovelace?",
+    Severity: gadget.BadgeDanger,
+    Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
+        {Label: "User", Key: "name"},
+        {Label: "Balance", Key: "balance", Type: gadget.ColNumber, Format: "currency:EUR"},
+    }},
+    Effects: []gadget.Effect{
+        {Text: "Removes the account", Severity: gadget.BadgeDanger},
+        {Text: "Deletes audit records", Value: "128", Severity: gadget.BadgeWarning},
+    },
+    TypeToConfirm: "ada@example.com",
+    Accept: gadget.AcceptSpec{Tool: "delete_user", Label: "Delete user",
+        Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+        SuccessMessage: "User deleted."},
+    Reject: &gadget.RejectSpec{Label: "Keep user"},
+}
+```
+
+Runtime behavior:
+
+- **Severity** colors the icon and picks the accept button's variant: danger →
+  `VariantDanger`, anything else → `VariantPrimary`, unless `Accept.Variant`
+  says otherwise.
+- **Effects** authored in Go are shown until a payload carries `EffectsKey`,
+  which replaces the list wholesale. An effect severity that is not one of the
+  `Badge*` values is ignored rather than styled.
+- **Guards** gate the accept button: the acknowledgement must be ticked and the
+  phrase typed exactly (trimmed). The button is rendered `disabled`
+  server-side whenever a guard is configured, so the document is correct before
+  the runtime mounts. Enter in the phrase field accepts.
+- **Accepting** calls `Accept.Tool`; on success the buttons are replaced by
+  `SuccessMessage` (or the result's text). A result with `isError` re-arms the
+  widget so a transient failure can be retried.
+- **Rejecting** calls `Reject.Tool` when set, then settles with `Message`.
+- **The decision is terminal**: after accepting or declining the buttons stay
+  gone, even if the host pushes further results (which still refresh the
+  details and effects).
+
+### 3.15 `Choice`
+
+A deciding widget: a question, the options answering it, and the case for each
+one. Picking is local — only the submit button calls a tool. Use it where
+`Confirm` asks yes/no about one operation and the reader has to choose *which*
+operation instead.
+
+```go
+type Choice struct {
+    URI    string          // ui:// resource URI (required)
+    Title  string          // toolbar + document title
+    Prompt string          // headline question (required)
+    Body   string          // supporting prose
+
+    Layout   ChoiceLayout  // ChoiceAuto (default) | ChoiceSplit | ChoiceStacked
+    Multiple bool          // checkboxes instead of radios
+    Min      int           // fewest options a multiple choice accepts (default 1)
+    Max      int           // most it accepts; 0 = no limit. Multiple only
+
+    Options []ChoiceOption // may be empty when they arrive under OptionsKey
+    Details Descriptions   // the record the question is about, bound to rows[0]
+
+    Submit ChoiceSubmit    // required
+    Cancel *RejectSpec     // nil renders no declining button
+
+    RowsKey    string      // default "rows"
+    OptionsKey string      // default "options"
+    RowID      string      // default "id"
+
+    InitialData map[string]any  // baked structuredContent snapshot
+    LoadTool    string          // read tool called once on load
+    LoadArgs    map[string]any
+
+    Brand *Brand
+    Theme *theme.Theme
+    UI    *uispec.ResourceUIMeta
+}
+
+type ChoiceOption struct {
+    Value   string        // sent to the tool (required, unique)
+    Label   string        // list heading; defaults to Value
+    Summary string        // one supporting line, always visible in the list
+
+    Body    string        // prose in the description block
+    Bullets []string      // short points under Body
+    Details Descriptions  // label/value list; Key items read Data
+    Data    map[string]any // the option's own record
+
+    Badge        string        // short text beside the label
+    BadgeVariant BadgeVariant  // defaults to BadgeNeutral; needs Badge
+
+    Default  bool         // preselected (a single choice takes at most one)
+    Disabled bool         // on offer, but not choosable now
+}
+
+type ChoiceSubmit struct {
+    Tool           string               // MCP tool called on submit (required)
+    Label          string               // defaults to "Continue"
+    ValueArg       string               // argument carrying the decision; defaults to "choice"
+    Args           map[string]ArgSource // Static / FromRow only
+    Variant        ActionVariant        // defaults to VariantPrimary
+    SuccessMessage string               // shown in place of the controls on success
+}
+```
+
+`Cancel` reuses `RejectSpec` (§3.14): `Label` (default "Cancel"), an optional
+`Tool` so the server hears the "no", its `Args`, and the terminal `Message`
+(default "Cancelled.").
+
+```go
+choice := &gadget.Choice{
+    URI:    "ui://demo/shipping",
+    Prompt: "How should we ship order ORD-4471?",
+    Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
+        {Label: "Order", Key: "reference"},
+    }},
+    Options: []gadget.ChoiceOption{
+        {
+            Value: "standard", Label: "Standard", Summary: "3-5 business days",
+            Body:    "Handed to the postal service tonight.",
+            Bullets: []string{"Tracked to the depot", "No signature"},
+            Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
+                {Label: "Price", Key: "price", Type: gadget.ColNumber, Format: "currency:EUR"},
+            }},
+            Data:    map[string]any{"price": 4.9},
+            Default: true,
+        },
+        {Value: "express", Label: "Express", Summary: "next business day",
+         Badge: "fastest", BadgeVariant: gadget.BadgeSuccess},
+    },
+    Submit: gadget.ChoiceSubmit{Tool: "ship_order", Label: "Ship it", ValueArg: "method",
+        Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+        SuccessMessage: "On its way."},
+    Cancel: &gadget.RejectSpec{Label: "Decide later"},
+}
+```
+
+The submit call is `Args` resolved as usual plus `ValueArg`: the chosen
+`Value` (single) or the array of chosen values in option order (multiple). So
+the example above calls `ship_order` with `{"id": 4471, "method": "express"}`.
+
+Runtime behavior:
+
+- **Layout** decides where an option's description block goes. `ChoiceSplit`
+  puts it in a side panel that follows the option in hand; `ChoiceStacked`
+  unfolds it inside the chosen option. `ChoiceAuto` measures the width the
+  host gave the widget and picks split at or above 34rem, stacked below —
+  re-measuring as the pane resizes, so one document reads in a wide canvas and
+  a narrow chat column. The server-rendered class is `--auto`, which styles as
+  stacked, so a document whose script never ran is still correct.
+- **Options** authored in Go are shown until a payload carries `OptionsKey`,
+  which replaces the list wholesale and re-applies the new options' own
+  defaults. A tool-supplied option describes itself in plain values — its
+  `details` entries are `{label, value}` pairs, already formatted server-side,
+  where an authored `Details` item is a typed field config resolved against
+  `Data`. A `badgeVariant` that is not a `Badge*` value is ignored rather than
+  styled.
+- **Selection**: a single choice is radios and swaps; a multiple choice is
+  checkboxes. Submit stays disabled until `Min` (default 1) is met; at `Max`
+  the unticked options disable rather than failing on click, and a hint under
+  the list tracks the count. `Disabled` options are never chosen, but pointing
+  at one still shows its description — why it cannot be taken is the thing
+  worth reading.
+- **Submitting** calls `Submit.Tool`; on success the controls are replaced by
+  `SuccessMessage` (or the result's text). A result with `isError` re-arms the
+  widget so a transient failure can be retried.
+- **Cancelling** calls `Cancel.Tool` when set, then settles with `Message`.
+- **The decision is terminal**: after submitting or cancelling the controls
+  stay gone, even if the host pushes further results (which still refresh the
+  details and options).
+
+### 3.16 `Brand`
 
 Identifies the application a widget belongs to. Available on `Table`, `Form`,
 `Card`, `CardList` and `Menu` as the `Brand` field; one `*Brand` is typically
@@ -573,7 +870,7 @@ hands the URL to `ui/openLink`.
 
 A brand makes the toolbar appear even when `Title` is empty.
 
-### 3.14 Validation rules (what `Validate()` / `Document()` reject)
+### 3.17 Validation rules (what `Validate()` / `Document()` reject)
 
 Table:
 - `URI` must be a well-formed `ui://` URI with a non-empty path.
@@ -595,14 +892,20 @@ Form:
 - `Theme` must pass `theme.Validate()`.
 
 Card / CardList (via `CardTemplate`):
-- `URI` as above; `Template.TitleKey` required.
-- `Badge`, when present (`Key` set), must be a badge column.
-- Body `Fields`: text/number/date/badge need `Key`; link needs `Link.HrefKey`;
-  no duplicate field `Key`s; `ColActions` is rejected (use `Actions`).
-- Template `Actions`: validated like any action; `FromSelection` is rejected
-  (per-card actions run on one record).
+- `URI` as above; `Template.Header.TitleKey` required.
+- `Header.Badge`, when present (`Key` set), must be a badge column, and cannot
+  be combined with `Header.Action` — the header has one end slot.
+- Each text slot rejects being filled twice: `Header.DescriptionKey` +
+  `Header.Description`, `Content.TextKey` + `Content.Text`, `Footer.TextKey` +
+  `Footer.Text`.
+- `Content.Items` validated as `Descriptions` (§3.13): `Label` required;
+  `Key` xor `Text`; text/number/date/badge need `Key`; link needs
+  `Link.HrefKey`; no duplicate item `Key`s.
+- `Header.Action` and `Footer.Actions`: validated like any action;
+  `FromSelection` is rejected (per-card actions run on one record).
 - CardList only: `PageSize >= 0`; `PageSizes` entries `> 0` and only with
-  `PageSize > 0`; `DefaultSort.Key` required when set; bulk actions validated.
+  `PageSize > 0`; `LoadMore` needs `PageSize > 0` and rejects `PageSizes`;
+  `DefaultSort.Key` required when set; bulk actions validated.
 - `Theme` must pass `theme.Validate()`.
 
 Menu:
@@ -612,6 +915,40 @@ Menu:
   `Brand.LogoSVG` (below).
 - Item `BadgeVariant`, when set, must be one of the `Badge*` constants.
 - `Theme` must pass `theme.Validate()`.
+
+Confirm:
+- `URI` as above; `Prompt` required; `Accept.Tool` required.
+- `Severity`, when set, must be one of the `Badge*` constants.
+- `Accept.Args` / `Reject.Args`: built with `Static` or `FromRow`;
+  `FromSelection` is rejected (a confirmation has no selection).
+- `Reject.Args` require `Reject.Tool`.
+- Effects: `Text` required; `Severity`, when set, must be a `Badge*` constant.
+- `Details` validated as `Descriptions` (below).
+- `Theme` must pass `theme.Validate()`.
+
+Choice:
+- `URI` as above; `Prompt` required; `Submit.Tool` required.
+- `Layout`, when set, must be `ChoiceSplit` or `ChoiceStacked`.
+- `Submit.Args` / `Cancel.Args`: built with `Static` or `FromRow`;
+  `FromSelection` is rejected (a choice has no row selection).
+- `Submit.Args` cannot contain `Submit.ValueArg` — the decision and a static
+  argument cannot share a name.
+- `Cancel.Args` require `Cancel.Tool`.
+- `Min`/`Max` require `Multiple`, cannot be negative, and `Min <= Max` when
+  `Max > 0`.
+- Options: `Value` required and unique; `BadgeVariant`, when set, must be a
+  `Badge*` constant and needs `Badge` text; no empty `Bullets` entry; a
+  `Disabled` option cannot be `Default`; at most one `Default` in a single
+  choice, and no more than `Max` in a multiple one.
+- Option `Details` and widget `Details` validated as `Descriptions` (below).
+- An empty `Options` list is legal: options may arrive at runtime.
+- `Theme` must pass `theme.Validate()`.
+
+Descriptions (wherever embedded):
+- Item `Label` required.
+- Exactly one of `Key` and `Text` per item; a `Text` item must be `ColText`.
+- text/number/date/badge items need `Key`; link items need `Link.HrefKey`.
+- No duplicate item `Key`s; `ColActions` is rejected.
 
 Brand (all widgets, when set):
 - `Name` or a logo is required.
@@ -640,6 +977,10 @@ Widgets read all runtime data from the tool result's `structuredContent`:
 | Card | `rows` (`RowsKey`) | `[]object` | renders the first element (`rows[0]`) |
 | Form | `values` (`PrefillKey`) | `{field: value}` | prefill (edit flows) |
 | Form | `errors` (`ErrorsKey`) | `{field: "message"}` | server-side field errors, rendered inline; marks the submit failed |
+| Confirm | `rows` (`RowsKey`) | `[]object` | the record the operation targets (`rows[0]`) |
+| Confirm | `effects` (`EffectsKey`) | `[]object` | side effects: `{text, detail?, value?, severity?}`; replaces the authored list |
+| Choice | `rows` (`RowsKey`) | `[]object` | the record the question is about (`rows[0]`) |
+| Choice | `options` (`OptionsKey`) | `[]object` | what is on offer: `{value, label?, summary?, body?, bullets?, details?, badge?, badgeVariant?, default?, disabled?}` where `details` is `[{label, value}]`; replaces the authored list |
 | Menu | — | — | reads nothing; tiles are authored and server-rendered |
 
 `Card`/`CardList` share the `rows` contract with `Table`: an action or tool
@@ -788,10 +1129,16 @@ type Theme struct {
 
     SpaceUnit string // base spacing unit (default 0.25rem); all gaps/paddings derive from it
 
+    Transparent bool   // drop the page fill and the gutter: the iframe rectangle disappears,
+                       // leaving only the widget's card on the host surface. Card, control
+                       // and overlay fills are untouched. == ColorPage "transparent" + PagePad "0"
+    ColorPage   string // page fill alone (cards/controls/overlays keep ColorBackground); ignored when Transparent
+    PagePad     string // gutter between widget and iframe edge (default 8px); ignored when Transparent
+
     Extra map[string]string // extra/override raw custom properties; keys MUST start with "--gadget-"
 }
 
-func (t *Theme) CSS() string      // ".gadget-root{...}" block, "" when nothing set; skips invalid entries
+func (t *Theme) CSS() string      // ":root{...}" (page tokens) + ".gadget-root{...}", "" when nothing set
 func (t *Theme) Validate() error  // surfaces what CSS() would silently skip
 ```
 
@@ -811,6 +1158,23 @@ Token → host variable mapping (for reference): `--gadget-color-bg` ←
 danger/success/warning ← `--color-text-danger/success/warning`,
 `--gadget-font`/`--gadget-font-mono` ← `--font-sans`/`--font-mono`,
 `--gadget-radius-s/m/l` ← `--border-radius-sm/md/lg`.
+
+### Embedding without a visible frame
+
+`Transparent: true` makes the widget document paint nothing of its own, so the
+host page shows through the iframe and only the card (with its border radius)
+reads as part of the host UI. Two things it depends on:
+
+- The **host** must leave the `<iframe>` element unpainted: `border: 0`
+  (the UA default is `2px inset`) and no `background`.
+- The embedded document's **root color scheme must match the `<iframe>`
+  element's**, or the UA paints an opaque canvas behind the whole document and
+  no author `background: transparent` can undo it. The runtime handles this by
+  pinning `:root { color-scheme }` to `hostContext.theme`.
+
+Content still cannot escape the iframe box: dropdown panels, tooltips and
+focus rings are clipped by the frame, and the frame rectangle keeps swallowing
+pointer events over its transparent areas.
 
 ---
 

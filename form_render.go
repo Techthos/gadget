@@ -114,11 +114,17 @@ func fieldNode(fd Field) g.Node {
 		}
 		control = h.Select(attrs...)
 	case FCheckbox:
-		attrs := append(controlAttrs(fd, id), h.Type("checkbox"))
+		// Not controlAttrs: the box draws itself (ui/css/check.css) rather than
+		// wearing .gadget-input, and none of the text/number validation
+		// attributes mean anything on a checkbox.
+		attrs := []g.Node{h.ID(id), h.Name(fd.Name)}
+		if fd.Required {
+			attrs = append(attrs, h.Required())
+		}
 		if b, ok := fd.Default.(bool); ok && b {
 			attrs = append(attrs, h.Checked())
 		}
-		control = h.Input(attrs...)
+		control = checkboxNode(attrs...)
 	default: // text, number, date, time, readonly
 		attrs := append(controlAttrs(fd, id), h.Type(inputType(ft)))
 		if ft == FReadonly {

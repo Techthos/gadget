@@ -108,12 +108,18 @@ host-themed table — sortable, filterable, paginated — inside the chat.
 - [Widget reference](docs/widgets.md) — Table, Form, Card, CardList, Menu, actions, data contract
 - [Theming](docs/theming.md) — tokens, host variables, dark mode
 - [Architecture](docs/architecture.md) — rendering model, runtime, security
+- [Preview server](docs/preview.md) — every widget as real MCP tools, for inspectors
 
 ## Examples
 
 - `examples/demo` — complete MCP server (streamable HTTP or `-stdio`):
   list/edit/save/delete/archive users. Point MCPJam or any MCP Apps host at
   `http://localhost:8080/mcp`.
+- `examples/preview` — the widest MCP server: a small app with mutable state
+  (customers, orders, forms, confirmations, choices) plus a gallery of every
+  widget variant as its own tool. Built for driving from an MCP Apps capable
+  inspector. `make preview`, then point the inspector at
+  `http://localhost:8081/mcp`. See [docs/preview.md](docs/preview.md).
 - `examples/harness` — a fake MCP Apps host in one HTML page, with a story
   browser: pick a widget variant from the rail (table, cardlist, card, form,
   menu, plus empty and long-list states), see it rendered in a sandboxed

@@ -85,12 +85,16 @@ import { mountTable } from "./widgets/table";
 import { mountCard } from "./widgets/card";
 import { mountCardList } from "./widgets/cardlist";
 import { mountMenu } from "./widgets/menu";
+import { mountConfirm } from "./widgets/confirm";
+import { mountChoice } from "./widgets/choice";
 
 registerBehavior("table", mountTable);
 registerBehavior("form", mountForm);
 registerBehavior("card", mountCard);
 registerBehavior("cardlist", mountCardList);
 registerBehavior("menu", mountMenu);
+registerBehavior("confirm", mountConfirm);
+registerBehavior("choice", mountChoice);
 
 if (typeof document !== "undefined" && "addEventListener" in document) {
   if (document.readyState === "loading") {

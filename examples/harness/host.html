@@ -164,6 +164,8 @@
     overflow: hidden;
     transition: max-width .18s ease;
   }
+  /* The iframe is left unpainted and unbordered — the UA default border and any
+   * background here would draw the frame the widget is trying not to show. */
   iframe { display: block; width: 100%; height: 480px; border: 0; background: transparent; }
 
   /* --- side panel --- */
@@ -255,6 +257,7 @@
       <button data-w="600" aria-pressed="false">600</button>
       <button data-w="380" aria-pressed="false">380</button>
     </div>
+    <button class="btn" id="frameless" aria-pressed="true">Frameless</button>
     <button class="btn" id="theme" aria-pressed="false">Dark theme</button>
     <button class="btn" id="reload">Reload</button>
   </div>
@@ -319,6 +322,10 @@
   const root = document.documentElement;
 
   let dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  // Default on: the widget document paints no page fill and no gutter, so the
+  // iframe is invisible and only the widget's card sits on this page. Toggle it
+  // off to see the framed default (?transparent=0 on the story route).
+  let frameless = true;
   let current = null;
 
   // A tiny stateful "database" so row/bulk actions visibly update the widget.
@@ -455,13 +462,14 @@
     });
     document.getElementById("story-title").textContent = `${story.group} · ${story.label}`;
     document.getElementById("story-desc").textContent = story.desc;
-    document.getElementById("story-src").textContent = story.src;
+    const src = frameless ? story.src : story.src + "?transparent=0";
+    document.getElementById("story-src").textContent = src;
     payloadEl.value = story.payload;
     payloadErr.hidden = true;
     users = seed();
     frame.style.height = "480px";
     if (!keepLog) clearLog();
-    frame.src = story.src;
+    frame.src = src;
     if (location.hash.slice(1) !== story.id) history.replaceState(null, "", "#" + story.id);
   };
 
@@ -498,6 +506,11 @@
     frameWrap.style.maxWidth = btn.dataset.w === "full" ? "" : btn.dataset.w + "px";
   };
   document.getElementById("reload").onclick = () => { if (current) loadStory(current); };
+  document.getElementById("frameless").onclick = (ev) => {
+    frameless = !frameless;
+    ev.currentTarget.setAttribute("aria-pressed", String(frameless));
+    if (current) loadStory(current);
+  };
   document.getElementById("theme").onclick = () => {
     dark = !dark;
     applyTheme();

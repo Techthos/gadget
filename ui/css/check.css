@@ -1,0 +1,86 @@
+/* Checkbox: the native box is replaced by a token-styled square with an inline
+ * <svg> mark, so selection controls carry the same radius, border and accent
+ * as every other control instead of the platform's default widget.
+ *
+ * The mark is real markup, not a background-image: a data: URI would need the
+ * host to allow img-src data:, which the spec does not guarantee (see
+ * docs/widgets.md). The <input> itself is kept in place and only stripped of
+ * its appearance — it stays the hit area, the focus target and the form value,
+ * so keyboard, label association and :indeterminate remain the browser's. */
+.gadget-check {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  /* Sits on the text baseline when it shares a line with a label. */
+  vertical-align: -0.25em;
+}
+
+.gadget-check input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 1.5px solid var(--gadget-color-border);
+  border-radius: calc(var(--gadget-radius-s) * 1.25);
+  background: var(--gadget-color-bg);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.gadget-check input:hover:not(:disabled) {
+  border-color: var(--gadget-color-primary);
+}
+
+.gadget-check input:checked,
+.gadget-check input:indeterminate {
+  background: var(--gadget-color-primary);
+  border-color: var(--gadget-color-primary);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--gadget-color-primary) 35%, transparent);
+}
+
+.gadget-check input:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Overlays the box; the input underneath takes every pointer event. */
+.gadget-check-icon {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: var(--gadget-color-primary-text);
+}
+
+/* Both marks are drawn in by retracting a dash as long as the whole path, so
+ * an unchecked box shows none of either. 16 is the viewBox edge — longer than
+ * both paths, which is all the value has to be. */
+.gadget-check-icon path {
+  stroke-dasharray: 16;
+  stroke-dashoffset: 16;
+  transition: stroke-dashoffset 0.18s ease-out;
+}
+
+.gadget-check input:checked ~ .gadget-check-icon .gadget-check-tick,
+.gadget-check input:indeterminate ~ .gadget-check-icon .gadget-check-dash {
+  stroke-dashoffset: 0;
+}
+
+/* One mark at a time: a partially selected page shows the dash, as it does
+ * natively, even though the input is also :checked. */
+.gadget-check input:indeterminate ~ .gadget-check-icon .gadget-check-tick {
+  stroke-dashoffset: 16;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gadget-check input,
+  .gadget-check-icon path {
+    transition: none;
+  }
+}

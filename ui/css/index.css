@@ -2,8 +2,14 @@
  * internal/assets/dist/gadget.css. */
 @import "./tokens.css";
 @import "./base.css";
+@import "./check.css";
+@import "./popup.css";
 @import "./dropdown.css";
+@import "./actionmenu.css";
 @import "./table.css";
 @import "./form.css";
 @import "./card.css";
 @import "./menu.css";
+@import "./descriptions.css";
+@import "./confirm.css";
+@import "./choice.css";

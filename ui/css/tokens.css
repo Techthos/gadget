@@ -4,6 +4,25 @@
  * first (set as inline style on :root by the runtime from
  * hostContext.styles.variables), then fall back to primitives.
  * Component styles reference semantic tokens only. */
+
+/* Document-level knobs. They live on :root, not .gadget-root, because the
+ * canvas and the body gutter are outside the widget element.
+ *
+ * color-scheme decides whether the host sees through this document at all: an
+ * iframe canvas stays transparent only while the embedded root element's used
+ * color scheme matches the <iframe> element's. On a mismatch Chrome paints an
+ * opaque Canvas rectangle behind everything, and no author-level
+ * "background: transparent" can undo it (css-color-adjust-1). "light dark" is
+ * the pre-handshake default; host.ts pins it to hostContext.theme. */
+:root {
+  color-scheme: light dark;
+
+  /* gutter between the widget and the iframe edge. Padding, not margin: body
+   * margin sits outside body.scrollHeight and would clip the bottom of
+   * auto-resized host iframes. */
+  --gadget-page-pad: 8px;
+}
+
 .gadget-root {
   /* primitives */
   --gadget-p-white: #ffffff;
@@ -23,6 +42,11 @@
 
   /* semantic: host variable -> primitive fallback */
   --gadget-color-bg: var(--color-background-primary, var(--gadget-p-white));
+  /* Page fill: the full-bleed rectangle behind the widget, i.e. the visible
+   * extent of the iframe. Set to transparent (theme.Theme.Transparent) and the
+   * frame disappears — only the card and its rounded corners sit on the host
+   * background, with no square slab behind them. */
+  --gadget-color-page: var(--gadget-color-bg);
   --gadget-color-surface: var(--color-background-secondary, var(--gadget-p-gray-50));
   --gadget-color-text: var(--color-text-primary, var(--gadget-p-gray-900));
   --gadget-color-text-muted: var(--color-text-secondary, var(--gadget-p-gray-500));
@@ -42,9 +66,8 @@
   --gadget-card-width: 17rem;
   /* smallest a Menu tile may get before the grid drops a column */
   --gadget-menu-tile-min: 11rem;
-
-  /* let host-provided light-dark() values self-adapt */
-  color-scheme: light dark;
+  /* smallest a Descriptions item may get before the list drops a column */
+  --gadget-desc-min: 12rem;
 }
 
 /* Dark primitives when the host declares a dark theme… */

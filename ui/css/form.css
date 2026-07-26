@@ -55,6 +55,20 @@
 .gadget-form-actions {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: calc(var(--gadget-space-unit) * 2);
   margin-top: calc(var(--gadget-space-unit) * 1);
+}
+
+@container gadget (max-width: 34rem) {
+  .gadget-form {
+    padding: calc(var(--gadget-space-unit) * 3);
+  }
+
+  /* Submit and cancel share the row and grow into it; once labels are long
+   * enough that they cannot, each takes a full-width row of its own rather
+   * than one of them wrapping mid-label. */
+  .gadget-form-actions .gadget-btn {
+    flex: 1 1 8rem;
+  }
 }

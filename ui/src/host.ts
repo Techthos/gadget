@@ -47,6 +47,13 @@ export function applyHostContext(
 
   if (ctx.theme === "light" || ctx.theme === "dark") {
     root.setAttribute("data-gadget-theme", ctx.theme);
+    // Pin the root color scheme to the host's. An iframe canvas is transparent
+    // only while the embedded root element's used color scheme matches the
+    // <iframe> element's; on a mismatch the UA (Chrome; not Firefox) paints an
+    // opaque Canvas rectangle behind the document, which no author-level
+    // "background: transparent" can undo. Without this, a dark host embedding a
+    // widget on a light OS gets a white slab around it.
+    root.style.colorScheme = ctx.theme;
   }
 
   if (ctx.locale !== undefined || ctx.timeZone !== undefined) {

@@ -80,40 +80,8 @@
   color: var(--gadget-color-primary);
 }
 
-/* Anchored to .gadget-root, not to the field: the card chrome clips overflow,
- * and a panel inside it would be cut off at the card's edge. The runtime sets
- * left/top/min-width from the trigger's box. */
-.gadget-dd-panel {
-  position: absolute;
-  z-index: 20;
-  max-height: 15rem;
-  overflow-y: auto;
-  padding: calc(var(--gadget-space-unit) * 1);
-  background: var(--gadget-color-bg);
-  border: 1px solid var(--gadget-color-border);
-  border-radius: var(--gadget-radius-m);
-  box-shadow: 0 6px 20px rgb(0 0 0 / 0.16);
-  animation: gadget-dd-in 0.12s ease-out;
-}
-
-.gadget-dd-panel--above {
-  animation-name: gadget-dd-in-above;
-}
-
-@keyframes gadget-dd-in {
-  from {
-    opacity: 0;
-    transform: translateY(-0.25rem);
-  }
-}
-
-@keyframes gadget-dd-in-above {
-  from {
-    opacity: 0;
-    transform: translateY(0.25rem);
-  }
-}
-
+/* The panel surface itself is .gadget-pop-panel (popup.css); what follows is
+ * the listbox it holds. */
 .gadget-dd-option {
   display: flex;
   align-items: center;
@@ -164,17 +132,24 @@
   margin-inline-end: auto;
   font-size: 0.8125rem;
   color: var(--gadget-color-text-muted);
+  /* The caption and a two-or-three digit control are already at their minimum;
+   * left shrinkable, the chooser is the first thing a cramped pagination bar
+   * squeezes, down to a sliver with the number clipped out of it. The bar
+   * wraps instead. */
+  flex: none;
 }
 
 .gadget-page-size-select {
   padding-block: calc(var(--gadget-space-unit) * 0.75);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .gadget-dd-panel {
-    animation: none;
-  }
+/* Wide enough for the digits plus the chevron, whatever the page sizes are. */
+.gadget-page-size .gadget-dd {
+  flex: none;
+  min-width: 4.5rem;
+}
 
+@media (prefers-reduced-motion: reduce) {
   .gadget-dd-trigger,
   .gadget-dd-chevron {
     transition: none;

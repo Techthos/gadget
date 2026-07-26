@@ -16,6 +16,7 @@ import (
 	"net/http"
 
 	"github.com/techthos/gadget"
+	"github.com/techthos/gadget/theme"
 )
 
 //go:embed host.html
@@ -32,6 +33,33 @@ func widgetHandler(w gadget.Widget) http.HandlerFunc {
 		rw.Header().Set("Cache-Control", "no-store")
 		_, _ = rw.Write([]byte(doc))
 	}
+}
+
+// setTransparent flips theme.Transparent on a freshly built widget, so every
+// story can be viewed both ways from the host page's "Frameless" toggle
+// instead of shipping a duplicate story per mode.
+func setTransparent(w gadget.Widget, on bool) gadget.Widget {
+	apply := func(t **theme.Theme) {
+		if *t == nil {
+			*t = &theme.Theme{}
+		}
+		(*t).Transparent = on
+	}
+	switch v := w.(type) {
+	case *gadget.Table:
+		apply(&v.Theme)
+	case *gadget.Form:
+		apply(&v.Theme)
+	case *gadget.Card:
+		apply(&v.Theme)
+	case *gadget.CardList:
+		apply(&v.Theme)
+	case *gadget.Menu:
+		apply(&v.Theme)
+	case *gadget.Confirm:
+		apply(&v.Theme)
+	}
+	return w
 }
 
 func main() {
@@ -61,7 +89,8 @@ func main() {
 			http.NotFound(rw, r)
 			return
 		}
-		widgetHandler(s.build())(rw, r)
+		// Frameless by default; ?transparent=0 renders the framed variant.
+		widgetHandler(setTransparent(s.build(), r.URL.Query().Get("transparent") != "0"))(rw, r)
 	})
 
 	log.Printf("gadget harness on http://localhost%s (%d stories)", *addr, len(list))

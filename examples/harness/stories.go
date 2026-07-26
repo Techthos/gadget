@@ -45,6 +45,62 @@ const (
     "role": "admin", "notify": false
   }
 }`
+	// One record with a field per item type, and no "owner" — the item that
+	// reads it shows the missing-value dash.
+	pushDetails = `{
+  "rows": [
+    {
+      "id": 2, "name": "Grace Hopper", "email": "grace@example.com",
+      "plan": "enterprise", "balance": 4820.4, "seats": 48,
+      "utilization": 0.71, "renewsAt": "2027-01-31T00:00:00Z",
+      "createdAt": "2024-11-02T09:00:00Z", "status": "active",
+      "website": "https://example.com/grace"
+    }
+  ]
+}`
+	pushEffects = `{
+  "rows": [
+    {
+      "id": 2, "name": "Grace Hopper", "email": "grace@example.com",
+      "balance": 815, "createdAt": "2026-02-03T10:30:00Z",
+      "status": "active", "website": "https://example.com/grace"
+    }
+  ],
+  "effects": [
+    { "text": "Removes the account", "severity": "danger" },
+    {
+      "text": "Deletes audit records", "detail": "Not recoverable.",
+      "value": "128", "severity": "warning"
+    },
+    { "text": "Notifies the team", "value": "4 people", "severity": "info" }
+  ]
+}`
+	pushOptions = `{
+  "rows": [
+    { "id": 4471, "reference": "ORD-4471", "name": "Ada Lovelace" }
+  ],
+  "options": [
+    {
+      "value": "drone", "label": "Drone", "summary": "within the hour",
+      "body": "Flown from the Kreuzberg hub. Weather permitting.",
+      "bullets": ["Live tracking", "Rooftop drop only"],
+      "details": [
+        { "label": "Price", "value": "EUR 39.00" },
+        { "label": "Arrives", "value": "today, 15:40" }
+      ],
+      "badge": "new", "badgeVariant": "info", "default": true
+    },
+    {
+      "value": "bike", "label": "Bike courier", "summary": "same day",
+      "body": "A rider collects the parcel at the next pickup round.",
+      "details": [{ "label": "Price", "value": "EUR 12.00" }]
+    },
+    {
+      "value": "post", "label": "Post", "summary": "not collecting today",
+      "disabled": true
+    }
+  ]
+}`
 )
 
 // catalog returns every story, in rail order. Src is filled in by stories().
@@ -76,6 +132,11 @@ func catalog() []story {
 			Payload: pushRows, build: func() gadget.Widget { return cardList() },
 		},
 		{
+			ID: "cards-loadmore", Group: "CardList", Label: "Load more",
+			Desc:    "24 records, six at a time — the strip grows instead of paging.",
+			Payload: pushRows, build: func() gadget.Widget { return cardListLoadMore() },
+		},
+		{
 			ID: "cards-empty", Group: "CardList", Label: "Empty state",
 			Desc:    "No records baked in — exercises the empty message.",
 			Payload: pushRows, build: func() gadget.Widget { return cardListEmpty() },
@@ -86,9 +147,24 @@ func catalog() []story {
 			Payload: pushRows, build: func() gadget.Widget { return card() },
 		},
 		{
+			ID: "card-sections", Group: "Card", Label: "All sections",
+			Desc:    "Header with a button instead of a badge, body prose, footer note.",
+			Payload: pushRows, build: func() gadget.Widget { return cardSections() },
+		},
+		{
 			ID: "card-empty", Group: "Card", Label: "Empty state",
 			Desc:    "Waiting for a record; push a result to load one.",
 			Payload: pushRows, build: func() gadget.Widget { return cardEmpty() },
+		},
+		{
+			ID: "descriptions-types", Group: "Descriptions", Label: "All item types",
+			Desc:    "Every item type in one list. Step the width down: the grid drops a column at a time and ends up stacked.",
+			Payload: pushDetails, build: func() gadget.Widget { return descriptionsTypes() },
+		},
+		{
+			ID: "descriptions-dense", Group: "Descriptions", Label: "Narrower columns",
+			Desc:    "The same list with --gadget-desc-min at 8rem, so it keeps more columns for longer.",
+			Payload: pushDetails, build: func() gadget.Widget { return descriptionsDense() },
 		},
 		{
 			ID: "form-edit", Group: "Form", Label: "Edit record",
@@ -110,6 +186,41 @@ func catalog() []story {
 			Desc:    "No icons, badges or descriptions — the minimum a Menu needs.",
 			Payload: pushEmptyRows, build: func() gadget.Widget { return menuPlain() },
 		},
+		{
+			ID: "confirm-danger", Group: "Confirm", Label: "Destructive",
+			Desc:    "Details, side effects, and both guards: tick the box and type ada@example.com.",
+			Payload: pushEffects, build: func() gadget.Widget { return confirmDanger() },
+		},
+		{
+			ID: "confirm-plain", Group: "Confirm", Label: "Plain question",
+			Desc:    "No guards, no details — a prompt, two effects and two buttons.",
+			Payload: pushEffects, build: func() gadget.Widget { return confirmPlain() },
+		},
+		{
+			ID: "confirm-runtime", Group: "Confirm", Label: "Runtime effects",
+			Desc:    "Ships with no snapshot; push a result to fill the details and effects.",
+			Payload: pushEffects, build: func() gadget.Widget { return confirmRuntime() },
+		},
+		{
+			ID: "choice-auto", Group: "Choice", Label: "One of several",
+			Desc:    "Auto layout: drag the width past 34rem and the description moves into the side panel.",
+			Payload: pushOptions, build: func() gadget.Widget { return choiceAuto() },
+		},
+		{
+			ID: "choice-stacked", Group: "Choice", Label: "Always stacked",
+			Desc:    "The description stays under the option it belongs to, whatever the width.",
+			Payload: pushOptions, build: func() gadget.Widget { return choiceStacked() },
+		},
+		{
+			ID: "choice-multi", Group: "Choice", Label: "Multiple, bounded",
+			Desc:    "Pick 2 to 3 add-ons: the hint tracks the count and the rest disable at the cap.",
+			Payload: pushOptions, build: func() gadget.Widget { return choiceMulti() },
+		},
+		{
+			ID: "choice-runtime", Group: "Choice", Label: "Runtime options",
+			Desc:    "Ships with no options; push a result to load what is on offer.",
+			Payload: pushOptions, build: func() gadget.Widget { return choiceRuntime() },
+		},
 	}
 }
 
@@ -128,10 +239,10 @@ func stories() []story {
 // the card widgets display; reused across stories.
 func harnessRows() []map[string]any {
 	return []map[string]any{
-		{"id": 1, "name": "Ada Lovelace", "email": "ada@example.com", "balance": 1200.5, "createdAt": "2026-01-12T09:00:00Z", "status": "active", "website": "https://example.com/ada"},
-		{"id": 2, "name": "Grace Hopper", "email": "grace@example.com", "balance": 815, "createdAt": "2026-02-03T10:30:00Z", "status": "active", "website": "https://example.com/grace"},
-		{"id": 3, "name": "Alan Turing", "email": "alan@example.com", "balance": 0, "createdAt": "2026-03-19T14:00:00Z", "status": "invited", "website": ""},
-		{"id": 4, "name": "Katherine Johnson", "email": "katherine@example.com", "balance": 233.1, "createdAt": "2026-04-01T08:15:00Z", "status": "active", "website": "https://example.com/katherine"},
+		{"id": 1, "name": "Ada Lovelace", "email": "ada@example.com", "balance": 1200.5, "createdAt": "2026-01-12T09:00:00Z", "status": "active", "website": "https://example.com/ada", "bio": "Wrote the first published algorithm; runs the analytical engine team."},
+		{"id": 2, "name": "Grace Hopper", "email": "grace@example.com", "balance": 815, "createdAt": "2026-02-03T10:30:00Z", "status": "active", "website": "https://example.com/grace", "bio": "Compiler pioneer. Keeps the nightly build honest."},
+		{"id": 3, "name": "Alan Turing", "email": "alan@example.com", "balance": 0, "createdAt": "2026-03-19T14:00:00Z", "status": "invited", "website": "", "bio": "Invited last week; has not signed in yet."},
+		{"id": 4, "name": "Katherine Johnson", "email": "katherine@example.com", "balance": 233.1, "createdAt": "2026-04-01T08:15:00Z", "status": "active", "website": "https://example.com/katherine", "bio": "Checks every trajectory by hand before it ships."},
 	}
 }
 
@@ -168,9 +279,22 @@ func deleteAction() gadget.Action {
 		Confirm: "Really?", Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")}}
 }
 
+// rowActions is a full actions column: enough entries that the row menu has
+// something to show, including a link and a confirmed destructive action.
+func rowActions() gadget.Column {
+	return gadget.ActionsColumn(
+		gadget.Action{Label: "Open profile", Kind: gadget.ActionLink, HrefKey: "website"},
+		gadget.Action{Label: "Send invite", Tool: "invite_user",
+			Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")}},
+		deleteAction(),
+	)
+}
+
 func archiveBulk() *gadget.SelectionConfig {
 	return &gadget.SelectionConfig{Bulk: []gadget.Action{
 		{Label: "Archive", Tool: "archive_users", Args: map[string]gadget.ArgSource{"ids": gadget.FromSelection("id")}},
+		{Label: "Delete", Tool: "delete_users", Variant: gadget.VariantDanger, Confirm: "Delete them?",
+			Args: map[string]gadget.ArgSource{"ids": gadget.FromSelection("id")}},
 	}}
 }
 
@@ -198,7 +322,7 @@ func table() *gadget.Table {
 			gadget.Number("balance", "Balance", "currency:EUR"),
 			gadget.Date("createdAt", "Created", "date"),
 			statusBadge(),
-			gadget.ActionsColumn(deleteAction()),
+			rowActions(),
 		},
 		PageSize:    3,
 		PageSizes:   []int{3, 5, 10},
@@ -272,15 +396,20 @@ func tableEmpty() *gadget.Table {
 // cardTemplate is shared by the single Card and the CardList.
 func cardTemplate() gadget.CardTemplate {
 	return gadget.CardTemplate{
-		TitleKey:    "name",
-		SubtitleKey: "email",
-		Badge:       statusBadge(),
-		Fields: []gadget.Column{
-			gadget.Number("balance", "Balance", "currency:EUR"),
-			gadget.Date("createdAt", "Joined", "relative"),
-			gadget.Link("website", "Website"),
+		Header: gadget.CardHeader{
+			TitleKey:       "name",
+			DescriptionKey: "email",
+			Badge:          statusBadge(),
 		},
-		Actions: []gadget.Action{deleteAction()},
+		Content: gadget.CardContent{
+			Items: gadget.Descriptions{Items: []gadget.DescriptionItem{
+				{Label: "Balance", Key: "balance", Type: gadget.ColNumber, Format: "currency:EUR"},
+				{Label: "Joined", Key: "createdAt", Type: gadget.ColDate, Format: "relative"},
+				{Label: "Website", Key: "website", Type: gadget.ColLink,
+					Link: &gadget.LinkSpec{HrefKey: "website"}},
+			}},
+		},
+		Footer: gadget.CardFooter{Actions: []gadget.Action{deleteAction()}},
 	}
 }
 
@@ -298,6 +427,19 @@ func cardList() *gadget.CardList {
 		Brand:       demoBrand(),
 		Theme:       demoTheme(),
 	}
+}
+
+// cardListLoadMore exercises the growing strip: no pagination bar, a "Load
+// more" tile at the end of the run instead.
+func cardListLoadMore() *gadget.CardList {
+	l := cardList()
+	l.URI = "ui://harness/cards-loadmore"
+	l.Title = "Directory"
+	l.PageSize = 6
+	l.PageSizes = nil
+	l.LoadMore = true
+	l.InitialData = map[string]any{"rows": manyRows(24)}
+	return l
 }
 
 func cardListEmpty() *gadget.CardList {
@@ -318,6 +460,21 @@ func card() *gadget.Card {
 		Brand:       demoBrand(),
 		Theme:       demoTheme(),
 	}
+}
+
+// cardSections fills every section slot: a header whose end slot holds a
+// button rather than a badge, prose above the detail list, and a footer note
+// beside the actions.
+func cardSections() *gadget.Card {
+	c := card()
+	c.URI = "ui://harness/card-sections"
+	c.Template.Header.Badge = gadget.Column{}
+	c.Template.Header.Action = &gadget.Action{
+		Label: "Open profile", Kind: gadget.ActionLink, HrefKey: "website",
+	}
+	c.Template.Content.TextKey = "bio"
+	c.Template.Footer.Text = "Balances update hourly."
+	return c
 }
 
 func cardEmpty() *gadget.Card {
@@ -430,5 +587,306 @@ func menuPlain() *gadget.Menu {
 			{Tool: "archive_users"},
 		},
 		Brand: demoBrand(),
+	}
+}
+
+// --- Descriptions stories ---
+
+// detailsRow is the record behind the Descriptions stories: one field per item
+// type. It has no "owner" field, so the item reading that key demonstrates the
+// missing-value dash.
+func detailsRow() map[string]any {
+	return map[string]any{
+		"id": 2, "name": "Grace Hopper", "email": "grace@example.com",
+		"plan": "enterprise", "balance": 4820.40, "seats": 48,
+		"utilization": 0.71, "renewsAt": "2027-01-31T00:00:00Z",
+		"createdAt": "2024-11-02T09:00:00Z", "status": "active",
+		"website": "https://example.com/grace",
+	}
+}
+
+// detailItems exercises every item type the block supports: the five typed,
+// record-bound kinds, a fixed authored value, and a key the record does not
+// carry.
+func detailItems() gadget.Descriptions {
+	return gadget.Descriptions{Items: []gadget.DescriptionItem{
+		{Label: "Account", Key: "name"},
+		{Label: "Email", Key: "email"},
+		{Label: "Status", Key: "status", Type: gadget.ColBadge, Badge: map[string]gadget.BadgeVariant{
+			"active":   gadget.BadgeSuccess,
+			"invited":  gadget.BadgeInfo,
+			"archived": gadget.BadgeNeutral,
+		}},
+		// No Align on the numbers: the value sits under its label here, so
+		// pushing it to the end of the cell would only strand it.
+		{Label: "Balance", Key: "balance", Type: gadget.ColNumber, Format: "currency:EUR"},
+		{Label: "Seats", Key: "seats", Type: gadget.ColNumber, Format: "int"},
+		{Label: "Utilization", Key: "utilization", Type: gadget.ColNumber, Format: "percent"},
+		{Label: "Customer since", Key: "createdAt", Type: gadget.ColDate, Format: "date"},
+		{Label: "Renews", Key: "renewsAt", Type: gadget.ColDate, Format: "relative"},
+		{Label: "Console", Type: gadget.ColLink,
+			Link: &gadget.LinkSpec{HrefKey: "website", Text: "Open console"}},
+		// Authored in Go: the same for every record, so no field carries it.
+		{Label: "Region", Text: "eu-central-1"},
+		// Nothing in the record answers to this key — the value renders as a
+		// dash rather than disappearing.
+		{Label: "Owner", Key: "owner"},
+	}}
+}
+
+// descriptionsTypes is the block on its own: a card with nothing but a title
+// and the detail list, so the grid is all there is to look at.
+func descriptionsTypes() *gadget.Card {
+	return &gadget.Card{
+		URI:   "ui://harness/descriptions",
+		Title: "Account details",
+		Template: gadget.CardTemplate{
+			Header:  gadget.CardHeader{TitleKey: "name", DescriptionKey: "plan"},
+			Content: gadget.CardContent{Items: detailItems()},
+		},
+		Empty:       gadget.EmptyState{Title: "No record", Body: "Push a tool-result to load one."},
+		InitialData: map[string]any{"rows": []map[string]any{detailsRow()}},
+		Brand:       demoBrand(),
+		Theme:       demoTheme(),
+	}
+}
+
+// descriptionsDense lowers the one knob the block has: how narrow an item may
+// get before the grid drops a column.
+func descriptionsDense() *gadget.Card {
+	c := descriptionsTypes()
+	c.URI = "ui://harness/descriptions-dense"
+	c.Theme = &theme.Theme{
+		ColorPrimary: "#7c3aed",
+		Extra:        map[string]string{"--gadget-desc-min": "8rem"},
+	}
+	return c
+}
+
+// --- Confirm stories ---
+
+// confirmDetails is the record summary the confirmation stories show: who the
+// operation is about, in the same typed cells a table would use.
+func confirmDetails() gadget.Descriptions {
+	return gadget.Descriptions{Items: []gadget.DescriptionItem{
+		{Label: "User", Key: "name"},
+		{Label: "Email", Key: "email"},
+		{Label: "Balance", Key: "balance", Type: gadget.ColNumber, Format: "currency:EUR"},
+		{Label: "Member since", Key: "createdAt", Type: gadget.ColDate, Format: "date"},
+		{Label: "Status", Key: "status", Type: gadget.ColBadge, Badge: map[string]gadget.BadgeVariant{
+			"active":   gadget.BadgeSuccess,
+			"invited":  gadget.BadgeInfo,
+			"archived": gadget.BadgeNeutral,
+		}},
+		{Label: "Profile", Type: gadget.ColLink, Link: &gadget.LinkSpec{HrefKey: "website", Text: "Open profile"}},
+		{Label: "Region", Text: "eu-central-1"},
+	}}
+}
+
+func confirmDanger() *gadget.Confirm {
+	return &gadget.Confirm{
+		URI:      "ui://harness/confirm",
+		Title:    "Delete user",
+		Prompt:   "Delete Ada Lovelace?",
+		Body:     "The account and everything attached to it is removed for good.",
+		Severity: gadget.BadgeDanger,
+		Details:  confirmDetails(),
+		Effects: []gadget.Effect{
+			{Text: "Removes the account", Detail: "Sign-in stops working immediately.", Severity: gadget.BadgeDanger},
+			{Text: "Deletes audit records", Value: "128", Severity: gadget.BadgeWarning},
+			{Text: "Frees the seat", Value: "1 seat", Severity: gadget.BadgeSuccess},
+		},
+		Acknowledge:   "I understand this cannot be undone.",
+		TypeToConfirm: "ada@example.com",
+		Accept: gadget.AcceptSpec{
+			Tool:           "delete_user",
+			Label:          "Delete user",
+			Args:           map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+			SuccessMessage: "User deleted.",
+		},
+		Reject:      &gadget.RejectSpec{Label: "Keep user", Message: "Nothing was deleted."},
+		InitialData: map[string]any{"rows": harnessRows()[:1]},
+		Brand:       demoBrand(),
+		Theme:       demoTheme(),
+	}
+}
+
+func confirmPlain() *gadget.Confirm {
+	return &gadget.Confirm{
+		URI:      "ui://harness/confirm-plain",
+		Prompt:   "Archive 4 users?",
+		Body:     "Archived users keep their data but cannot sign in.",
+		Severity: gadget.BadgeWarning,
+		Effects: []gadget.Effect{
+			{Text: "Revokes active sessions", Value: "4", Severity: gadget.BadgeWarning},
+			{Text: "Keeps every record", Severity: gadget.BadgeNeutral},
+		},
+		Accept: gadget.AcceptSpec{Tool: "archive_users", Label: "Archive", SuccessMessage: "Users archived."},
+		Reject: &gadget.RejectSpec{},
+		Brand:  demoBrand(),
+		Theme:  demoTheme(),
+	}
+}
+
+// confirmRuntime authors nothing but the question: the record and the
+// consequences arrive from the tool that opens it, which is how a real server
+// reports what this particular call will cost.
+func confirmRuntime() *gadget.Confirm {
+	return &gadget.Confirm{
+		URI:     "ui://harness/confirm-runtime",
+		Title:   "Delete user",
+		Prompt:  "Delete this user?",
+		Body:    "Push a tool result to load the record and its side effects.",
+		Details: confirmDetails(),
+		Accept: gadget.AcceptSpec{
+			Tool:           "delete_user",
+			Label:          "Delete",
+			Args:           map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+			SuccessMessage: "User deleted.",
+		},
+		Reject: &gadget.RejectSpec{},
+		Brand:  demoBrand(),
+		Theme:  demoTheme(),
+	}
+}
+
+// --- Choice stories ---
+
+// shippingOptions is the offer the choice stories present: three ways to send
+// one parcel, each carrying its own record so the prices and dates are
+// formatted for the host's locale rather than baked into strings.
+func shippingOptions() []gadget.ChoiceOption {
+	price := gadget.DescriptionItem{Label: "Price", Key: "price", Type: gadget.ColNumber, Format: "currency:EUR"}
+	arrives := gadget.DescriptionItem{Label: "Arrives", Key: "eta", Type: gadget.ColDate, Format: "date"}
+	return []gadget.ChoiceOption{
+		{
+			Value:   "standard",
+			Label:   "Standard",
+			Summary: "3-5 business days",
+			Body:    "Handed to the postal service tonight and tracked as far as the local depot.",
+			Bullets: []string{"Tracked to the depot", "No signature on delivery", "Insured to EUR 50"},
+			Details: gadget.Descriptions{Items: []gadget.DescriptionItem{price, arrives}},
+			Data:    map[string]any{"price": 4.9, "eta": "2026-08-03T10:00:00Z"},
+			Default: true,
+		},
+		{
+			Value:        "express",
+			Label:        "Express",
+			Summary:      "next business day, before 12:00",
+			Body:         "Collected by courier this afternoon and delivered to the door tomorrow morning.",
+			Bullets:      []string{"Tracked end to end", "Signature required", "Insured to EUR 500"},
+			Details:      gadget.Descriptions{Items: []gadget.DescriptionItem{price, arrives}},
+			Data:         map[string]any{"price": 14.9, "eta": "2026-07-28T12:00:00Z"},
+			Badge:        "fastest",
+			BadgeVariant: gadget.BadgeSuccess,
+		},
+		{
+			Value:    "pickup",
+			Label:    "Depot pickup",
+			Summary:  "no depot near this address",
+			Body:     "The nearest depot is 40 km away, so this address cannot use pickup.",
+			Disabled: true,
+		},
+	}
+}
+
+func choiceDetails() gadget.Descriptions {
+	return gadget.Descriptions{Items: []gadget.DescriptionItem{
+		{Label: "Order", Key: "reference"},
+		{Label: "Recipient", Key: "name"},
+		{Label: "Destination", Text: "Berlin, DE"},
+	}}
+}
+
+func choiceAuto() *gadget.Choice {
+	return &gadget.Choice{
+		URI:     "ui://harness/choice",
+		Title:   "Shipping",
+		Prompt:  "How should we ship order ORD-4471?",
+		Body:    "The parcel is packed and leaves the warehouse today either way.",
+		Details: choiceDetails(),
+		Options: shippingOptions(),
+		Submit: gadget.ChoiceSubmit{
+			Tool:           "ship_order",
+			Label:          "Ship it",
+			ValueArg:       "method",
+			Args:           map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+			SuccessMessage: "On its way.",
+		},
+		Cancel: &gadget.RejectSpec{Label: "Decide later", Message: "Nothing was shipped."},
+		InitialData: map[string]any{
+			"rows": []map[string]any{{"id": 4471, "reference": "ORD-4471", "name": "Ada Lovelace"}},
+		},
+		Brand: demoBrand(),
+		Theme: demoTheme(),
+	}
+}
+
+func choiceStacked() *gadget.Choice {
+	c := choiceAuto()
+	c.URI = "ui://harness/choice-stacked"
+	c.Layout = gadget.ChoiceStacked
+	c.Details = gadget.Descriptions{}
+	return c
+}
+
+func choiceMulti() *gadget.Choice {
+	return &gadget.Choice{
+		URI:      "ui://harness/choice-multi",
+		Title:    "Add-ons",
+		Prompt:   "Which extras should this shipment carry?",
+		Body:     "Choose two or three; they are billed with the shipping cost.",
+		Layout:   gadget.ChoiceSplit,
+		Multiple: true,
+		Min:      2,
+		Max:      3,
+		Options: []gadget.ChoiceOption{
+			{
+				Value: "insurance", Label: "Extra insurance", Summary: "up to EUR 5,000",
+				Body:    "Covers the declared value against loss and damage in transit.",
+				Bullets: []string{"Claims within 30 days", "Proof of value required"},
+				Default: true,
+			},
+			{
+				Value: "signature", Label: "Signature on delivery", Summary: "hand to the recipient",
+				Body: "The courier hands the parcel over in person and records the signature.",
+			},
+			{
+				Value: "saturday", Label: "Saturday delivery", Summary: "weekend slot",
+				Body:         "Delivered on Saturday morning instead of the next business day.",
+				Badge:        "surcharge",
+				BadgeVariant: gadget.BadgeWarning,
+			},
+			{
+				Value: "carbon", Label: "Carbon offset", Summary: "adds EUR 0.40",
+				Body: "Buys certified offsets for the leg between the depot and the door.",
+			},
+		},
+		Submit: gadget.ChoiceSubmit{Tool: "add_extras", Label: "Add extras", ValueArg: "extras", SuccessMessage: "Extras added."},
+		Cancel: &gadget.RejectSpec{},
+		Brand:  demoBrand(),
+		Theme:  demoTheme(),
+	}
+}
+
+// choiceRuntime authors the question and nothing else: what is on offer comes
+// from the tool that opens it, which is how a server that prices shipping at
+// call time would do it.
+func choiceRuntime() *gadget.Choice {
+	return &gadget.Choice{
+		URI:     "ui://harness/choice-runtime",
+		Title:   "Shipping",
+		Prompt:  "How should we ship this order?",
+		Body:    "Push a tool result to load the order and the options on offer.",
+		Details: choiceDetails(),
+		Submit: gadget.ChoiceSubmit{
+			Tool:           "ship_order",
+			ValueArg:       "method",
+			Args:           map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+			SuccessMessage: "On its way.",
+		},
+		Cancel: &gadget.RejectSpec{},
+		Brand:  demoBrand(),
+		Theme:  demoTheme(),
 	}
 }

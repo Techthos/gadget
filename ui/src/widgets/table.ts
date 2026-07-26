@@ -2,8 +2,9 @@
 // pagination/selection, and fires row/bulk actions as MCP tool calls.
 import type { MountContext } from "../index";
 import { HOST_CONTEXT_EVENT } from "../host";
+import { actionMenuTrigger, createActionMenu } from "../actionmenu";
 import { Row, rowsFrom } from "../data";
-import { clear, delegate, h } from "../dom";
+import { checkbox, clear, delegate, h } from "../dom";
 import { refreshDropdown } from "../dropdown";
 import { formatCell } from "../format";
 import { CallToolResult, M } from "../protocol";
@@ -73,7 +74,6 @@ interface TableState {
 	statusMsg?: string;
 }
 
-const CONFIRM_RESET_MS = 4000;
 const STATUS_CLEAR_MS = 4000;
 const FILTER_DEBOUNCE_MS = 150;
 
@@ -92,8 +92,39 @@ export function mountTable(ctx: MountContext): void {
 	const pageInfoEl = root.querySelector<HTMLElement>("[data-gadget-page-info]");
 	const bulkEl = root.querySelector<HTMLElement>("[data-gadget-bulk]");
 	const bulkCountEl = root.querySelector<HTMLElement>("[data-gadget-bulk-count]");
+	const bulkMenuEl = root.querySelector<HTMLButtonElement>("[data-gadget-bulk-menu]");
 	const selectAllEl = root.querySelector<HTMLInputElement>("[data-gadget-select-all]");
 	const pageSizeEl = root.querySelector<HTMLSelectElement>("[data-gadget-page-size]");
+	// Visible only in the compact tier, where the header row (and its sort
+	// buttons) is hidden. Both drive the same sort state, so either stays right
+	// when the widget crosses the breakpoint.
+	const sortSelectEl = root.querySelector<HTMLSelectElement>("[data-gadget-sort-select]");
+
+	const wrapEl = root.querySelector<HTMLElement>(".gadget-table-wrap");
+	const tableEl = root.querySelector<HTMLTableElement>(".gadget-table");
+
+	// --- stacked / grid layout ---
+	//
+	// Whether a table fits is a question about its columns, not about the pane:
+	// five columns of email addresses overflow a 600px pane while three short
+	// ones are comfortable at 320px. No CSS breakpoint can know which it is
+	// looking at, so the runtime measures and CSS renders the verdict
+	// (.gadget-root[data-gadget-stacked] in table.css).
+	//
+	// The measurement is always taken in grid layout, because stacked rows have
+	// no column widths to measure: the attribute comes off, the table's
+	// min-content width is read, and it goes back on if that overflows. Both
+	// steps run in one synchronous block, so no intermediate state is painted.
+	// The verdict therefore depends only on content and available width — never
+	// on the layout currently showing — which is what keeps it from oscillating
+	// around the crossover point.
+	function updateStacking(): void {
+		if (!wrapEl || !tableEl) return;
+		root.removeAttribute("data-gadget-stacked");
+		if (tableEl.scrollWidth > wrapEl.clientWidth) {
+			root.setAttribute("data-gadget-stacked", "");
+		}
+	}
 
 	const filterKeys = cfg.columns.map((c) => c.key).filter((k) => k !== "");
 	const rowID = (row: Row): string => String(row[cfg.rowId] ?? "");
@@ -189,65 +220,79 @@ export function mountTable(ctx: MountContext): void {
 		}
 	}
 
-	// Native confirm() is silently disabled in sandboxed MCP Apps iframes,
-	// so confirmation is a two-phase button: first click arms it and shows
-	// the confirm text, a second click within the window fires.
-	function armOrFire(btn: HTMLElement, action: ActionCfg, row: Row | null): void {
-		if (action.confirm && !btn.hasAttribute("data-gadget-armed")) {
-			const original = btn.textContent;
-			btn.setAttribute("data-gadget-armed", "");
-			btn.textContent = action.confirm;
-			setTimeout(() => {
-				btn.removeAttribute("data-gadget-armed");
-				btn.textContent = original;
-			}, CONFIRM_RESET_MS);
-			return;
-		}
-		void fire(action, row);
-	}
+	// --- action menus ---
+	//
+	// Row and bulk actions are both a "⋯" trigger over one shared popup (see
+	// actionmenu.ts), which is also where a confirmed action's two-phase
+	// question is asked — native confirm() is silently disabled in sandboxed
+	// MCP Apps iframes.
+	const menu = createActionMenu(root);
+
+	menu.bind(root, "action-menu", (el, value) => {
+		const actions = cfg.columns[Number(value)]?.actions ?? [];
+		if (actions.length === 0) return null;
+		const id = el.closest("tr")?.getAttribute("data-gadget-row-id");
+		const row = store.get().rows.find((r) => rowID(r) === id) ?? null;
+		return { items: actions, onSelect: (i) => void fire(actions[i] as ActionCfg, row) };
+	});
+
+	menu.bind(root, "bulk-menu", () => {
+		const actions = cfg.selection?.bulk ?? [];
+		if (actions.length === 0) return null;
+		// The toolbar has room to its trailing side, and the trigger is at its
+		// leading one.
+		return {
+			items: actions,
+			align: "start",
+			onSelect: (i) => void fire(actions[i] as ActionCfg, null),
+		};
+	});
 
 	// --- rendering ---
 
-	function actionButton(action: ActionCfg, attr: string, value: string, busy: boolean): HTMLElement {
-		let cls = "gadget-btn";
-		if (action.variant) cls += ` gadget-btn--${action.variant}`;
-		return h(
-			"button",
-			{ type: "button", class: cls, [`data-gadget-${attr}`]: value, disabled: busy },
-			action.label,
-		);
+	// Cell attributes shared by every column type. The label is what the
+	// compact tier prints in front of the value once the header row is gone
+	// (CSS reads it as attr(data-gadget-label)); the role keeps the cell a
+	// cell there, where `display: block` has stripped the implicit one.
+	function cellAttrs(col: ColumnCfg, extraClass?: string): Record<string, string | null> {
+		const alignCls = col.align ? `gadget-align-${col.align}` : "";
+		const cls = [extraClass, alignCls].filter(Boolean).join(" ");
+		return {
+			role: "cell",
+			class: cls || null,
+			"data-gadget-label": col.label || null,
+		};
 	}
 
 	function cellFor(col: ColumnCfg, colIdx: number, row: Row, busy: boolean): HTMLElement {
-		const alignCls = col.align ? ` gadget-align-${col.align}` : "";
 		switch (col.type) {
 			case "badge": {
 				const value = String(row[col.key] ?? "");
 				const variant = col.badge?.[value];
 				const cls = "gadget-badge" + (variant && variant !== "neutral" ? ` gadget-badge--${variant}` : "");
-				return h("td", { class: alignCls || null }, value === "" ? "" : h("span", { class: cls }, value));
+				return h("td", cellAttrs(col), value === "" ? "" : h("span", { class: cls }, value));
 			}
 			case "link": {
 				const href = row[col.link?.hrefKey ?? col.key];
-				if (typeof href !== "string" || href === "") return h("td", {});
+				if (typeof href !== "string" || href === "") return h("td", cellAttrs(col));
 				const textKey = col.link?.textKey;
 				const text =
 					(textKey !== undefined ? String(row[textKey] ?? "") : "") ||
 					col.link?.text ||
 					href;
-				return h("td", { class: alignCls || null },
+				return h("td", cellAttrs(col),
 					h("button", { type: "button", class: "gadget-link", "data-gadget-link": href }, text),
 				);
 			}
 			case "actions": {
-				const td = h("td", { class: "gadget-td-actions" });
-				(col.actions ?? []).forEach((a, actIdx) => {
-					td.append(actionButton(a, "action", `${colIdx}:${actIdx}`, busy));
-				});
+				const td = h("td", cellAttrs(col, "gadget-td-actions"));
+				td.append(
+					actionMenuTrigger({ "data-gadget-action-menu": String(colIdx), disabled: busy }),
+				);
 				return td;
 			}
 			default:
-				return h("td", { class: alignCls || null }, formatCell(row[col.key], col.type, col.format));
+				return h("td", cellAttrs(col), formatCell(row[col.key], col.type, col.format));
 		}
 	}
 
@@ -256,22 +301,21 @@ export function mountTable(ctx: MountContext): void {
 		const busy = s.status === "loading";
 		const selected = new Set(s.selected);
 
+		// An open menu belongs to a trigger that is about to be replaced, and
+		// stands over rows that are about to change under it.
+		menu.close();
+
 		// rows
 		clear(tbody);
 		for (const row of pageRows) {
-			const tr = h("tr", { "data-gadget-row-id": rowID(row) });
+			const tr = h("tr", { role: "row", "data-gadget-row-id": rowID(row) });
 			if (cfg.selection) {
-				tr.append(
-					h("td", { class: "gadget-td-select" },
-						h("input", {
-							type: "checkbox",
-							"data-gadget-select-row": "",
-							"aria-label": "Select row",
-						}),
-					),
-				);
-				const cb = tr.querySelector<HTMLInputElement>("input");
-				if (cb) cb.checked = selected.has(rowID(row));
+				const cb = checkbox({
+					"data-gadget-select-row": "",
+					"aria-label": "Select row",
+				});
+				cb.input.checked = selected.has(rowID(row));
+				tr.append(h("td", { role: "cell", class: "gadget-td-select" }, cb.wrap));
 			}
 			cfg.columns.forEach((col, i) => tr.append(cellFor(col, i, row, busy)));
 			tbody.append(tr);
@@ -284,6 +328,10 @@ export function mountTable(ctx: MountContext): void {
 				"aria-sort",
 				s.sort && s.sort.key === key ? (s.sort.desc ? "descending" : "ascending") : "none",
 			);
+		}
+		if (sortSelectEl) {
+			sortSelectEl.value = s.sort ? `${s.sort.key}|${s.sort.desc ? "desc" : "asc"}` : "";
+			refreshDropdown(sortSelectEl);
 		}
 
 		// empty state
@@ -319,14 +367,16 @@ export function mountTable(ctx: MountContext): void {
 
 		// selection
 		if (selectAllEl) {
-			selectAllEl.checked = pageRows.length > 0 && pageRows.every((r) => selected.has(rowID(r)));
+			const onPage = pageRows.filter((r) => selected.has(rowID(r))).length;
+			selectAllEl.checked = pageRows.length > 0 && onPage === pageRows.length;
+			// Part of the page selected reads as a dash rather than an empty
+			// box — the toggle's next click selects the rest, not nothing.
+			selectAllEl.indeterminate = onPage > 0 && onPage < pageRows.length;
 		}
 		if (bulkEl) {
 			bulkEl.hidden = selected.size === 0;
 			if (bulkCountEl) bulkCountEl.textContent = `${selected.size} selected`;
-			for (const btn of bulkEl.querySelectorAll<HTMLButtonElement>("[data-gadget-bulk-action]")) {
-				btn.disabled = busy;
-			}
+			if (bulkMenuEl) bulkMenuEl.disabled = busy;
 		}
 
 		// status
@@ -338,6 +388,22 @@ export function mountTable(ctx: MountContext): void {
 			if (busy) statusEl.className += " gadget-status--loading";
 			else if (s.statusKind) statusEl.className += ` gadget-status--${s.statusKind}`;
 		}
+
+		// Last: the rows just written are what the columns have to fit.
+		updateStacking();
+	}
+
+	// Rows settle the content side of the measurement; this settles the space
+	// side. Gated on the inline size because toggling the layout changes the
+	// wrap's height, and an unguarded observer would answer its own writes.
+	if (wrapEl && typeof ResizeObserver !== "undefined") {
+		let lastWidth = -1;
+		new ResizeObserver((entries) => {
+			const width = entries[0]?.contentRect.width ?? -1;
+			if (width === lastWidth) return;
+			lastWidth = width;
+			updateStacking();
+		}).observe(wrapEl);
 	}
 
 	// --- events ---
@@ -349,6 +415,20 @@ export function mountTable(ctx: MountContext): void {
 			page: 0,
 		});
 	});
+
+	// The compact sort control carries direction in its value, so one change
+	// sets both halves of the sort; the empty option clears it.
+	if (sortSelectEl) {
+		sortSelectEl.addEventListener("change", () => {
+			const v = sortSelectEl.value;
+			if (v === "") {
+				store.set({ sort: null, page: 0 });
+				return;
+			}
+			const sep = v.lastIndexOf("|");
+			store.set({ sort: { key: v.slice(0, sep), desc: v.slice(sep + 1) === "desc" }, page: 0 });
+		});
+	}
 
 	let filterTimer: ReturnType<typeof setTimeout> | undefined;
 	delegate(root, "input", "filter", (el) => {
@@ -391,20 +471,6 @@ export function mountTable(ctx: MountContext): void {
 			for (const r of pageRows) selected.delete(rowID(r));
 		}
 		store.set({ selected: [...selected] });
-	});
-
-	delegate(root, "click", "action", (el, value) => {
-		const [colIdx, actIdx] = value.split(":").map(Number);
-		const action = cfg.columns[colIdx ?? -1]?.actions?.[actIdx ?? -1];
-		if (!action) return;
-		const id = el.closest("tr")?.getAttribute("data-gadget-row-id");
-		const row = store.get().rows.find((r) => rowID(r) === id) ?? null;
-		armOrFire(el, action, row);
-	});
-
-	delegate(root, "click", "bulk-action", (el, value) => {
-		const action = cfg.selection?.bulk[Number(value)];
-		if (action) armOrFire(el, action, null);
 	});
 
 	delegate(root, "click", "link", (_el, href) => {

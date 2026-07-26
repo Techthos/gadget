@@ -6,23 +6,29 @@ import { M } from "../src/protocol";
 import { FakeHost, flush } from "./fake-host";
 
 const TEMPLATE = {
-	titleKey: "name",
-	subtitleKey: "email",
-	badge: {
-		key: "status",
-		label: "Status",
-		type: "badge",
-		sortable: false,
-		badge: { active: "success", banned: "danger" },
+	header: {
+		titleKey: "name",
+		descriptionKey: "email",
+		badge: {
+			key: "status",
+			label: "Status",
+			type: "badge",
+			badge: { active: "success", banned: "danger" },
+		},
 	},
-	fields: [
-		{ key: "balance", label: "Balance", type: "number", sortable: true, format: "currency:EUR" },
-		{ key: "website", label: "Website", type: "link", sortable: false, link: { hrefKey: "website" } },
-	],
-	actions: [
-		{ label: "Edit", kind: "tool", tool: "edit_user", args: { id: { row: "id" } } },
-		{ label: "Delete", kind: "tool", tool: "delete_user", confirm: "Really delete?", args: { id: { row: "id" } } },
-	],
+	content: {
+		items: [
+			{ key: "balance", label: "Balance", type: "number", format: "currency:EUR" },
+			{ key: "website", label: "Website", type: "link", link: { hrefKey: "website" } },
+		],
+	},
+	footer: {
+		text: "Balances update hourly.",
+		actions: [
+			{ label: "Edit", kind: "tool", tool: "edit_user", args: { id: { row: "id" } } },
+			{ label: "Delete", kind: "tool", tool: "delete_user", confirm: "Really delete?", args: { id: { row: "id" } } },
+		],
+	},
 };
 
 const ROWS = [
@@ -121,12 +127,141 @@ describe("cardlist behavior", () => {
 		document.body.innerHTML = "";
 	});
 
+	it("grows the strip from a Load more tile instead of paging it", async () => {
+		const root = listShell();
+		mountCardList({
+			root,
+			config: listConfig({ pageSize: 2, loadMore: true }),
+			initialData: { rows: ROWS },
+			bridge,
+		});
+		const more = (): HTMLButtonElement | null =>
+			root.querySelector<HTMLButtonElement>("[data-gadget-reveal]");
+
+		expect(titles(root)).toEqual(["Carol", "Alice"]);
+		expect(more()?.textContent).toContain("2 of 3");
+		// LoadMore replaces the pager rather than sitting alongside it.
+		expect(root.querySelector<HTMLElement>("[data-gadget-pagination]")?.hidden).toBe(true);
+
+		more()?.click();
+		await flush();
+		expect(titles(root)).toEqual(["Carol", "Alice", "Bob"]);
+		// Nothing left to reveal, so the tail goes away.
+		expect(more()).toBeNull();
+	});
+
+	it("restarts the revealed run when the filter narrows the set", async () => {
+		const root = listShell();
+		mountCardList({
+			root,
+			config: listConfig({ pageSize: 2, loadMore: true }),
+			initialData: { rows: ROWS },
+			bridge,
+		});
+		root.querySelector<HTMLButtonElement>("[data-gadget-reveal]")?.click();
+		await flush();
+		expect(titles(root)).toHaveLength(3);
+
+		const filter = root.querySelector<HTMLInputElement>("[data-gadget-filter]") as HTMLInputElement;
+		filter.value = "";
+		filter.dispatchEvent(new Event("input", { bubbles: true }));
+		await new Promise((r) => setTimeout(r, 200));
+		expect(titles(root)).toEqual(["Carol", "Alice"]);
+	});
+
+	it("keeps the reader's place in the strip when a card is selected", async () => {
+		const root = listShell({ selection: true });
+		const strip = root.querySelector<HTMLElement>("[data-gadget-cards]") as HTMLElement;
+		// jsdom does not scroll; the behavior only reads and writes scrollLeft.
+		let scrollLeft = 0;
+		Object.defineProperty(strip, "scrollWidth", { configurable: true, get: () => 1200 });
+		Object.defineProperty(strip, "clientWidth", { configurable: true, get: () => 400 });
+		Object.defineProperty(strip, "scrollLeft", {
+			configurable: true,
+			get: () => scrollLeft,
+			set: (v: number) => {
+				scrollLeft = v;
+			},
+		});
+		mountCardList({
+			root,
+			config: listConfig({ selection: { bulk: [] } }),
+			initialData: { rows: ROWS },
+			bridge,
+		});
+
+		scrollLeft = 640;
+		const box = root.querySelectorAll<HTMLInputElement>("[data-gadget-select-card]")[2] as HTMLInputElement;
+		box.click();
+		await flush();
+
+		expect(scrollLeft).toBe(640);
+		expect(titles(root)).toEqual(["Carol", "Alice", "Bob"]);
+	});
+
 	it("renders cards from the data island", () => {
 		const root = listShell();
 		mountCardList({ root, config: listConfig(), initialData: { rows: ROWS }, bridge });
 		expect(root.querySelectorAll(".gadget-card-item")).toHaveLength(3);
 		expect(titles(root)).toEqual(["Carol", "Alice", "Bob"]);
-		expect(root.querySelector(".gadget-card-subtitle")?.textContent).toBe("carol@x.io");
+		expect(root.querySelector(".gadget-card-description")?.textContent).toBe("carol@x.io");
+	});
+
+	it("renders the three sections and leaves out the ones with nothing to show", () => {
+		const root = listShell();
+		mountCardList({
+			root,
+			config: listConfig({ card: { header: { titleKey: "name" } } }),
+			initialData: { rows: [ROWS[0]] },
+			bridge,
+		});
+		const card = root.querySelector(".gadget-card-item")!;
+		expect(card.querySelector(".gadget-card-item-header")).not.toBeNull();
+		expect(card.querySelector(".gadget-card-content")).toBeNull();
+		expect(card.querySelector(".gadget-card-item-footer")).toBeNull();
+	});
+
+	it("renders content prose and a footer note from the template", () => {
+		const root = listShell();
+		mountCardList({
+			root,
+			config: listConfig({
+				card: {
+					header: { titleKey: "name" },
+					content: { textKey: "bio" },
+					footer: { text: "Updated hourly" },
+				},
+			}),
+			initialData: { rows: [{ ...ROWS[0], bio: "Runs the billing team." }] },
+			bridge,
+		});
+		expect(root.querySelector(".gadget-card-text")?.textContent).toBe("Runs the billing team.");
+		expect(root.querySelector(".gadget-card-note")?.textContent).toBe("Updated hourly");
+	});
+
+	it("indexes the header action ahead of the footer actions", async () => {
+		const root = listShell();
+		host.onToolCall = () => ({ structuredContent: {} });
+		mountCardList({
+			root,
+			config: listConfig({
+				card: {
+					header: { titleKey: "name", action: { label: "Open", kind: "tool", tool: "open_user", args: { id: { row: "id" } } } },
+					footer: { actions: [{ label: "Edit", kind: "tool", tool: "edit_user", args: { id: { row: "id" } } }] },
+				},
+			}),
+			initialData: { rows: [ROWS[0]] },
+			bridge,
+		});
+		const card = root.querySelector(".gadget-card-item")!;
+		expect(card.querySelector('.gadget-card-action [data-gadget-action="0"]')?.textContent).toBe("Open");
+
+		card.querySelector<HTMLElement>('[data-gadget-action="1"]')!.click();
+		await flush();
+		expect(host.received(M.toolsCall)[0]!.params).toMatchObject({
+			name: "edit_user",
+			arguments: { id: 1 },
+		});
 	});
 
 	// jsdom has no layout, so the strip's geometry is stubbed; the behavior
@@ -171,7 +306,7 @@ describe("cardlist behavior", () => {
 	it("renders badge and link fields", () => {
 		const root = listShell();
 		mountCardList({ root, config: listConfig(), initialData: { rows: [ROWS[0]] }, bridge });
-		const badge = root.querySelector(".gadget-card-badge .gadget-badge")!;
+		const badge = root.querySelector(".gadget-card-action .gadget-badge")!;
 		expect(badge.textContent).toBe("active");
 		expect(badge.className).toContain("gadget-badge--success");
 		const link = root.querySelector<HTMLElement>("[data-gadget-link]")!;
@@ -223,7 +358,7 @@ describe("cardlist behavior", () => {
 		expect(root.querySelector<HTMLSelectElement>("[data-gadget-sort-select]")?.value).toBe("balance|desc");
 	});
 
-	it("filters across title, subtitle, and fields after the debounce", async () => {
+	it("filters across title, description, and content items after the debounce", async () => {
 		const root = listShell();
 		mountCardList({ root, config: listConfig(), initialData: { rows: ROWS }, bridge });
 		const input = root.querySelector<HTMLInputElement>("[data-gadget-filter]")!;

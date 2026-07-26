@@ -72,6 +72,15 @@ func (d *db) rows() []map[string]any {
 	return rows
 }
 
+// userRow is one user in the row shape every widget reads (honors json tags).
+func userRow(u *user) map[string]any {
+	rows, _ := gadget.RowsOf([]*user{u})
+	if len(rows) == 0 {
+		return map[string]any{}
+	}
+	return rows[0]
+}
+
 // --- widgets ---
 
 func usersTable() *gadget.Table {
@@ -117,24 +126,28 @@ func usersCards() *gadget.CardList {
 		URI:   "ui://demo/user-cards",
 		Title: "Users",
 		Template: gadget.CardTemplate{
-			TitleKey:    "name",
-			SubtitleKey: "email",
-			Badge: gadget.Badge("status", "Status", map[string]gadget.BadgeVariant{
-				"active":   gadget.BadgeSuccess,
-				"invited":  gadget.BadgeInfo,
-				"archived": gadget.BadgeNeutral,
-			}),
-			Fields: []gadget.Column{
-				gadget.Number("balance", "Balance", "currency:EUR"),
-				gadget.Date("createdAt", "Joined", "relative"),
+			Header: gadget.CardHeader{
+				TitleKey:       "name",
+				DescriptionKey: "email",
+				Badge: gadget.Badge("status", "Status", map[string]gadget.BadgeVariant{
+					"active":   gadget.BadgeSuccess,
+					"invited":  gadget.BadgeInfo,
+					"archived": gadget.BadgeNeutral,
+				}),
 			},
-			Actions: []gadget.Action{
+			Content: gadget.CardContent{
+				Items: gadget.Descriptions{Items: []gadget.DescriptionItem{
+					{Label: "Balance", Key: "balance", Type: gadget.ColNumber, Format: "currency:EUR"},
+					{Label: "Joined", Key: "createdAt", Type: gadget.ColDate, Format: "relative"},
+				}},
+			},
+			Footer: gadget.CardFooter{Actions: []gadget.Action{
 				{
 					Label: "Delete", Tool: "delete_user", Variant: gadget.VariantDanger,
 					Confirm: "Really delete?",
 					Args:    map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
 				},
-			},
+			}},
 		},
 		PageSize:    12,
 		PageSizes:   []int{12, 24, 48},
@@ -168,6 +181,40 @@ func userForm() *gadget.Form {
 		},
 		Submit: gadget.SubmitSpec{Tool: "save_user", Label: "Save", SuccessMessage: "User saved."},
 		Cancel: &gadget.CancelSpec{},
+		Brand:  demoBrand(),
+		Theme:  &theme.Theme{ColorPrimary: "#7c3aed"},
+	}
+}
+
+// deleteConfirm asks before a deletion runs. The record and the consequences
+// are per call, so both arrive from confirm_delete_user's result: the user
+// under "rows", what removing them costs under "effects".
+func deleteConfirm() *gadget.Confirm {
+	return &gadget.Confirm{
+		URI:      "ui://demo/confirm-delete",
+		Title:    "Delete user",
+		Prompt:   "Delete this user?",
+		Body:     "The account and everything attached to it is removed for good.",
+		Severity: gadget.BadgeDanger,
+		Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
+			{Label: "User", Key: "name"},
+			{Label: "Email", Key: "email"},
+			{Label: "Balance", Key: "balance", Type: gadget.ColNumber, Format: "currency:EUR"},
+			{Label: "Status", Key: "status", Type: gadget.ColBadge, Badge: map[string]gadget.BadgeVariant{
+				"active":   gadget.BadgeSuccess,
+				"invited":  gadget.BadgeInfo,
+				"archived": gadget.BadgeNeutral,
+			}},
+			{Label: "Region", Text: "eu-central-1"},
+		}},
+		Acknowledge: "I understand this cannot be undone.",
+		Accept: gadget.AcceptSpec{
+			Tool:           "apply_delete_user",
+			Label:          "Delete user",
+			Args:           map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+			SuccessMessage: "User deleted.",
+		},
+		Reject: &gadget.RejectSpec{Label: "Keep user", Message: "Nothing was deleted."},
 		Brand:  demoBrand(),
 		Theme:  &theme.Theme{ColorPrimary: "#7c3aed"},
 	}
@@ -241,6 +288,7 @@ func newServer(data *db) *mcp.Server {
 	cards := usersCards()
 	form := userForm()
 	menu := demoMenu()
+	confirm := deleteConfirm()
 
 	// Model-visible: list users, rendered by the table widget.
 	type empty struct{}
@@ -298,6 +346,45 @@ func newServer(data *db) *mcp.Server {
 			}
 			data.Unlock()
 			return textResult(fmt.Sprintf("Archived %d users.", len(in.IDs))), rowsOut{Rows: data.rows()}, nil
+		}))
+
+	// Model-visible: ask before deleting. The table's own row action deletes
+	// behind a two-phase button; this is the other style — a view of its own
+	// that spells out what the deletion costs before it runs.
+	type confirmOut struct {
+		Rows    []map[string]any `json:"rows"`
+		Effects []map[string]any `json:"effects"`
+	}
+	must(gosdk.AddWidgetToolFor(server, confirm,
+		&mcp.Tool{Name: "confirm_delete_user", Description: "Ask the user to confirm deleting a user by id."},
+		func(_ context.Context, _ *mcp.CallToolRequest, in deleteIn) (*mcp.CallToolResult, confirmOut, error) {
+			data.Lock()
+			u := data.users[in.ID]
+			data.Unlock()
+			if u == nil {
+				return textResult("No such user."), confirmOut{}, nil
+			}
+			// Effects are computed per call: this is what makes them worth
+			// showing rather than authoring once at registration time.
+			effects := []map[string]any{
+				{"text": "Removes the account", "detail": "Sign-in stops working immediately.", "severity": "danger"},
+				{"text": "Releases the balance", "value": fmt.Sprintf("%.2f EUR", u.Balance), "severity": "warning"},
+			}
+			if u.Status == "active" {
+				effects = append(effects, map[string]any{"text": "Ends an active session", "severity": "warning"})
+			}
+			return nil, confirmOut{Rows: []map[string]any{userRow(u)}, Effects: effects}, nil
+		}))
+
+	// App-only: fired by the confirmation's accept button.
+	applyDelete := &mcp.Tool{Name: "apply_delete_user", Description: "Delete a user by id, after confirmation."}
+	gosdk.AppOnly(applyDelete, confirm)
+	must(gosdk.AddWidgetToolFor(server, confirm, applyDelete,
+		func(_ context.Context, _ *mcp.CallToolRequest, in deleteIn) (*mcp.CallToolResult, empty, error) {
+			data.Lock()
+			delete(data.users, in.ID)
+			data.Unlock()
+			return textResult("User deleted."), empty{}, nil
 		}))
 
 	// Model-visible: open the edit form prefilled for one user.

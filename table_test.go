@@ -89,7 +89,7 @@ func TestTableGolden(t *testing.T) {
 		`id="gadget-data"`,
 		`data-gadget-sort="name"`,
 		`data-gadget-select-all`,
-		`data-gadget-bulk-action="0"`,
+		`data-gadget-bulk-menu`,
 		`data-gadget-page-size`,
 		`--gadget-color-primary:#7c3aed`,
 	} {

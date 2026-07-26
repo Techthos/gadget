@@ -16,6 +16,10 @@ Widgets read runtime data from the tool result's `structuredContent`:
 | Card | `rows` (`RowsKey`) | `[]object` — renders the first element (`rows[0]`) |
 | Form | `values` (`PrefillKey`) | `{field: value}` prefill |
 | Form | `errors` (`ErrorsKey`) | `{field: "message"}` server-side errors |
+| Confirm | `rows` (`RowsKey`) | `[]object` — the record the operation targets (`rows[0]`) |
+| Confirm | `effects` (`EffectsKey`) | `[]object` — side effects: `{text, detail?, value?, severity?}` |
+| Choice | `rows` (`RowsKey`) | `[]object` — the record the question is about (`rows[0]`) |
+| Choice | `options` (`OptionsKey`) | `[]object` — what is on offer: `{value, label?, summary?, body?, bullets?, details?, badge?, badgeVariant?, default?, disabled?}`, `details` being `[{label, value}]` |
 | Menu | — | reads nothing; its tiles are authored, not fetched |
 
 `gadget.RowsOf(slice)` converts typed Go slices to row maps (honors json
@@ -69,6 +73,10 @@ table := &gadget.Table{
   `HrefKey` via `ui/open-link`. Arg sources: `Static(v)`, `FromRow(field)`,
   `FromSelection(field)` (bulk only). `Confirm` renders an inline two-phase
   confirmation (native `confirm()` doesn't work in sandboxed iframes).
+  An actions column renders one "⋯" trigger per row and bulk actions render an
+  "Actions" trigger in the toolbar, each opening a menu of the labels — an
+  actions column costs the same width whether it holds one action or five, and
+  the confirmation is asked on the menu item.
 - If an action's result contains `RowsKey`, the table re-renders with the
   returned rows and clears the selection — return the updated list from
   mutating tools.
@@ -130,20 +138,29 @@ list/mutation tools drive either.
 
 ```go
 tmpl := gadget.CardTemplate{
-    TitleKey:    "name",
-    SubtitleKey: "email",
-    Badge: gadget.Badge("status", "Status", map[string]gadget.BadgeVariant{
-        "active": gadget.BadgeSuccess,
-        "banned": gadget.BadgeDanger,
-    }),
-    Fields: []gadget.Column{
-        gadget.Number("balance", "Balance", "currency:EUR"),
-        gadget.Date("createdAt", "Joined", "relative"),
-        gadget.Link("website", "Website"),
+    Header: gadget.CardHeader{
+        TitleKey:       "name",
+        DescriptionKey: "email",
+        Badge: gadget.Badge("status", "Status", map[string]gadget.BadgeVariant{
+            "active": gadget.BadgeSuccess,
+            "banned": gadget.BadgeDanger,
+        }),
     },
-    Actions: []gadget.Action{
-        {Label: "Edit", Tool: "edit_user", Variant: gadget.VariantPrimary,
-            Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")}},
+    Content: gadget.CardContent{
+        TextKey: "bio",
+        Items: gadget.Descriptions{Items: []gadget.DescriptionItem{
+            {Label: "Balance", Key: "balance", Type: gadget.ColNumber, Format: "currency:EUR"},
+            {Label: "Joined", Key: "createdAt", Type: gadget.ColDate, Format: "relative"},
+            {Label: "Website", Key: "website", Type: gadget.ColLink,
+                Link: &gadget.LinkSpec{HrefKey: "website"}},
+        }},
+    },
+    Footer: gadget.CardFooter{
+        Text: "Balances update hourly.",
+        Actions: []gadget.Action{
+            {Label: "Edit", Tool: "edit_user", Variant: gadget.VariantPrimary,
+                Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")}},
+        },
     },
 }
 
@@ -165,14 +182,21 @@ cards := &gadget.CardList{
 card := &gadget.Card{URI: "ui://myapp/user", Title: "User", Template: tmpl}
 ```
 
-- **Template**: `TitleKey` (required) and optional `SubtitleKey` pull the card
-  heading from row fields; `Badge` (a badge column) shows a status pill;
-  `Fields` are typed label/value rows (same `Column` types and formats as a
-  table, minus `actions`); `Actions` render as footer buttons.
+- **Template**: three sections, rendered in order.
+  - `Header` — `TitleKey` (required) and `DescriptionKey`/`Description` name
+    the record, and one end slot holds either `Badge` (a badge column, for a
+    status pill) or `Action` (a button). Not both: it is one slot.
+  - `Content` — `TextKey`/`Text` is a paragraph of body prose, and `Items` is
+    the shared `Descriptions` block (same types and `Format` strings as table
+    columns; a value the record lacks renders as `—`).
+  - `Footer` — `TextKey`/`Text` is a note beside the buttons in `Actions`.
+
+  A section with nothing in it is not rendered, so a title-and-actions card
+  carries no empty chrome.
 - **CardList** reuses `RowsKey`/`RowID`, `PageSize`, `PageSizes`,
   `DefaultSort`, `Filterable`, and `Selection` exactly as `Table`. The sort
-  control is a dropdown auto-derived from the sortable body fields; filtering
-  matches title, subtitle, and field values.
+  control is a dropdown auto-derived from the sortable content items;
+  filtering matches the title, description, body text and item values.
 - **Carousel**: prev/next controls appear only when the cards overflow the
   available width and disable at each end. The strip drags with the mouse,
   swipes on touch, scrolls with the arrow keys when focused, and hides its
@@ -241,6 +265,182 @@ gosdk.AddWidgetToolFor(server, menu,
   chat pane and a wide panel. Minimum tile width is the
   `--gadget-menu-tile-min` token (default `11rem`), overridable per widget:
   `Theme: &theme.Theme{Extra: map[string]string{"--gadget-menu-tile-min": "14rem"}}`.
+
+## Confirm
+
+An approval view: it states an operation, shows the record it targets and the
+side effects it will have, and offers exactly two outcomes. This is the long
+form of `Action.Confirm` — that one re-labels a button for a second click and
+has room for a few words; use `Confirm` when the consequences have to be
+weighed before the reader decides.
+
+```go
+confirm := &gadget.Confirm{
+    URI:      "ui://myapp/delete-user",
+    Title:    "Delete user",
+    Prompt:   "Delete Ada Lovelace?",
+    Body:     "The account and everything attached to it is removed for good.",
+    Severity: gadget.BadgeDanger,
+
+    Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
+        {Label: "User", Key: "name"},
+        {Label: "Balance", Key: "balance", Type: gadget.ColNumber, Format: "currency:EUR"},
+        {Label: "Status", Key: "status", Type: gadget.ColBadge, Badge: map[string]gadget.BadgeVariant{
+            "active": gadget.BadgeSuccess,
+        }},
+        {Label: "Region", Text: "eu-central-1"},
+    }},
+    Effects: []gadget.Effect{
+        {Text: "Removes the account", Severity: gadget.BadgeDanger},
+        {Text: "Deletes audit records", Value: "128", Severity: gadget.BadgeWarning},
+    },
+
+    Acknowledge:   "I understand this cannot be undone.",
+    TypeToConfirm: "ada@example.com",
+
+    Accept: gadget.AcceptSpec{
+        Tool: "delete_user", Label: "Delete user",
+        Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+        SuccessMessage: "User deleted.",
+    },
+    Reject: &gadget.RejectSpec{Label: "Keep user", Message: "Nothing was deleted."},
+}
+```
+
+- **Severity** (`BadgeInfo` default, `BadgeWarning`, `BadgeDanger`) colors the
+  icon and picks the accept button's variant — danger gets the danger button,
+  anything else the primary one. `Accept.Variant` overrides that.
+- **Details** is a `Descriptions` block bound to `rows[0]`, the same record
+  contract as `Card`. **Effects** are the consequences, one row each:
+  `Text`, an optional `Detail` line, an optional `Value` shown at the row end
+  ("128", "4 people"), and a `Severity` that colors the row's dot.
+- **Authored now or delivered later**: the effects written in Go are what the
+  widget shows until a tool result arrives with its own under `EffectsKey`,
+  which replaces the list wholesale. Use `InitialData` for a baked snapshot and
+  `LoadTool`/`LoadArgs` to fetch the record and effects fresh on load — worth
+  it here, since the consequences should be current at decision time rather
+  than at registration time.
+- **Guards** add friction before the accept button enables: `Acknowledge`
+  renders a checkbox that must be ticked, `TypeToConfirm` a phrase that must be
+  typed exactly. Either, both or neither; the button renders `disabled`
+  server-side when any is configured, so the document is correct before the
+  runtime mounts.
+- **Accept** calls `Accept.Tool` with `Static`/`FromRow` args (`FromSelection`
+  is rejected — there is no selection). On success the buttons are replaced by
+  `SuccessMessage`, or by the result's own text. A result with `isError` leaves
+  the widget usable so a transient failure can be retried.
+- **Reject** is optional. Without `Reject.Tool` declining is a local outcome
+  the server never hears about; set the tool when the operation needs an
+  explicit "no".
+- **The decision is final**: once accepted or declined the buttons are gone and
+  the outcome stays on screen, even if the host pushes later results.
+
+## Choice
+
+A deciding view: a question, the options answering it, and the case for each
+one. Picking is local — nothing is called until the reader submits. Where
+`Confirm` asks yes/no about one operation, `Choice` asks *which* operation.
+
+```go
+choice := &gadget.Choice{
+    URI:    "ui://myapp/shipping",
+    Title:  "Shipping",
+    Prompt: "How should we ship order ORD-4471?",
+    Body:   "The parcel is packed and leaves the warehouse today either way.",
+
+    Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
+        {Label: "Order", Key: "reference"},
+        {Label: "Destination", Text: "Berlin, DE"},
+    }},
+
+    Options: []gadget.ChoiceOption{
+        {
+            Value: "standard", Label: "Standard", Summary: "3-5 business days",
+            Body:    "Handed to the postal service tonight.",
+            Bullets: []string{"Tracked to the depot", "No signature on delivery"},
+            Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
+                {Label: "Price", Key: "price", Type: gadget.ColNumber, Format: "currency:EUR"},
+                {Label: "Arrives", Key: "eta", Type: gadget.ColDate, Format: "date"},
+            }},
+            Data:    map[string]any{"price": 4.9, "eta": "2026-08-03T10:00:00Z"},
+            Default: true,
+        },
+        {
+            Value: "express", Label: "Express", Summary: "next business day",
+            Body:         "Arrives before 12:00 tomorrow.",
+            Badge:        "fastest",
+            BadgeVariant: gadget.BadgeSuccess,
+        },
+        {Value: "pickup", Label: "Depot pickup", Summary: "no depot nearby", Disabled: true},
+    },
+
+    Submit: gadget.ChoiceSubmit{
+        Tool: "ship_order", Label: "Ship it", ValueArg: "method",
+        Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+        SuccessMessage: "On its way.",
+    },
+    Cancel: &gadget.RejectSpec{Label: "Decide later", Message: "Nothing was shipped."},
+}
+```
+
+- **An option argues for itself.** `Label` and `Summary` are the list; `Body`,
+  `Bullets` and `Details` are the description block. `Details` items typed with
+  a `Key` read the option's own `Data` record, so prices and dates are
+  formatted for the host's locale instead of being baked into strings.
+- **Layout is about width, not taste.** `ChoiceSplit` puts the description in a
+  side panel that follows the option in hand; `ChoiceStacked` unfolds it inside
+  the chosen option. The default, `ChoiceAuto`, measures the width the host
+  gave the widget — side panel at or above `34rem`, stacked below — and
+  re-measures as the pane resizes, so the same document reads in a wide canvas
+  and a narrow chat column.
+- **One or several.** Without `Multiple` the options are radios and the last
+  pick wins. With it they are checkboxes bounded by `Min` (default 1) and `Max`
+  (0 = no limit): submit stays disabled until the floor is met, the unticked
+  options disable at the cap rather than failing on click, and a hint under the
+  list tracks the count.
+- **Authored now or delivered later**: the options written in Go are what the
+  widget shows until a tool result arrives with its own under `OptionsKey`,
+  which replaces the list wholesale and re-applies the new defaults. Options
+  from a tool describe themselves in plain values — `details` there is
+  `[{label, value}]`, already formatted server-side. `LoadTool`/`LoadArgs`
+  fetch them fresh on load, which is what a server pricing shipping at call
+  time wants.
+- **Submit** calls `Submit.Tool` with its `Static`/`FromRow` args plus
+  `ValueArg` (default `"choice"`): the chosen `Value`, or the array of chosen
+  values in option order. On success the controls are replaced by
+  `SuccessMessage`, or by the result's own text; a result with `isError` leaves
+  the widget usable so a transient failure can be retried.
+- **`Disabled` options** are never chosen, but pointing at one still shows its
+  description — why it cannot be taken is the thing worth reading.
+- **The decision is final**: once submitted or cancelled the controls are gone
+  and the outcome stays on screen, even if the host pushes later results.
+
+### Descriptions
+
+`Descriptions` is a shared block, not a widget: a label/value detail list used
+by `Confirm`, `Choice` (both for the record and per option) and a card's
+content. Each item takes its value from a record field (`Key`, typed and
+Intl-formatted exactly like a table cell) or from fixed
+text authored in Go (`Text`) — one or the other, never both.
+
+```go
+gadget.Descriptions{Items: []gadget.DescriptionItem{
+    {Label: "User", Key: "name"},
+    {Label: "Joined", Key: "createdAt", Type: gadget.ColDate, Format: "relative"},
+    {Label: "Profile", Type: gadget.ColLink, Link: &gadget.LinkSpec{HrefKey: "website"}},
+    {Label: "Region", Text: "eu-central-1"},
+}}
+```
+
+- **Item types** are the `Column` types minus `actions`: `text` (default),
+  `number`, `date`, `badge`, `link`, with the same `Format` strings.
+- **No layout options.** The list takes as many columns as the widget's own
+  width allows and collapses to one in a narrow pane. The smallest an item may
+  get before a column is dropped is the `--gadget-desc-min` token (default
+  `12rem`), overridable per widget:
+  `Theme: &theme.Theme{Extra: map[string]string{"--gadget-desc-min": "16rem"}}`.
+- **A value the record does not carry renders as an em dash** rather than
+  disappearing: a reader deciding on these facts should see which are missing.
 
 ## Branding
 
