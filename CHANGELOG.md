@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.6.0 - 2026-07-26
 
 - **New widget `DatePicker`**, and a calendar for forms. One grid, two
   mountings: `DatePicker` renders it inline as a view of its own (a question, an
