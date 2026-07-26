@@ -5,41 +5,41 @@
  * below, not the viewport: this list is sized by whatever room its widget
  * was given. */
 
-.gadget-descriptions {
+.gomu-descriptions {
   margin: 0;
-  padding: calc(var(--gadget-space-unit) * 4);
+  padding: calc(var(--gomu-space-unit) * 4);
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(var(--gadget-desc-min), 1fr));
-  gap: calc(var(--gadget-space-unit) * 3) calc(var(--gadget-space-unit) * 5);
+  grid-template-columns: repeat(auto-fit, minmax(var(--gomu-desc-min), 1fr));
+  gap: calc(var(--gomu-space-unit) * 3) calc(var(--gomu-space-unit) * 5);
 }
 
 /* Label above value, not beside it: in a column this narrow a shared line
  * leaves the value a few characters wide. */
-.gadget-desc-item {
+.gomu-desc-item {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--gadget-space-unit) * 0.5);
+  gap: calc(var(--gomu-space-unit) * 0.5);
   min-width: 0;
 }
 
-.gadget-desc-label {
-  color: var(--gadget-color-text-muted);
+.gomu-desc-label {
+  color: var(--gomu-color-text-muted);
   font-size: 0.8125rem;
 }
 
-.gadget-desc-value {
+.gomu-desc-value {
   margin: 0;
   overflow-wrap: anywhere;
 }
 
 /* The stand-in for a value the record does not carry. */
-.gadget-desc-value--missing {
-  color: var(--gadget-color-text-muted);
+.gomu-desc-value--missing {
+  color: var(--gomu-color-text-muted);
 }
 
-@container gadget (max-width: 34rem) {
-  .gadget-descriptions {
-    padding: calc(var(--gadget-space-unit) * 3);
-    gap: calc(var(--gadget-space-unit) * 2.5);
+@container gomu (max-width: 34rem) {
+  .gomu-descriptions {
+    padding: calc(var(--gomu-space-unit) * 3);
+    gap: calc(var(--gomu-space-unit) * 2.5);
   }
 }

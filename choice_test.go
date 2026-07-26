@@ -1,4 +1,4 @@
-package gadget
+package gomukit
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 
 	xhtml "golang.org/x/net/html"
 
-	"github.com/techthos/gadget/theme"
+	"github.com/techthos/gomukit/theme"
 )
 
 // canonicalChoice exercises every slot: a context record, options with prose,
@@ -96,27 +96,27 @@ func TestChoiceGolden(t *testing.T) {
 		t.Fatalf("document does not parse: %v", err)
 	}
 	for _, want := range []string{
-		`data-gadget-widget="choice"`,
-		`gadget-choice--auto`,
+		`data-gomu-widget="choice"`,
+		`gomu-choice--auto`,
 		`How should we ship order #4471?`,
-		`data-gadget-descriptions`,
-		`data-gadget-options`,
-		`data-gadget-panel`,
-		`data-gadget-hint`,
-		`data-gadget-cancel`,
-		`data-gadget-submit`,
-		`data-gadget-outcome`,
+		`data-gomu-descriptions`,
+		`data-gomu-options`,
+		`data-gomu-panel`,
+		`data-gomu-hint`,
+		`data-gomu-cancel`,
+		`data-gomu-submit`,
+		`data-gomu-outcome`,
 		`>Ship it</button>`,
 		`>Decide later</button>`,
 		`role="radiogroup"`,
-		`--gadget-color-primary:#7c3aed`,
+		`--gomu-color-primary:#7c3aed`,
 	} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("document missing %q", want)
 		}
 	}
 	// Nothing can be submitted before the runtime knows what is chosen.
-	if !strings.Contains(doc, `data-gadget-submit="" disabled`) {
+	if !strings.Contains(doc, `data-gomu-submit="" disabled`) {
 		t.Error("submit button must render disabled")
 	}
 	// Options are runtime state: an option list can be replaced wholesale by a
@@ -157,15 +157,15 @@ func TestChoiceMinimalShell(t *testing.T) {
 		t.Fatalf("document does not parse: %v", err)
 	}
 	for _, unwanted := range []string{
-		"data-gadget-descriptions", "data-gadget-cancel", "gadget-toolbar", "gadget-choice-lede",
+		"data-gomu-descriptions", "data-gomu-cancel", "gomu-toolbar", "gomu-choice-lede",
 	} {
 		if strings.Contains(shell, unwanted) {
 			t.Errorf("minimal shell should not contain %q:\n%s", unwanted, shell)
 		}
 	}
 	for _, want := range []string{
-		`gadget-choice--auto`,
-		`class="gadget-btn gadget-btn--primary" data-gadget-submit`,
+		`gomu-choice--auto`,
+		`class="gomu-btn gomu-btn--primary" data-gomu-submit`,
 		`>Continue</button>`,
 	} {
 		if !strings.Contains(shell, want) {
@@ -188,9 +188,9 @@ func TestChoiceMultipleShell(t *testing.T) {
 
 func TestChoiceLayoutClass(t *testing.T) {
 	for layout, want := range map[ChoiceLayout]string{
-		ChoiceAuto:    "gadget-choice--auto",
-		ChoiceSplit:   "gadget-choice--split",
-		ChoiceStacked: "gadget-choice--stacked",
+		ChoiceAuto:    "gomu-choice--auto",
+		ChoiceSplit:   "gomu-choice--split",
+		ChoiceStacked: "gomu-choice--stacked",
 	} {
 		c := canonicalChoice()
 		c.Layout = layout

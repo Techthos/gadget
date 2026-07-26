@@ -23,7 +23,7 @@ export function badgeNode(field: FieldCfg, row: Row): Node | string {
 	const value = String(row[field.key] ?? "");
 	if (value === "") return "";
 	const variant = field.badge?.[value];
-	const cls = "gadget-badge" + (variant && variant !== "neutral" ? ` gadget-badge--${variant}` : "");
+	const cls = "gomu-badge" + (variant && variant !== "neutral" ? ` gomu-badge--${variant}` : "");
 	return h("span", { class: cls }, value);
 }
 
@@ -38,7 +38,7 @@ export function valueNode(field: FieldCfg, row: Row): Node | string {
 			const textKey = field.link?.textKey;
 			const text =
 				(textKey !== undefined ? String(row[textKey] ?? "") : "") || field.link?.text || href;
-			return h("button", { type: "button", class: "gadget-link", "data-gadget-link": href }, text);
+			return h("button", { type: "button", class: "gomu-link", "data-gomu-link": href }, text);
 		}
 		default:
 			return formatCell(row[field.key], field.type, field.format);

@@ -14,7 +14,7 @@
 import type { MountContext } from "../index";
 import { delegate } from "../dom";
 import { M } from "../protocol";
-import { textOf } from "./card-common";
+import { errorText, textOf } from "../status";
 
 interface MenuItemCfg {
 	tool: string;
@@ -32,8 +32,8 @@ export function mountMenu(ctx: MountContext): void {
 	const { root, bridge } = ctx;
 
 	const items = Array.isArray(cfg.items) ? cfg.items : [];
-	const tiles = [...root.querySelectorAll<HTMLButtonElement>("[data-gadget-menu-item]")];
-	const statusEl = root.querySelector<HTMLElement>("[data-gadget-status]");
+	const tiles = [...root.querySelectorAll<HTMLButtonElement>("[data-gomu-menu-item]")];
+	const statusEl = root.querySelector<HTMLElement>("[data-gomu-status]");
 
 	let busy = false;
 
@@ -41,7 +41,7 @@ export function mountMenu(ctx: MountContext): void {
 		if (!statusEl) return;
 		statusEl.hidden = msg === "";
 		statusEl.textContent = msg;
-		statusEl.className = "gadget-status" + (kind ? ` gadget-status--${kind}` : "");
+		statusEl.className = "gomu-status" + (kind ? ` gomu-status--${kind}` : "");
 	}
 
 	// The whole menu goes inert during a call: a second tile would race the
@@ -52,7 +52,7 @@ export function mountMenu(ctx: MountContext): void {
 	}
 
 	function labelOf(tile: HTMLElement): string {
-		return tile.querySelector(".gadget-menu-label")?.textContent ?? "this";
+		return tile.querySelector(".gomu-menu-label")?.textContent ?? "this";
 	}
 
 	async function open(item: MenuItemCfg, label: string): Promise<void> {
@@ -77,7 +77,7 @@ export function mountMenu(ctx: MountContext): void {
 			}
 		} catch (e) {
 			setBusy(false);
-			showStatus("error", e instanceof Error ? e.message : String(e));
+			showStatus("error", errorText(e, `Could not open ${label}.`));
 		}
 	}
 

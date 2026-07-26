@@ -1,4 +1,4 @@
-// gadget runtime entry point. Mounts the widget behavior found on the page,
+// gomukit runtime entry point. Mounts the widget behavior found on the page,
 // performs the MCP Apps handshake, applies host styling, and reports size.
 //
 // Boot order matters: the behavior mounts (and paints any baked initial
@@ -31,9 +31,9 @@ export function registerBehavior(kind: string, behavior: Behavior): void {
 }
 
 export async function boot(): Promise<void> {
-  const root = document.querySelector<HTMLElement>("[data-gadget-widget]");
+  const root = document.querySelector<HTMLElement>("[data-gomu-widget]");
   if (!root) return;
-  const kind = root.getAttribute("data-gadget-widget") ?? "";
+  const kind = root.getAttribute("data-gomu-widget") ?? "";
   const config = readIsland<Record<string, unknown>>(CONFIG_ISLAND_ID) ?? {};
   const initialData = readIsland<Record<string, unknown>>(DATA_ISLAND_ID);
 
@@ -65,7 +65,7 @@ export async function boot(): Promise<void> {
     if (url !== "") void bridge.openLink(url);
   });
 
-  // Every server-rendered <select> becomes a gadget dropdown before the
+  // Every server-rendered <select> becomes a gomukit dropdown before the
   // behavior mounts. The select survives the upgrade, so behaviors keep
   // finding and driving the same element.
   enhanceSelects(root);

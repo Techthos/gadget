@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>gadget · harness</title>
+<title>gomukit · harness</title>
 <style>
   :root {
     --bg: #f4f5f7;
@@ -245,7 +245,7 @@
         <rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9.5h18M9 9.5V20"/>
       </svg>
     </span>
-    <span class="brand-name">gadget</span>
+    <span class="brand-name">gomukit</span>
     <span class="chip">harness</span>
     <a class="by" href="https://www.techthos.net/" target="_blank" rel="noopener noreferrer"
        title="Agentic Software Development, done the right way.">by <strong>Techthos</strong></a>
@@ -525,7 +525,14 @@
     try {
       const structuredContent = JSON.parse(payloadEl.value);
       payloadErr.hidden = true;
-      notify("ui/notifications/tool-result", { structuredContent });
+      // Mirror what a real server sends: with no content of its own, the
+      // structured output is echoed into a text block (the spec suggests it
+      // and the Go SDK does it), which is exactly the payload the status bar
+      // must never show.
+      notify("ui/notifications/tool-result", {
+        structuredContent,
+        content: [{ type: "text", text: JSON.stringify(structuredContent) }],
+      });
     } catch (e) {
       payloadErr.textContent = String(e);
       payloadErr.hidden = false;

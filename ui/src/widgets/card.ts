@@ -7,13 +7,13 @@ import { HOST_CONTEXT_EVENT } from "../host";
 import { Row, rowsFrom } from "../data";
 import { clear } from "../dom";
 import { CallToolResult, M } from "../protocol";
+import { errorText, textOf } from "../status";
 import {
 	ActionCfg,
 	CardTemplateCfg,
 	renderCard,
 	resolveArgs,
 	templateActions,
-	textOf,
 } from "./card-common";
 
 interface CardCfg {
@@ -33,12 +33,12 @@ export function mountCard(ctx: MountContext): void {
 	const cfg = ctx.config as unknown as CardCfg;
 	const { root, bridge } = ctx;
 
-	const hostEl = root.querySelector<HTMLElement>("[data-gadget-card]");
+	const hostEl = root.querySelector<HTMLElement>("[data-gomu-card]");
 	if (!hostEl || typeof cfg.card !== "object" || typeof cfg.card.header !== "object") return;
 	const actions = templateActions(cfg.card);
 	const host: HTMLElement = hostEl;
-	const statusEl = root.querySelector<HTMLElement>("[data-gadget-status]");
-	const emptyEl = root.querySelector<HTMLElement>("[data-gadget-empty]");
+	const statusEl = root.querySelector<HTMLElement>("[data-gomu-status]");
+	const emptyEl = root.querySelector<HTMLElement>("[data-gomu-empty]");
 
 	const rowID = (row: Row): string => String(row[cfg.rowId] ?? "");
 
@@ -50,7 +50,7 @@ export function mountCard(ctx: MountContext): void {
 		if (!statusEl) return;
 		statusEl.hidden = msg === "";
 		statusEl.textContent = msg;
-		statusEl.className = "gadget-status" + (kind ? ` gadget-status--${kind}` : "");
+		statusEl.className = "gomu-status" + (kind ? ` gomu-status--${kind}` : "");
 	}
 
 	function render(): void {
@@ -102,19 +102,19 @@ export function mountCard(ctx: MountContext): void {
 		} catch (e) {
 			busy = false;
 			render();
-			showStatus("error", e instanceof Error ? e.message : String(e));
+			showStatus("error", errorText(e, "The action failed."));
 		}
 	}
 
 	// Native confirm() is silently disabled in sandboxed MCP Apps iframes;
 	// confirmation is a two-phase button (arm, then fire on a second click).
 	function armOrFire(btn: HTMLElement, action: ActionCfg): void {
-		if (action.confirm && !btn.hasAttribute("data-gadget-armed")) {
+		if (action.confirm && !btn.hasAttribute("data-gomu-armed")) {
 			const original = btn.textContent;
-			btn.setAttribute("data-gadget-armed", "");
+			btn.setAttribute("data-gomu-armed", "");
 			btn.textContent = action.confirm;
 			setTimeout(() => {
-				btn.removeAttribute("data-gadget-armed");
+				btn.removeAttribute("data-gomu-armed");
 				btn.textContent = original;
 			}, CONFIRM_RESET_MS);
 			return;
@@ -125,15 +125,15 @@ export function mountCard(ctx: MountContext): void {
 	host.addEventListener("click", (ev) => {
 		const target = ev.target;
 		if (!(target instanceof Element)) return;
-		const btn = target.closest<HTMLElement>("[data-gadget-action]");
+		const btn = target.closest<HTMLElement>("[data-gomu-action]");
 		if (btn && host.contains(btn)) {
-			const action = actions[Number(btn.getAttribute("data-gadget-action"))];
+			const action = actions[Number(btn.getAttribute("data-gomu-action"))];
 			if (action) armOrFire(btn, action);
 			return;
 		}
-		const link = target.closest<HTMLElement>("[data-gadget-link]");
+		const link = target.closest<HTMLElement>("[data-gomu-link]");
 		if (link && host.contains(link)) {
-			const href = link.getAttribute("data-gadget-link") ?? "";
+			const href = link.getAttribute("data-gomu-link") ?? "";
 			if (href !== "") void bridge.openLink(href);
 		}
 	});

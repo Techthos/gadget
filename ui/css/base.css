@@ -1,62 +1,62 @@
-/* Base widget chrome. All rules are scoped under .gadget-root and reference
+/* Base widget chrome. All rules are scoped under .gomu-root and reference
  * semantic tokens only — except the body reset below: the document is fully
- * gadget-owned, and the default body MARGIN sits outside body.scrollHeight,
+ * gomu-owned, and the default body MARGIN sits outside body.scrollHeight,
  * clipping the bottom of auto-resized host iframes. Padding measures.
  * The document canvas is left unpainted so a host page shows through; see the
  * color-scheme note in tokens.css for the one thing that overrides that. */
 body {
   margin: 0;
-  padding: var(--gadget-page-pad);
+  padding: var(--gomu-page-pad);
 }
 
-.gadget-root,
-.gadget-root *,
-.gadget-root *::before,
-.gadget-root *::after {
+.gomu-root,
+.gomu-root *,
+.gomu-root *::before,
+.gomu-root *::after {
   box-sizing: border-box;
 }
 
 /* The hidden attribute must win over component display rules
- * (e.g. .gadget-bulk { display: flex }). */
-.gadget-root [hidden] {
+ * (e.g. .gomu-bulk { display: flex }). */
+.gomu-root [hidden] {
   display: none !important;
 }
 
-.gadget-root {
+.gomu-root {
   /* Anchor for dropdown panels, which are positioned here rather than inside
    * the card chrome that would clip them. */
   position: relative;
   /* Widgets lay themselves out against the room they were given, not the
    * viewport: the same document is dropped into a narrow chat pane and a wide
    * panel, and only the element itself knows which. Every responsive rule in
-   * this bundle is an @container query on this name — grep "container gadget".
+   * this bundle is an @container query on this name — grep "container gomu".
    * inline-size only, so block size stays content-driven and the size-changed
    * reports keep measuring real content height. */
-  container: gadget / inline-size;
-  font-family: var(--gadget-font);
-  color: var(--gadget-color-text);
-  background: var(--gadget-color-page);
+  container: gomu / inline-size;
+  font-family: var(--gomu-font);
+  color: var(--gomu-color-text);
+  background: var(--gomu-color-page);
   font-size: 0.875rem;
   line-height: 1.45;
 }
 
-.gadget-card {
-  border: 1px solid var(--gadget-color-border);
-  border-radius: var(--gadget-radius-l);
-  background: var(--gadget-color-bg);
+.gomu-card {
+  border: 1px solid var(--gomu-color-border);
+  border-radius: var(--gomu-radius-l);
+  background: var(--gomu-color-bg);
   overflow: hidden;
 }
 
-.gadget-toolbar {
+.gomu-toolbar {
   display: flex;
   align-items: center;
-  gap: calc(var(--gadget-space-unit) * 3);
+  gap: calc(var(--gomu-space-unit) * 3);
   flex-wrap: wrap;
-  padding: calc(var(--gadget-space-unit) * 3) calc(var(--gadget-space-unit) * 4);
-  border-bottom: 1px solid var(--gadget-color-border);
+  padding: calc(var(--gomu-space-unit) * 3) calc(var(--gomu-space-unit) * 4);
+  border-bottom: 1px solid var(--gomu-color-border);
 }
 
-.gadget-title {
+.gomu-title {
   font-size: 1rem;
   font-weight: 600;
   margin: 0;
@@ -72,89 +72,89 @@ body {
  * comfortable width and drops to its own full-width row when the toolbar
  * runs out (a 10rem basis is wider than the remaining space long before the
  * input itself would become unusable). */
-.gadget-filter {
+.gomu-filter {
   flex: 1 1 10rem;
   min-width: 0;
 }
 
-.gadget-btn {
+.gomu-btn {
   font: inherit;
-  color: var(--gadget-color-text);
-  background: var(--gadget-color-surface);
-  border: 1px solid var(--gadget-color-border);
-  border-radius: var(--gadget-radius-s);
-  padding: calc(var(--gadget-space-unit) * 1.5) calc(var(--gadget-space-unit) * 3);
+  color: var(--gomu-color-text);
+  background: var(--gomu-color-surface);
+  border: 1px solid var(--gomu-color-border);
+  border-radius: var(--gomu-radius-s);
+  padding: calc(var(--gomu-space-unit) * 1.5) calc(var(--gomu-space-unit) * 3);
   cursor: pointer;
 }
 
-.gadget-btn:hover {
+.gomu-btn:hover {
   filter: brightness(0.97);
 }
 
-.gadget-btn--primary {
-  background: var(--gadget-color-primary);
-  border-color: var(--gadget-color-primary);
-  color: var(--gadget-color-primary-text);
+.gomu-btn--primary {
+  background: var(--gomu-color-primary);
+  border-color: var(--gomu-color-primary);
+  color: var(--gomu-color-primary-text);
 }
 
-.gadget-btn--danger {
-  color: var(--gadget-color-danger);
-  border-color: var(--gadget-color-danger);
+.gomu-btn--danger {
+  color: var(--gomu-color-danger);
+  border-color: var(--gomu-color-danger);
   background: transparent;
 }
 
-.gadget-btn[data-gadget-armed] {
-  background: var(--gadget-color-danger);
-  border-color: var(--gadget-color-danger);
-  color: var(--gadget-color-primary-text);
+.gomu-btn[data-gomu-armed] {
+  background: var(--gomu-color-danger);
+  border-color: var(--gomu-color-danger);
+  color: var(--gomu-color-primary-text);
 }
 
-.gadget-btn:disabled {
+.gomu-btn:disabled {
   opacity: 0.5;
   cursor: default;
 }
 
-.gadget-root :focus-visible {
-  outline: 2px solid var(--gadget-color-primary);
+.gomu-root :focus-visible {
+  outline: 2px solid var(--gomu-color-primary);
   outline-offset: 1px;
 }
 
-.gadget-input {
+.gomu-input {
   font: inherit;
-  color: var(--gadget-color-text);
-  background: var(--gadget-color-bg);
-  border: 1px solid var(--gadget-color-border);
-  border-radius: var(--gadget-radius-s);
-  padding: calc(var(--gadget-space-unit) * 1.5) calc(var(--gadget-space-unit) * 2.5);
+  color: var(--gomu-color-text);
+  background: var(--gomu-color-bg);
+  border: 1px solid var(--gomu-color-border);
+  border-radius: var(--gomu-radius-s);
+  padding: calc(var(--gomu-space-unit) * 1.5) calc(var(--gomu-space-unit) * 2.5);
 }
 
-.gadget-badge {
+.gomu-badge {
   display: inline-block;
-  padding: 0 calc(var(--gadget-space-unit) * 2);
+  padding: 0 calc(var(--gomu-space-unit) * 2);
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 500;
-  border: 1px solid var(--gadget-color-border);
-  color: var(--gadget-color-text-muted);
+  border: 1px solid var(--gomu-color-border);
+  color: var(--gomu-color-text-muted);
 }
 
-.gadget-badge--info {
-  color: var(--gadget-color-primary);
+.gomu-badge--info {
+  color: var(--gomu-color-primary);
   border-color: currentcolor;
 }
 
-.gadget-badge--success {
-  color: var(--gadget-color-success);
+.gomu-badge--success {
+  color: var(--gomu-color-success);
   border-color: currentcolor;
 }
 
-.gadget-badge--warning {
-  color: var(--gadget-color-warning);
+.gomu-badge--warning {
+  color: var(--gomu-color-warning);
   border-color: currentcolor;
 }
 
-.gadget-badge--danger {
-  color: var(--gadget-color-danger);
+.gomu-badge--danger {
+  color: var(--gomu-color-danger);
   border-color: currentcolor;
 }
 
@@ -162,128 +162,128 @@ body {
  * at a fixed height and with its message clipped to a single line, so the
  * widget's height is identical whether or not something is loading — a host
  * iframe sized from our size-changed reports must not jump mid-call. */
-.gadget-statusbar {
+.gomu-statusbar {
   display: flex;
   align-items: center;
   font-size: 0.8125rem;
-  padding: calc(var(--gadget-space-unit) * 2) calc(var(--gadget-space-unit) * 4);
-  border-top: 1px solid var(--gadget-color-border);
+  padding: calc(var(--gomu-space-unit) * 2) calc(var(--gomu-space-unit) * 4);
+  border-top: 1px solid var(--gomu-color-border);
 }
 
 /* Zero-width strut: holds the bar at exactly one line while the message is
  * hidden, at whatever font scale the host imposes. */
-.gadget-statusbar::before {
+.gomu-statusbar::before {
   content: "";
   width: 0;
   height: 1.45em;
 }
 
-.gadget-status {
-  color: var(--gadget-color-text-muted);
+.gomu-status {
+  color: var(--gomu-color-text-muted);
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.gadget-status--error {
-  color: var(--gadget-color-danger);
+.gomu-status--error {
+  color: var(--gomu-color-danger);
 }
 
-.gadget-status--success {
-  color: var(--gadget-color-success);
+.gomu-status--success {
+  color: var(--gomu-color-success);
 }
 
-.gadget-status--loading {
-  color: var(--gadget-color-text-muted);
+.gomu-status--loading {
+  color: var(--gomu-color-text-muted);
 }
 
-.gadget-status--loading::before {
+.gomu-status--loading::before {
   content: "";
   display: inline-block;
   width: 0.75em;
   height: 0.75em;
-  margin-inline-end: calc(var(--gadget-space-unit) * 2);
+  margin-inline-end: calc(var(--gomu-space-unit) * 2);
   border: 2px solid currentcolor;
   border-top-color: transparent;
   border-radius: 50%;
-  animation: gadget-spin 0.7s linear infinite;
+  animation: gomu-spin 0.7s linear infinite;
   vertical-align: -0.1em;
 }
 
-@keyframes gadget-spin {
+@keyframes gomu-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-.gadget-empty {
-  padding: calc(var(--gadget-space-unit) * 8) calc(var(--gadget-space-unit) * 4);
+.gomu-empty {
+  padding: calc(var(--gomu-space-unit) * 8) calc(var(--gomu-space-unit) * 4);
   text-align: center;
-  color: var(--gadget-color-text-muted);
+  color: var(--gomu-color-text-muted);
 }
 
-.gadget-empty h3 {
-  margin: 0 0 calc(var(--gadget-space-unit) * 1);
+.gomu-empty h3 {
+  margin: 0 0 calc(var(--gomu-space-unit) * 1);
   font-size: 0.9375rem;
-  color: var(--gadget-color-text);
+  color: var(--gomu-color-text);
 }
 
-.gadget-empty p {
+.gomu-empty p {
   margin: 0;
 }
 
-.gadget-link {
+.gomu-link {
   background: none;
   border: none;
   padding: 0;
   font: inherit;
-  color: var(--gadget-color-primary);
+  color: var(--gomu-color-primary);
   text-decoration: underline;
   cursor: pointer;
 }
 
 /* Brand: application logo/name, first item in the widget toolbar. */
-.gadget-brand {
+.gomu-brand {
   display: flex;
   align-items: center;
-  gap: calc(var(--gadget-space-unit) * 2);
+  gap: calc(var(--gomu-space-unit) * 2);
   font-size: 0.8125rem;
-  color: var(--gadget-color-text-muted);
+  color: var(--gomu-color-text-muted);
   min-width: 0;
 }
 
-.gadget-brand-logo {
+.gomu-brand-logo {
   display: inline-flex;
   align-items: center;
   flex: none;
   height: 1.25rem;
 }
 
-.gadget-brand-logo > svg,
-img.gadget-brand-logo {
+.gomu-brand-logo > svg,
+img.gomu-brand-logo {
   height: 1.25rem;
   width: auto;
   max-width: 8rem;
 }
 
-.gadget-brand-name {
+.gomu-brand-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.gadget-brand--link {
+.gomu-brand--link {
   background: none;
   border: none;
   padding: 0;
   font: inherit;
-  color: var(--gadget-color-text-muted);
+  color: var(--gomu-color-text-muted);
   cursor: pointer;
 }
 
-.gadget-brand--link:hover .gadget-brand-name {
-  color: var(--gadget-color-text);
+.gomu-brand--link:hover .gomu-brand-name {
+  color: var(--gomu-color-text);
   text-decoration: underline;
 }
 
@@ -297,7 +297,7 @@ img.gadget-brand-logo {
  * header already names the month. Clipped rather than hidden, since
  * display:none and visibility:hidden take it out of the accessibility tree
  * along with the layout. */
-.gadget-sr-only {
+.gomu-sr-only {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -309,31 +309,31 @@ img.gadget-brand-logo {
   border: 0;
 }
 
-@container gadget (max-width: 34rem) {
-  .gadget-toolbar {
-    gap: calc(var(--gadget-space-unit) * 2);
-    padding: calc(var(--gadget-space-unit) * 3);
+@container gomu (max-width: 34rem) {
+  .gomu-toolbar {
+    gap: calc(var(--gomu-space-unit) * 2);
+    padding: calc(var(--gomu-space-unit) * 3);
   }
 
   /* Its own row: sharing one with the title leaves neither enough to read. */
-  .gadget-filter {
+  .gomu-filter {
     flex-basis: 100%;
   }
 
   /* Bulk actions are the widest thing the toolbar can hold, and they appear
    * only once rows are selected — giving them a row of their own keeps that
    * appearance from reflowing everything above them. */
-  .gadget-bulk {
+  .gomu-bulk {
     flex: 1 1 100%;
     flex-wrap: wrap;
   }
 
-  .gadget-statusbar,
-  .gadget-empty {
-    padding-inline: calc(var(--gadget-space-unit) * 3);
+  .gomu-statusbar,
+  .gomu-empty {
+    padding-inline: calc(var(--gomu-space-unit) * 3);
   }
 
-  .gadget-empty {
-    padding-block: calc(var(--gadget-space-unit) * 6);
+  .gomu-empty {
+    padding-block: calc(var(--gomu-space-unit) * 6);
   }
 }

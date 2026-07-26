@@ -1,40 +1,40 @@
 /* Card and CardList styling. Cards are self-contained blocks; the CardList
  * lays them out as a horizontally scrolling strip (carousel) inside the
- * shared .gadget-card chrome, so a collection fits any chat-pane width. */
+ * shared .gomu-card chrome, so a collection fits any chat-pane width. */
 
-.gadget-card-host {
-  padding: calc(var(--gadget-space-unit) * 4);
+.gomu-card-host {
+  padding: calc(var(--gomu-space-unit) * 4);
 }
 
-.gadget-carousel {
+.gomu-carousel {
   position: relative;
 }
 
 /* min-width:0 keeps the strip from giving the document an intrinsic width:
  * the cards overflow horizontally inside it instead of widening the frame. */
-.gadget-card-strip {
+.gomu-card-strip {
   display: flex;
   min-width: 0;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scroll-behavior: smooth;
-  gap: calc(var(--gadget-space-unit) * 3);
-  padding: calc(var(--gadget-space-unit) * 4);
+  gap: calc(var(--gomu-space-unit) * 3);
+  padding: calc(var(--gomu-space-unit) * 4);
   /* The strip is driven by swipe, drag and the nav controls; its scrollbar
    * would only eat vertical space in an already short widget. */
   scrollbar-width: none;
 }
 
-.gadget-card-strip::-webkit-scrollbar {
+.gomu-card-strip::-webkit-scrollbar {
   display: none;
 }
 
 /* Drag-to-swipe: grab affordance only while the strip actually scrolls. */
-.gadget-card-strip--scrollable {
+.gomu-card-strip--scrollable {
   cursor: grab;
 }
 
-.gadget-card-strip--dragging {
+.gomu-card-strip--dragging {
   cursor: grabbing;
   /* Follow the pointer frame by frame instead of animating to each position. */
   scroll-behavior: auto;
@@ -44,50 +44,50 @@
 /* No scroll-snap: when the total overflow is smaller than one card pitch the
  * only reachable snap position is the start, so the browser pulls every
  * programmatic scroll straight back and the next control appears dead. */
-.gadget-card-strip > .gadget-card-item {
+.gomu-card-strip > .gomu-card-item {
   /* Never wider than the strip itself: in a narrow pane one card fills the
    * width exactly, instead of a fixed 17rem card hanging over the edge with
    * its values clipped and no way to scroll the tail into view. */
-  flex: 0 0 min(var(--gadget-card-width), 100%);
+  flex: 0 0 min(var(--gomu-card-width), 100%);
 }
 
 /* Tail tile of a LoadMore strip. Narrower than a card and dashed, so it reads
  * as the end of the run rather than another record in it. */
-.gadget-card-more {
+.gomu-card-more {
   flex: 0 0 min(9rem, 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: calc(var(--gadget-space-unit) * 1);
+  gap: calc(var(--gomu-space-unit) * 1);
   font: inherit;
-  color: var(--gadget-color-text-muted);
+  color: var(--gomu-color-text-muted);
   background: none;
-  border: 1px dashed var(--gadget-color-border);
-  border-radius: var(--gadget-radius-m);
-  padding: calc(var(--gadget-space-unit) * 3.5);
+  border: 1px dashed var(--gomu-color-border);
+  border-radius: var(--gomu-radius-m);
+  padding: calc(var(--gomu-space-unit) * 3.5);
   cursor: pointer;
 }
 
-.gadget-card-more:hover:not(:disabled) {
-  border-color: var(--gadget-color-primary);
+.gomu-card-more:hover:not(:disabled) {
+  border-color: var(--gomu-color-primary);
 }
 
-.gadget-card-more:disabled {
+.gomu-card-more:disabled {
   opacity: 0.5;
   cursor: default;
 }
 
-.gadget-card-more-label {
+.gomu-card-more-label {
   font-weight: 600;
-  color: var(--gadget-color-primary);
+  color: var(--gomu-color-primary);
 }
 
-.gadget-card-more-count {
+.gomu-card-more-count {
   font-size: 0.8125rem;
 }
 
-.gadget-carousel-nav {
+.gomu-carousel-nav {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
@@ -95,101 +95,101 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: calc(var(--gadget-space-unit) * 7);
-  height: calc(var(--gadget-space-unit) * 7);
+  width: calc(var(--gomu-space-unit) * 7);
+  height: calc(var(--gomu-space-unit) * 7);
   padding: 0;
   font-size: 0.875rem;
   line-height: 1;
   border-radius: 50%;
-  background: var(--gadget-color-bg);
+  background: var(--gomu-color-bg);
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
 }
 
-.gadget-carousel-nav[data-gadget-scroll="prev"] {
-  inset-inline-start: calc(var(--gadget-space-unit) * 1);
+.gomu-carousel-nav[data-gomu-scroll="prev"] {
+  inset-inline-start: calc(var(--gomu-space-unit) * 1);
 }
 
-.gadget-carousel-nav[data-gadget-scroll="next"] {
-  inset-inline-end: calc(var(--gadget-space-unit) * 1);
+.gomu-carousel-nav[data-gomu-scroll="next"] {
+  inset-inline-end: calc(var(--gomu-space-unit) * 1);
 }
 
 /* Touch hosts swipe; the arrows only get in the way there. */
 @media (hover: none) {
-  .gadget-carousel-nav {
+  .gomu-carousel-nav {
     display: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gadget-card-strip {
+  .gomu-card-strip {
     scroll-behavior: auto;
   }
 }
 
 /* A card is three stacked sections — header, content, footer — separated by
- * one rhythm. --gadget-card-spacing is that rhythm: it is both the gap
+ * one rhythm. --gomu-card-spacing is that rhythm: it is both the gap
  * between sections and their inset, so a section can be padded edge to edge
  * (or run edge to edge) without going out of step with the ones above it. */
-.gadget-card-item {
-  --gadget-card-spacing: calc(var(--gadget-space-unit) * 3.5);
+.gomu-card-item {
+  --gomu-card-spacing: calc(var(--gomu-space-unit) * 3.5);
   display: flex;
   flex-direction: column;
-  gap: var(--gadget-card-spacing);
-  border: 1px solid var(--gadget-color-border);
-  border-radius: var(--gadget-radius-m);
-  background: var(--gadget-color-bg);
-  padding-block: var(--gadget-card-spacing);
+  gap: var(--gomu-card-spacing);
+  border: 1px solid var(--gomu-color-border);
+  border-radius: var(--gomu-radius-m);
+  background: var(--gomu-color-bg);
+  padding-block: var(--gomu-card-spacing);
 }
 
 /* The inset lives on the sections, not the card, so a section that wants the
  * full width has it. */
-.gadget-card-item-header,
-.gadget-card-content,
-.gadget-card-item-footer {
-  padding-inline: var(--gadget-card-spacing);
+.gomu-card-item-header,
+.gomu-card-content,
+.gomu-card-item-footer {
+  padding-inline: var(--gomu-card-spacing);
 }
 
-.gadget-card-item-header {
+.gomu-card-item-header {
   display: flex;
   align-items: flex-start;
-  gap: calc(var(--gadget-space-unit) * 2);
+  gap: calc(var(--gomu-space-unit) * 2);
 }
 
-.gadget-card-heading {
+.gomu-card-heading {
   min-width: 0;
   margin-inline-end: auto;
 }
 
-.gadget-card-title {
+.gomu-card-title {
   font-weight: 600;
   font-size: 0.9375rem;
   overflow-wrap: anywhere;
 }
 
-.gadget-card-description {
-  color: var(--gadget-color-text-muted);
+.gomu-card-description {
+  color: var(--gomu-color-text-muted);
   font-size: 0.8125rem;
   overflow-wrap: anywhere;
 }
 
 /* The header's single end slot: a status badge or a button. */
-.gadget-card-action {
+.gomu-card-action {
   flex: none;
 }
 
-.gadget-card-select {
+.gomu-card-select {
   flex: none;
-  margin-top: calc(var(--gadget-space-unit) * 0.5);
+  margin-top: calc(var(--gomu-space-unit) * 0.5);
 }
 
-.gadget-card-content {
+.gomu-card-content {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--gadget-space-unit) * 3);
+  gap: calc(var(--gomu-space-unit) * 3);
   min-width: 0;
 }
 
-.gadget-card-text {
+.gomu-card-text {
   margin: 0;
   font-size: 0.875rem;
   overflow-wrap: anywhere;
@@ -197,69 +197,69 @@
 
 /* The detail list is the shared Descriptions block; inside a card the section
  * already carries the inset, and one column is all a card's width allows. */
-.gadget-card-items {
+.gomu-card-items {
   padding: 0;
-  gap: calc(var(--gadget-space-unit) * 2);
+  gap: calc(var(--gomu-space-unit) * 2);
 }
 
-.gadget-card-item-footer {
+.gomu-card-item-footer {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: calc(var(--gadget-space-unit) * 2);
+  gap: calc(var(--gomu-space-unit) * 2);
   /* Footers line up across a row of cards of unequal height. */
   margin-top: auto;
 }
 
 /* Only when something precedes it: a card whose footer follows the header
  * directly reads as one block, and a rule there would cut it in half. */
-.gadget-card-content + .gadget-card-item-footer {
-  border-top: 1px solid var(--gadget-color-border);
-  padding-top: var(--gadget-card-spacing);
+.gomu-card-content + .gomu-card-item-footer {
+  border-top: 1px solid var(--gomu-color-border);
+  padding-top: var(--gomu-card-spacing);
 }
 
-.gadget-card-note {
-  color: var(--gadget-color-text-muted);
+.gomu-card-note {
+  color: var(--gomu-color-text-muted);
   font-size: 0.8125rem;
   margin-inline-end: auto;
   overflow-wrap: anywhere;
 }
 
-.gadget-card-item-actions {
+.gomu-card-item-actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: calc(var(--gadget-space-unit) * 2);
+  gap: calc(var(--gomu-space-unit) * 2);
   margin-inline-start: auto;
 }
 
-.gadget-card-item-actions .gadget-btn {
-  padding: calc(var(--gadget-space-unit) * 0.75) calc(var(--gadget-space-unit) * 2.5);
+.gomu-card-item-actions .gomu-btn {
+  padding: calc(var(--gomu-space-unit) * 0.75) calc(var(--gomu-space-unit) * 2.5);
   font-size: 0.8125rem;
 }
 
 /* Compact tier: give the cards their room back from the chrome. The strip
  * needs no layout change — a card is already sized to the strip, so one fills
  * the pane and the rest stay a swipe away. */
-@container gadget (max-width: 34rem) {
-  .gadget-card-host,
-  .gadget-card-strip {
-    padding: calc(var(--gadget-space-unit) * 3);
+@container gomu (max-width: 34rem) {
+  .gomu-card-host,
+  .gomu-card-strip {
+    padding: calc(var(--gomu-space-unit) * 3);
   }
 
-  .gadget-card-item {
-    --gadget-card-spacing: calc(var(--gadget-space-unit) * 3);
+  .gomu-card-item {
+    --gomu-card-spacing: calc(var(--gomu-space-unit) * 3);
   }
 }
 
-.gadget-cards-selectall {
+.gomu-cards-selectall {
   display: inline-flex;
   align-items: center;
-  gap: calc(var(--gadget-space-unit) * 1.5);
+  gap: calc(var(--gomu-space-unit) * 1.5);
   font-size: 0.8125rem;
-  color: var(--gadget-color-text-muted);
+  color: var(--gomu-color-text-muted);
 }
 
-.gadget-sort-select {
-  padding-block: calc(var(--gadget-space-unit) * 1);
+.gomu-sort-select {
+  padding-block: calc(var(--gomu-space-unit) * 1);
 }

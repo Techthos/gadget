@@ -8,7 +8,7 @@
   frame as `Choice`, with the same terminal decision and re-arm-on-error
   behaviour), while a `Form`'s `FDate` and the new `FDateRange` open it in a
   popover over their native date inputs. The inputs survive the upgrade as the
-  value holders, exactly as a `<select>` does under the gadget dropdown, so
+  value holders, exactly as a `<select>` does under the gomukit dropdown, so
   validation and submitted values are unchanged and a document whose script
   never runs still has a working control.
   Dates travel as `"YYYY-MM-DD"` throughout: `Submit.ValueArg` (default
@@ -59,7 +59,7 @@
   body fields move from `[]Column` to `Descriptions`, so cards, confirmations
   and any future detail view format identically and a missing value renders as
   an em dash. A section with nothing in it is not rendered. The card's spacing
-  is one rhythm, `--gadget-card-spacing`, used as both the gap between sections
+  is one rhythm, `--gomu-card-spacing`, used as both the gap between sections
   and their inset; a footer that follows content is separated by a rule.
   `CardList` derives its sort options from the sortable `Content.Items` and
   filters across title, description, body text and item values.
@@ -96,7 +96,7 @@
   (`DescriptionItem` — `Label` plus either a record `Key`, typed and
   Intl-formatted like a table cell, or authored `Text`). No layout options: it
   takes as many columns as the widget's width allows and collapses to one in a
-  narrow pane, with the item floor in the new `--gadget-desc-min` token
+  narrow pane, with the item floor in the new `--gomu-desc-min` token
   (default `12rem`). Missing data-bound values render as an em dash.
 
 - **Table actions are menus**: an actions column now renders one `⋯` trigger
@@ -162,7 +162,7 @@ Initial scaffold:
 - Embedded TypeScript runtime: JSON-RPC postMessage bridge
   (`ui/initialize`, `tools/call`, size-changed reporting, host-context
   handling), event-delegated behaviors, Intl formatting.
-- Theming: `--gadget-*` token system defaulting to host-injected variables;
+- Theming: `--gomu-*` token system defaulting to host-injected variables;
   `theme.Theme` override struct; dark mode via host theme +
   `prefers-color-scheme` fallback.
 - `gosdk` adapter for `modelcontextprotocol/go-sdk` (extension capability,

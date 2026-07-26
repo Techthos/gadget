@@ -1,7 +1,7 @@
 # Theming
 
-gadget uses a two-layer design-token system as CSS custom properties,
-prefixed `--gadget-*`, scoped under `.gadget-root`.
+gomukit uses a two-layer design-token system as CSS custom properties,
+prefixed `--gomu-*`, scoped under `.gomu-root`.
 
 ## How a color is resolved
 
@@ -9,7 +9,7 @@ Every semantic token defaults to the **host-injected MCP Apps variable**
 with a library fallback:
 
 ```css
---gadget-color-text: var(--color-text-primary, var(--gadget-p-gray-900));
+--gomu-color-text: var(--color-text-primary, var(--gomu-p-gray-900));
 ```
 
 MCP Apps hosts (Claude, ChatGPT, …) deliver `hostContext.styles.variables`
@@ -20,7 +20,7 @@ host's look** without configuration, and still render sensibly with no host.
 
 ## Dark mode
 
-- The host's `theme: "light" | "dark"` sets `data-gadget-theme` on the root
+- The host's `theme: "light" | "dark"` sets `data-gomu-theme` on the root
   element; token overrides react to it.
 - Without a host theme, `@media (prefers-color-scheme: dark)` provides the
   fallback.
@@ -38,7 +38,7 @@ plus an 8px gutter, so the frame reads as a panel of its own. `Transparent`
 removes both, leaving only the widget's card on the host surface:
 
 ```go
-table := &gadget.Table{ /* ... */, Theme: &theme.Theme{Transparent: true}}
+table := &gomukit.Table{ /* ... */, Theme: &theme.Theme{Transparent: true}}
 ```
 
 Card, tile, input and dropdown fills are untouched, so text contrast never
@@ -52,7 +52,7 @@ Three facts govern whether this actually looks embedded:
    only breaks when something paints: the widget's page fill, or the host.
 2. **The host must leave the `<iframe>` element unpainted.** The UA default
    border is `2px inset`, so the host needs `border: 0` and no `background`.
-   gadget cannot influence this from inside.
+   gomukit cannot influence this from inside.
 3. **The root color schemes must match.** Per css-color-adjust, when the
    embedded root element's used color scheme differs from the `<iframe>`
    element's, the UA replaces the transparent canvas with an opaque one in the
@@ -67,7 +67,7 @@ What transparency does **not** buy, because an iframe is still a nested
 browsing context:
 
 - Popovers cannot escape the frame. Dropdown panels, tooltips and focus rings
-  are clipped by the iframe box; panels are anchored on `.gadget-root` and
+  are clipped by the iframe box; panels are anchored on `.gomu-root` and
   flipped to stay inside it.
 - The frame rectangle keeps swallowing pointer events over transparent areas.
 - Text selection cannot span host and widget, and `position: fixed` resolves
@@ -82,7 +82,7 @@ browsing context:
 ## Overriding tokens: the Theme struct
 
 ```go
-import "github.com/techthos/gadget/theme"
+import "github.com/techthos/gomukit/theme"
 
 t := &theme.Theme{
     ColorPrimary: "#7c3aed",
@@ -90,35 +90,35 @@ t := &theme.Theme{
     FontFamily:   `"Inter", sans-serif`,
     SpaceUnit:    "0.3rem", // roomier layout
     Extra: map[string]string{
-        "--gadget-table-stripe": "rgb(0 0 0 / 4%)",
+        "--gomu-table-stripe": "rgb(0 0 0 / 4%)",
     },
 }
-table := &gadget.Table{ /* ... */, Theme: t}
+table := &gomukit.Table{ /* ... */, Theme: t}
 ```
 
-`Theme.CSS()` emits a `.gadget-root { … }` block (preceded by a `:root { … }`
+`Theme.CSS()` emits a `.gomu-root { … }` block (preceded by a `:root { … }`
 block for the document-level page tokens) appended **after** the base
 stylesheet: non-empty fields win over the defaults (including host values);
 empty fields keep host-aware behavior. `Extra` keys must start with
-`--gadget-`. Values are validated against CSS/HTML breakout
+`--gomu-`. Values are validated against CSS/HTML breakout
 (`Theme.Validate()`).
 
 ## Token reference (semantic layer)
 
 | Token | Purpose | Host variable consulted |
 |---|---|---|
-| `--gadget-color-bg` | cards, controls, overlays | `--color-background-primary` |
-| `--gadget-color-page` | page fill behind the widget (defaults to `--gadget-color-bg`; `transparent` hides the frame) | — |
-| `--gadget-color-surface` | headers, inputs, cards | `--color-background-secondary` |
-| `--gadget-color-text` | primary text | `--color-text-primary` |
-| `--gadget-color-text-muted` | secondary text | `--color-text-secondary` |
-| `--gadget-color-border` | borders | `--color-border-primary` |
-| `--gadget-color-primary` | accent / primary buttons | `--color-text-accent` |
-| `--gadget-color-danger` | destructive actions, errors | `--color-text-danger` |
-| `--gadget-color-success` | success states | `--color-text-success` |
-| `--gadget-color-warning` | warnings | `--color-text-warning` |
-| `--gadget-font` / `--gadget-font-mono` | typography | `--font-sans` / `--font-mono` |
-| `--gadget-radius-s/m/l` | corner radii | `--border-radius-sm/md/lg` |
-| `--gadget-space-unit` | base spacing unit (0.25rem) | — |
-| `--gadget-page-pad` | gutter between widget and iframe edge (8px; set on `:root`) | — |
-| `--gadget-card-width` | width of one card in the CardList carousel (17rem) | — |
+| `--gomu-color-bg` | cards, controls, overlays | `--color-background-primary` |
+| `--gomu-color-page` | page fill behind the widget (defaults to `--gomu-color-bg`; `transparent` hides the frame) | — |
+| `--gomu-color-surface` | headers, inputs, cards | `--color-background-secondary` |
+| `--gomu-color-text` | primary text | `--color-text-primary` |
+| `--gomu-color-text-muted` | secondary text | `--color-text-secondary` |
+| `--gomu-color-border` | borders | `--color-border-primary` |
+| `--gomu-color-primary` | accent / primary buttons | `--color-text-accent` |
+| `--gomu-color-danger` | destructive actions, errors | `--color-text-danger` |
+| `--gomu-color-success` | success states | `--color-text-success` |
+| `--gomu-color-warning` | warnings | `--color-text-warning` |
+| `--gomu-font` / `--gomu-font-mono` | typography | `--font-sans` / `--font-mono` |
+| `--gomu-radius-s/m/l` | corner radii | `--border-radius-sm/md/lg` |
+| `--gomu-space-unit` | base spacing unit (0.25rem) | — |
+| `--gomu-page-pad` | gutter between widget and iframe edge (8px; set on `:root`) | — |
+| `--gomu-card-width` | width of one card in the CardList carousel (17rem) | — |

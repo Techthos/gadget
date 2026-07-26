@@ -1,4 +1,4 @@
-package gadget
+package gomukit
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 
-	"github.com/techthos/gadget/internal/htmlx"
+	"github.com/techthos/gomukit/internal/htmlx"
 )
 
 // statusNode renders the shared, runtime-driven status/announcement region.
@@ -16,8 +16,8 @@ import (
 // or not a message is showing, so the widget does not resize (and the host
 // iframe does not jump) when work starts or finishes.
 func statusNode() g.Node {
-	return h.Div(h.Class("gadget-statusbar"),
-		h.Div(h.Class("gadget-status"), htmlx.Data("status", ""), g.Attr("hidden"), h.Aria("live", "polite")),
+	return h.Div(h.Class("gomu-statusbar"),
+		h.Div(h.Class("gomu-status"), htmlx.Data("status", ""), g.Attr("hidden"), h.Aria("live", "polite")),
 	)
 }
 
@@ -29,7 +29,7 @@ func emptyStateNode(e EmptyState) g.Node {
 		title = "No data"
 	}
 	nodes := []g.Node{
-		h.Class("gadget-empty"),
+		h.Class("gomu-empty"),
 		htmlx.Data("empty", ""),
 		g.Attr("hidden"),
 		h.H3(g.Text(title)),
@@ -44,24 +44,24 @@ func emptyStateNode(e EmptyState) g.Node {
 // enables it. When the widget offers a choice of page sizes, the chooser leads
 // the bar; the runtime keeps the page size it reports in sync with it.
 func paginationNode(sizes []int, current int) g.Node {
-	nodes := []g.Node{h.Class("gadget-pagination"), htmlx.Data("pagination", ""), g.Attr("hidden")}
+	nodes := []g.Node{h.Class("gomu-pagination"), htmlx.Data("pagination", ""), g.Attr("hidden")}
 	if len(sizes) > 0 {
 		nodes = append(nodes, pageSizeNode(sizes, current))
 	}
 	nodes = append(nodes,
-		h.Button(h.Type("button"), h.Class("gadget-btn"), htmlx.Data("page", "prev"), g.Text("Previous")),
-		h.Span(h.Class("gadget-page-info"), htmlx.Data("page-info", "")),
-		h.Button(h.Type("button"), h.Class("gadget-btn"), htmlx.Data("page", "next"), g.Text("Next")),
+		h.Button(h.Type("button"), h.Class("gomu-btn"), htmlx.Data("page", "prev"), g.Text("Previous")),
+		h.Span(h.Class("gomu-page-info"), htmlx.Data("page-info", "")),
+		h.Button(h.Type("button"), h.Class("gomu-btn"), htmlx.Data("page", "next"), g.Text("Next")),
 	)
 	return h.Div(nodes...)
 }
 
 // pageSizeNode renders the per-page chooser. The runtime upgrades the select
-// into a gadget dropdown, so the caption is a span rather than a label: it
+// into a gomukit dropdown, so the caption is a span rather than a label: it
 // names the control for the eye, while the select carries the accessible name.
 func pageSizeNode(sizes []int, current int) g.Node {
 	opts := []g.Node{
-		h.Class("gadget-input gadget-page-size-select"),
+		h.Class("gomu-input gomu-page-size-select"),
 		htmlx.Data("page-size", ""),
 		h.Aria("label", "Items per page"),
 	}
@@ -73,7 +73,7 @@ func pageSizeNode(sizes []int, current int) g.Node {
 		}
 		opts = append(opts, h.Option(attrs...))
 	}
-	return h.Div(h.Class("gadget-page-size"),
+	return h.Div(h.Class("gomu-page-size"),
 		h.Span(g.Text("Per page")),
 		h.Select(opts...),
 	)

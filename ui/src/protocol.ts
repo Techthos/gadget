@@ -6,7 +6,7 @@ import spec from "./spec-constants.json";
 export const SPEC_VERSION: string = spec.specVersion;
 export const M = spec.methods;
 
-export const RUNTIME_NAME = "gadget";
+export const RUNTIME_NAME = "gomukit";
 export const RUNTIME_VERSION = "0.1.0";
 
 // --- JSON-RPC 2.0 ---

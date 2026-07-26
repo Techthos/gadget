@@ -1,11 +1,11 @@
-package gadget
+package gomukit
 
 import (
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 
-	"github.com/techthos/gadget/internal/assets"
-	"github.com/techthos/gadget/internal/htmlx"
+	"github.com/techthos/gomukit/internal/assets"
+	"github.com/techthos/gomukit/internal/htmlx"
 )
 
 // Document implements Widget. The question and the buttons are authored, so
@@ -33,7 +33,7 @@ func (d *DatePicker) Document() (string, error) {
 }
 
 func (d *DatePicker) shell() g.Node {
-	chrome := []g.Node{h.Class("gadget-card gadget-datepicker gadget-datepicker--" + d.modeName())}
+	chrome := []g.Node{h.Class("gomu-card gomu-datepicker gomu-datepicker--" + d.modeName())}
 	if toolbar := d.toolbar(); toolbar != nil {
 		chrome = append(chrome, toolbar)
 	}
@@ -41,16 +41,16 @@ func (d *DatePicker) shell() g.Node {
 		d.promptNode(),
 		// Filled by the runtime from rows[0]; out of the layout until there is
 		// a record to describe.
-		g.If(!d.Details.empty(), h.Dl(h.Class("gadget-descriptions"), htmlx.Data("descriptions", ""), g.Attr("hidden"))),
-		h.Div(h.Class("gadget-datepicker-body"),
-			h.Div(h.Class("gadget-cal"), htmlx.Data("calendar", ""), h.Aria("labelledby", "gadget-datepicker-question")),
+		g.If(!d.Details.empty(), h.Dl(h.Class("gomu-descriptions"), htmlx.Data("descriptions", ""), g.Attr("hidden"))),
+		h.Div(h.Class("gomu-datepicker-body"),
+			h.Div(h.Class("gomu-cal"), htmlx.Data("calendar", ""), h.Aria("labelledby", "gomu-datepicker-question")),
 		),
-		h.P(h.Class("gadget-datepicker-summary"), htmlx.Data("summary", ""), g.Attr("hidden"), h.Aria("live", "polite")),
+		h.P(h.Class("gomu-datepicker-summary"), htmlx.Data("summary", ""), g.Attr("hidden"), h.Aria("live", "polite")),
 		d.decisionNode(),
-		h.P(h.Class("gadget-datepicker-outcome"), htmlx.Data("outcome", ""), g.Attr("hidden"), h.Aria("live", "polite")),
+		h.P(h.Class("gomu-datepicker-outcome"), htmlx.Data("outcome", ""), g.Attr("hidden"), h.Aria("live", "polite")),
 		statusNode(),
 	)
-	return h.Div(h.Class("gadget-root"), htmlx.Data("widget", "datepicker"),
+	return h.Div(h.Class("gomu-root"), htmlx.Data("widget", "datepicker"),
 		h.Div(chrome...),
 	)
 }
@@ -61,21 +61,21 @@ func (d *DatePicker) toolbar() g.Node {
 		items = append(items, brand)
 	}
 	if d.Title != "" {
-		items = append(items, h.H2(h.Class("gadget-title"), g.Text(d.Title)))
+		items = append(items, h.H2(h.Class("gomu-title"), g.Text(d.Title)))
 	}
 	if len(items) == 0 {
 		return nil
 	}
-	return h.Div(append([]g.Node{h.Class("gadget-toolbar")}, items...)...)
+	return h.Div(append([]g.Node{h.Class("gomu-toolbar")}, items...)...)
 }
 
 func (d *DatePicker) promptNode() g.Node {
 	nodes := []g.Node{
-		h.Class("gadget-datepicker-prompt"),
-		h.H3(h.Class("gadget-datepicker-question"), h.ID("gadget-datepicker-question"), g.Text(d.Prompt)),
+		h.Class("gomu-datepicker-prompt"),
+		h.H3(h.Class("gomu-datepicker-question"), h.ID("gomu-datepicker-question"), g.Text(d.Prompt)),
 	}
 	if d.Body != "" {
-		nodes = append(nodes, h.P(h.Class("gadget-datepicker-lede"), g.Text(d.Body)))
+		nodes = append(nodes, h.P(h.Class("gomu-datepicker-lede"), g.Text(d.Body)))
 	}
 	return h.Div(nodes...)
 }
@@ -85,18 +85,18 @@ func (d *DatePicker) promptNode() g.Node {
 // a call it cannot make. Cancel leads, so the committing button is not where
 // the thumb lands first.
 func (d *DatePicker) decisionNode() g.Node {
-	nodes := []g.Node{h.Class("gadget-datepicker-actions"), htmlx.Data("decision", "")}
+	nodes := []g.Node{h.Class("gomu-datepicker-actions"), htmlx.Data("decision", "")}
 	if d.Cancel != nil {
 		nodes = append(nodes, h.Button(
 			h.Type("button"),
-			h.Class("gadget-btn"),
+			h.Class("gomu-btn"),
 			htmlx.Data("cancel", ""),
 			g.Text(d.cancelLabel()),
 		))
 	}
 	return h.Div(append(nodes, h.Button(
 		h.Type("button"),
-		h.Class("gadget-btn gadget-btn--"+string(d.submitVariant())),
+		h.Class("gomu-btn gomu-btn--"+string(d.submitVariant())),
 		htmlx.Data("submit", ""),
 		h.Disabled(),
 		g.Text(d.submitLabel()),

@@ -1,4 +1,4 @@
-package gadget
+package gomukit
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 
 	xhtml "golang.org/x/net/html"
 
-	"github.com/techthos/gadget/theme"
+	"github.com/techthos/gomukit/theme"
 )
 
 func f64(v float64) *float64 { return &v }
@@ -70,14 +70,14 @@ func TestFormGolden(t *testing.T) {
 		t.Fatalf("document does not parse: %v", err)
 	}
 	for _, want := range []string{
-		`data-gadget-widget="form"`,
-		`<form class="gadget-form" data-gadget-form`,
-		`name="name" class="gadget-input" placeholder="Full name" required minlength="2" maxlength="80" type="text"`,
-		`<textarea id="gadget-f-bio"`,
+		`data-gomu-widget="form"`,
+		`<form class="gomu-form" data-gomu-form`,
+		`name="name" class="gomu-input" placeholder="Full name" required minlength="2" maxlength="80" type="text"`,
+		`<textarea id="gomu-f-bio"`,
 		`min="0" max="150" step="1" type="number"`,
-		`<span class="gadget-check"><input type="checkbox" id="gadget-f-active" name="active" checked>`,
-		`<path class="gadget-check-tick"`,
-		`<select id="gadget-f-role"`,
+		`<span class="gomu-check"><input type="checkbox" id="gomu-f-active" name="active" checked>`,
+		`<path class="gomu-check-tick"`,
+		`<select id="gomu-f-role"`,
 		`<option value="admin"`,
 		`multiple`,
 		`type="date"`,
@@ -86,17 +86,17 @@ func TestFormGolden(t *testing.T) {
 		// control and checkValidity() agree with the grid.
 		`max="2026-01-01" type="date"`,
 		// A range is its two value holders, named after the two tool arguments.
-		`<div class="gadget-daterange" data-gadget-daterange="stay">`,
-		`name="stay" class="gadget-input gadget-daterange-start" aria-label="Stay start date"`,
-		`name="stay_until" class="gadget-input gadget-daterange-end" aria-label="Stay end date"`,
+		`<div class="gomu-daterange" data-gomu-daterange="stay">`,
+		`name="stay" class="gomu-input gomu-daterange-start" aria-label="Stay start date"`,
+		`name="stay_until" class="gomu-input gomu-daterange-end" aria-label="Stay end date"`,
 		`value="2026-08-20"`,
 		`value="2026-08-23"`,
 		`type="hidden" name="id" value="42"`,
 		`readonly`,
-		`data-gadget-error-for="name"`,
-		`data-gadget-cancel`,
+		`data-gomu-error-for="name"`,
+		`data-gomu-cancel`,
 		// Not type="submit": sandboxed hosts block native form submission.
-		`data-gadget-submit`,
+		`data-gomu-submit`,
 	} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("document missing %q", want)

@@ -7,10 +7,10 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/techthos/gadget"
-	"github.com/techthos/gadget/gosdk"
-	"github.com/techthos/gadget/theme"
-	"github.com/techthos/gadget/uispec"
+	"github.com/techthos/gomukit"
+	"github.com/techthos/gomukit/gosdk"
+	"github.com/techthos/gomukit/theme"
+	"github.com/techthos/gomukit/uispec"
 )
 
 // The gallery is the catalog half of this server: one tool per widget
@@ -31,7 +31,7 @@ type preview struct {
 	Desc   string
 	Icon   string
 	Badge  string
-	Widget gadget.Widget
+	Widget gomukit.Widget
 	// Data is the structuredContent the tool answers with. Nil means the
 	// widget needs nothing at runtime: it was fully authored in Go.
 	Data func() previewOut
@@ -112,66 +112,66 @@ func rowsOnly(rows []map[string]any) func() previewOut {
 
 // --- shared gallery pieces ---
 
-func galleryDeleteAction() gadget.Action {
-	return gadget.Action{Label: "Delete", Tool: "sandbox_delete", Variant: gadget.VariantDanger,
-		Confirm: "Really delete?", Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")}}
+func galleryDeleteAction() gomukit.Action {
+	return gomukit.Action{Label: "Delete", Tool: "sandbox_delete", Variant: gomukit.VariantDanger,
+		Confirm: "Really delete?", Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")}}
 }
 
-func galleryRowActions() gadget.Column {
-	return gadget.ActionsColumn(
-		gadget.Action{Label: "Open console", Kind: gadget.ActionLink, HrefKey: "website"},
+func galleryRowActions() gomukit.Column {
+	return gomukit.ActionsColumn(
+		gomukit.Action{Label: "Open console", Kind: gomukit.ActionLink, HrefKey: "website"},
 		// One argument read from the row, one fixed by the author.
-		gadget.Action{Label: "Send invite", Tool: "sandbox_invite",
-			Args: map[string]gadget.ArgSource{
-				"id":      gadget.FromRow("id"),
-				"channel": gadget.Static("email"),
+		gomukit.Action{Label: "Send invite", Tool: "sandbox_invite",
+			Args: map[string]gomukit.ArgSource{
+				"id":      gomukit.FromRow("id"),
+				"channel": gomukit.Static("email"),
 			}},
 		galleryDeleteAction(),
 	)
 }
 
-func galleryBulk() *gadget.SelectionConfig {
-	return &gadget.SelectionConfig{Bulk: []gadget.Action{
+func galleryBulk() *gomukit.SelectionConfig {
+	return &gomukit.SelectionConfig{Bulk: []gomukit.Action{
 		{Label: "Archive", Tool: "sandbox_archive",
-			Args: map[string]gadget.ArgSource{"ids": gadget.FromSelection("id")}},
-		{Label: "Delete", Tool: "sandbox_delete_many", Variant: gadget.VariantDanger,
-			Confirm: "Delete them?", Args: map[string]gadget.ArgSource{"ids": gadget.FromSelection("id")}},
+			Args: map[string]gomukit.ArgSource{"ids": gomukit.FromSelection("id")}},
+		{Label: "Delete", Tool: "sandbox_delete_many", Variant: gomukit.VariantDanger,
+			Confirm: "Delete them?", Args: map[string]gomukit.ArgSource{"ids": gomukit.FromSelection("id")}},
 	}}
 }
 
-func galleryCardTemplate() gadget.CardTemplate {
-	return gadget.CardTemplate{
-		Header: gadget.CardHeader{
+func galleryCardTemplate() gomukit.CardTemplate {
+	return gomukit.CardTemplate{
+		Header: gomukit.CardHeader{
 			TitleKey:       "name",
 			DescriptionKey: "email",
 			Badge:          customerStatusBadge(),
 		},
-		Content: gadget.CardContent{
-			Items: gadget.Descriptions{Items: []gadget.DescriptionItem{
-				{Label: "Balance", Key: "balance", Type: gadget.ColNumber, Format: "currency:EUR"},
-				{Label: "Joined", Key: "createdAt", Type: gadget.ColDate, Format: "relative"},
-				{Label: "Console", Key: "website", Type: gadget.ColLink,
-					Link: &gadget.LinkSpec{HrefKey: "website"}},
+		Content: gomukit.CardContent{
+			Items: gomukit.Descriptions{Items: []gomukit.DescriptionItem{
+				{Label: "Balance", Key: "balance", Type: gomukit.ColNumber, Format: "currency:EUR"},
+				{Label: "Joined", Key: "createdAt", Type: gomukit.ColDate, Format: "relative"},
+				{Label: "Console", Key: "website", Type: gomukit.ColLink,
+					Link: &gomukit.LinkSpec{HrefKey: "website"}},
 			}},
 		},
-		Footer: gadget.CardFooter{Actions: []gadget.Action{galleryDeleteAction()}},
+		Footer: gomukit.CardFooter{Actions: []gomukit.Action{galleryDeleteAction()}},
 	}
 }
 
-func galleryConfirmDetails() gadget.Descriptions {
-	return gadget.Descriptions{Items: []gadget.DescriptionItem{
+func galleryConfirmDetails() gomukit.Descriptions {
+	return gomukit.Descriptions{Items: []gomukit.DescriptionItem{
 		{Label: "User", Key: "name"},
 		{Label: "Email", Key: "email"},
-		{Label: "Balance", Key: "balance", Type: gadget.ColNumber, Format: "currency:EUR"},
-		{Label: "Member since", Key: "createdAt", Type: gadget.ColDate, Format: "date"},
-		{Label: "Status", Key: "status", Type: gadget.ColBadge, Badge: customerStatusVariants()},
-		{Label: "Profile", Type: gadget.ColLink, Link: &gadget.LinkSpec{HrefKey: "website", Text: "Open profile"}},
+		{Label: "Balance", Key: "balance", Type: gomukit.ColNumber, Format: "currency:EUR"},
+		{Label: "Member since", Key: "createdAt", Type: gomukit.ColDate, Format: "date"},
+		{Label: "Status", Key: "status", Type: gomukit.ColBadge, Badge: customerStatusVariants()},
+		{Label: "Profile", Type: gomukit.ColLink, Link: &gomukit.LinkSpec{HrefKey: "website", Text: "Open profile"}},
 		{Label: "Region", Text: "eu-central-1"},
 	}}
 }
 
-func galleryChoiceDetails() gadget.Descriptions {
-	return gadget.Descriptions{Items: []gadget.DescriptionItem{
+func galleryChoiceDetails() gomukit.Descriptions {
+	return gomukit.Descriptions{Items: []gomukit.DescriptionItem{
 		{Label: "Order", Key: "reference"},
 		{Label: "Recipient", Key: "name"},
 		{Label: "Destination", Text: "Berlin, DE"},
@@ -184,15 +184,15 @@ func galleryOrderRow() []map[string]any {
 
 // galleryShippingOptions are authored options: the same offer the scenario
 // prices at call time, fixed here so the variant renders on its own.
-func galleryShippingOptions() []gadget.ChoiceOption {
-	price := gadget.DescriptionItem{Label: "Price", Key: "price", Type: gadget.ColNumber, Format: "currency:EUR"}
-	arrives := gadget.DescriptionItem{Label: "Arrives", Key: "eta", Type: gadget.ColDate, Format: "date"}
-	return []gadget.ChoiceOption{
+func galleryShippingOptions() []gomukit.ChoiceOption {
+	price := gomukit.DescriptionItem{Label: "Price", Key: "price", Type: gomukit.ColNumber, Format: "currency:EUR"}
+	arrives := gomukit.DescriptionItem{Label: "Arrives", Key: "eta", Type: gomukit.ColDate, Format: "date"}
+	return []gomukit.ChoiceOption{
 		{
 			Value: "standard", Label: "Standard", Summary: "3 to 5 business days",
 			Body:    "Handed to the postal service tonight and tracked as far as the local depot.",
 			Bullets: []string{"Tracked to the depot", "No signature on delivery", "Insured to EUR 50"},
-			Details: gadget.Descriptions{Items: []gadget.DescriptionItem{price, arrives}},
+			Details: gomukit.Descriptions{Items: []gomukit.DescriptionItem{price, arrives}},
 			Data:    map[string]any{"price": 4.9, "eta": "2026-08-03T10:00:00Z"},
 			Default: true,
 		},
@@ -200,10 +200,10 @@ func galleryShippingOptions() []gadget.ChoiceOption {
 			Value: "express", Label: "Express", Summary: "next business day, before 12:00",
 			Body:         "Collected by courier this afternoon and delivered to the door tomorrow morning.",
 			Bullets:      []string{"Tracked end to end", "Signature required", "Insured to EUR 500"},
-			Details:      gadget.Descriptions{Items: []gadget.DescriptionItem{price, arrives}},
+			Details:      gomukit.Descriptions{Items: []gomukit.DescriptionItem{price, arrives}},
 			Data:         map[string]any{"price": 14.9, "eta": "2026-07-28T12:00:00Z"},
 			Badge:        "fastest",
-			BadgeVariant: gadget.BadgeSuccess,
+			BadgeVariant: gomukit.BadgeSuccess,
 		},
 		{
 			Value: "pickup", Label: "Depot pickup", Summary: "no depot near this address",
@@ -213,12 +213,12 @@ func galleryShippingOptions() []gadget.ChoiceOption {
 	}
 }
 
-func gallerySubmit() gadget.ChoiceSubmit {
-	return gadget.ChoiceSubmit{
+func gallerySubmit() gomukit.ChoiceSubmit {
+	return gomukit.ChoiceSubmit{
 		Tool:           "sandbox_ship",
 		Label:          "Ship it",
 		ValueArg:       "method",
-		Args:           map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+		Args:           map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")},
 		SuccessMessage: "On its way.",
 	}
 }
@@ -443,14 +443,14 @@ func galleryCatalog() []preview {
 
 // --- gallery widgets ---
 
-func galleryTable() *gadget.Table {
-	return &gadget.Table{
+func galleryTable() *gomukit.Table {
+	return &gomukit.Table{
 		URI:   "ui://preview/gallery-table",
 		Title: "Users",
-		Columns: []gadget.Column{
-			gadget.Text("name", "Name"),
-			gadget.Number("balance", "Balance", "currency:EUR"),
-			gadget.Date("createdAt", "Created", "date"),
+		Columns: []gomukit.Column{
+			gomukit.Text("name", "Name"),
+			gomukit.Number("balance", "Balance", "currency:EUR"),
+			gomukit.Date("createdAt", "Created", "date"),
 			customerStatusBadge(),
 			galleryRowActions(),
 		},
@@ -465,15 +465,15 @@ func galleryTable() *gadget.Table {
 
 // galleryTableReadonly is the one variant that ships its data baked in: the
 // document paints before any tool result arrives.
-func galleryTableReadonly() *gadget.Table {
-	return &gadget.Table{
+func galleryTableReadonly() *gomukit.Table {
+	return &gomukit.Table{
 		URI:   "ui://preview/gallery-table-readonly",
 		Title: "Users",
-		Columns: []gadget.Column{
-			gadget.Text("name", "Name"),
-			gadget.Text("email", "Email"),
-			gadget.Number("balance", "Balance", "currency:EUR"),
-			gadget.Date("createdAt", "Created", "date"),
+		Columns: []gomukit.Column{
+			gomukit.Text("name", "Name"),
+			gomukit.Text("email", "Email"),
+			gomukit.Number("balance", "Balance", "currency:EUR"),
+			gomukit.Date("createdAt", "Created", "date"),
 		},
 		InitialData: map[string]any{"rows": galleryRows()},
 		Brand:       appBrand(),
@@ -481,22 +481,22 @@ func galleryTableReadonly() *gadget.Table {
 	}
 }
 
-func galleryTableLong() *gadget.Table {
-	return &gadget.Table{
+func galleryTableLong() *gomukit.Table {
+	return &gomukit.Table{
 		URI:   "ui://preview/gallery-table-long",
 		Title: "Directory",
-		Columns: []gadget.Column{
-			gadget.Text("name", "Name"),
-			gadget.Text("email", "Email"),
-			gadget.Number("balance", "Balance", "currency:EUR"),
-			gadget.Number("seats", "Seats", "int"),
-			gadget.Date("createdAt", "Created", "date"),
+		Columns: []gomukit.Column{
+			gomukit.Text("name", "Name"),
+			gomukit.Text("email", "Email"),
+			gomukit.Number("balance", "Balance", "currency:EUR"),
+			gomukit.Number("seats", "Seats", "int"),
+			gomukit.Date("createdAt", "Created", "date"),
 			customerStatusBadge(),
-			gadget.ActionsColumn(galleryDeleteAction()),
+			gomukit.ActionsColumn(galleryDeleteAction()),
 		},
 		PageSize:    8,
 		PageSizes:   []int{8, 16, 24},
-		DefaultSort: &gadget.SortSpec{Key: "balance", Desc: true},
+		DefaultSort: &gomukit.SortSpec{Key: "balance", Desc: true},
 		Filterable:  true,
 		Selection:   galleryBulk(),
 		Brand:       appBrand(),
@@ -504,17 +504,17 @@ func galleryTableLong() *gadget.Table {
 	}
 }
 
-func galleryTableEmpty() *gadget.Table {
-	return &gadget.Table{
+func galleryTableEmpty() *gomukit.Table {
+	return &gomukit.Table{
 		URI:   "ui://preview/gallery-table-empty",
 		Title: "Users",
-		Columns: []gadget.Column{
-			gadget.Text("name", "Name"),
-			gadget.Number("balance", "Balance", "currency:EUR"),
+		Columns: []gomukit.Column{
+			gomukit.Text("name", "Name"),
+			gomukit.Number("balance", "Balance", "currency:EUR"),
 			customerStatusBadge(),
 		},
 		Filterable: true,
-		Empty: gadget.EmptyState{Title: "No users yet",
+		Empty: gomukit.EmptyState{Title: "No users yet",
 			Body: "Call preview_table_full to see the same widget with rows."},
 		Brand: appBrand(),
 		Theme: appTheme(),
@@ -524,26 +524,26 @@ func galleryTableEmpty() *gadget.Table {
 // galleryTableKeys proves the data contract is a default, not a rule: the
 // widget reads a different array key and identifies records by a different
 // field, and every action arg follows.
-func galleryTableKeys() *gadget.Table {
-	return &gadget.Table{
+func galleryTableKeys() *gomukit.Table {
+	return &gomukit.Table{
 		URI:   "ui://preview/gallery-table-keys",
 		Title: "Warehouses",
-		Columns: []gadget.Column{
-			gadget.Text("code", "Code"),
-			gadget.Text("city", "City"),
-			gadget.Number("capacity", "Capacity", "int"),
-			gadget.ActionsColumn(gadget.Action{
-				Label: "Delete", Tool: "sandbox_delete", Variant: gadget.VariantDanger,
+		Columns: []gomukit.Column{
+			gomukit.Text("code", "Code"),
+			gomukit.Text("city", "City"),
+			gomukit.Number("capacity", "Capacity", "int"),
+			gomukit.ActionsColumn(gomukit.Action{
+				Label: "Delete", Tool: "sandbox_delete", Variant: gomukit.VariantDanger,
 				Confirm: "Really delete?",
-				Args:    map[string]gadget.ArgSource{"code": gadget.FromRow("code")},
+				Args:    map[string]gomukit.ArgSource{"code": gomukit.FromRow("code")},
 			}),
 		},
 		RowsKey:    "records",
 		RowID:      "code",
 		Filterable: true,
-		Selection: &gadget.SelectionConfig{Bulk: []gadget.Action{
+		Selection: &gomukit.SelectionConfig{Bulk: []gomukit.Action{
 			{Label: "Archive", Tool: "sandbox_archive",
-				Args: map[string]gadget.ArgSource{"codes": gadget.FromSelection("code")}},
+				Args: map[string]gomukit.ArgSource{"codes": gomukit.FromSelection("code")}},
 		}},
 		Brand: appBrand(),
 		Theme: appTheme(),
@@ -558,14 +558,14 @@ func keyedRows() []map[string]any {
 	}
 }
 
-func galleryCards() *gadget.CardList {
-	return &gadget.CardList{
+func galleryCards() *gomukit.CardList {
+	return &gomukit.CardList{
 		URI:         "ui://preview/gallery-cards",
 		Title:       "Users",
 		Template:    galleryCardTemplate(),
 		PageSize:    3,
 		PageSizes:   []int{3, 6, 12},
-		DefaultSort: &gadget.SortSpec{Key: "balance", Desc: true},
+		DefaultSort: &gomukit.SortSpec{Key: "balance", Desc: true},
 		Filterable:  true,
 		Selection:   galleryBulk(),
 		Brand:       appBrand(),
@@ -573,7 +573,7 @@ func galleryCards() *gadget.CardList {
 	}
 }
 
-func galleryCardsLoadMore() *gadget.CardList {
+func galleryCardsLoadMore() *gomukit.CardList {
 	l := galleryCards()
 	l.URI = "ui://preview/gallery-cards-loadmore"
 	l.Title = "Directory"
@@ -583,36 +583,36 @@ func galleryCardsLoadMore() *gadget.CardList {
 	return l
 }
 
-func galleryCardsEmpty() *gadget.CardList {
+func galleryCardsEmpty() *gomukit.CardList {
 	l := galleryCards()
 	l.URI = "ui://preview/gallery-cards-empty"
-	l.Empty = gadget.EmptyState{Title: "Nothing to show", Body: "Call preview_cards_carousel for the populated variant."}
+	l.Empty = gomukit.EmptyState{Title: "Nothing to show", Body: "Call preview_cards_carousel for the populated variant."}
 	return l
 }
 
-func galleryCard() *gadget.Card {
-	return &gadget.Card{
+func galleryCard() *gomukit.Card {
+	return &gomukit.Card{
 		URI:      "ui://preview/gallery-card",
 		Title:    "User",
 		Template: galleryCardTemplate(),
-		Empty:    gadget.EmptyState{Title: "No user", Body: "Call the tool again with a record."},
+		Empty:    gomukit.EmptyState{Title: "No user", Body: "Call the tool again with a record."},
 		Brand:    appBrand(),
 		Theme:    appTheme(),
 	}
 }
 
-func galleryCardSections() *gadget.Card {
+func galleryCardSections() *gomukit.Card {
 	c := galleryCard()
 	c.URI = "ui://preview/gallery-card-sections"
-	c.Template.Header.Badge = gadget.Column{}
-	c.Template.Header.Action = &gadget.Action{Label: "Open console", Kind: gadget.ActionLink, HrefKey: "website"}
+	c.Template.Header.Badge = gomukit.Column{}
+	c.Template.Header.Action = &gomukit.Action{Label: "Open console", Kind: gomukit.ActionLink, HrefKey: "website"}
 	c.Template.Content.TextKey = "bio"
 	c.Template.Footer.Text = "Balances update hourly."
 	c.InitialData = map[string]any{"rows": galleryRows()[:1]}
 	return c
 }
 
-func galleryCardEmpty() *gadget.Card {
+func galleryCardEmpty() *gomukit.Card {
 	c := galleryCard()
 	c.URI = "ui://preview/gallery-card-empty"
 	return c
@@ -630,115 +630,115 @@ func detailsRow() map[string]any {
 	}
 }
 
-func galleryDescriptions() *gadget.Card {
-	return &gadget.Card{
+func galleryDescriptions() *gomukit.Card {
+	return &gomukit.Card{
 		URI:   "ui://preview/gallery-descriptions",
 		Title: "Account details",
-		Template: gadget.CardTemplate{
-			Header:  gadget.CardHeader{TitleKey: "name", DescriptionKey: "plan"},
-			Content: gadget.CardContent{Items: customerDetails()},
+		Template: gomukit.CardTemplate{
+			Header:  gomukit.CardHeader{TitleKey: "name", DescriptionKey: "plan"},
+			Content: gomukit.CardContent{Items: customerDetails()},
 		},
-		Empty: gadget.EmptyState{Title: "No record", Body: "Call the tool again with a record."},
+		Empty: gomukit.EmptyState{Title: "No record", Body: "Call the tool again with a record."},
 		Brand: appBrand(),
 		Theme: appTheme(),
 	}
 }
 
-func galleryDescriptionsDense() *gadget.Card {
+func galleryDescriptionsDense() *gomukit.Card {
 	c := galleryDescriptions()
 	c.URI = "ui://preview/gallery-descriptions-dense"
 	c.Theme = &theme.Theme{
 		ColorPrimary: "#7c3aed",
-		Extra:        map[string]string{"--gadget-desc-min": "8rem"},
+		Extra:        map[string]string{"--gomu-desc-min": "8rem"},
 	}
 	return c
 }
 
-func galleryForm() *gadget.Form {
-	return &gadget.Form{
+func galleryForm() *gomukit.Form {
+	return &gomukit.Form{
 		URI:   "ui://preview/gallery-form",
 		Title: "Edit user",
-		Fields: []gadget.Field{
-			{Name: "id", Type: gadget.FHidden, Default: "1"},
+		Fields: []gomukit.Field{
+			{Name: "id", Type: gomukit.FHidden, Default: "1"},
 			{Name: "name", Label: "Name", Required: true},
 			{Name: "email", Label: "Email", Required: true,
-				Validation: &gadget.Validation{Pattern: `[^@\s]+@[^@\s]+`, Message: "Enter a valid email address."}},
-			{Name: "role", Label: "Role", Type: gadget.FSelect,
-				Options: []gadget.Option{gadget.Opt("user"), gadget.Opt("admin")}},
-			{Name: "notify", Label: "Send notifications", Type: gadget.FCheckbox, Default: true},
+				Validation: &gomukit.Validation{Pattern: `[^@\s]+@[^@\s]+`, Message: "Enter a valid email address."}},
+			{Name: "role", Label: "Role", Type: gomukit.FSelect,
+				Options: []gomukit.Option{gomukit.Opt("user"), gomukit.Opt("admin")}},
+			{Name: "notify", Label: "Send notifications", Type: gomukit.FCheckbox, Default: true},
 		},
-		Submit: gadget.SubmitSpec{Tool: "sandbox_save", SuccessMessage: "Saved."},
-		Cancel: &gadget.CancelSpec{},
+		Submit: gomukit.SubmitSpec{Tool: "sandbox_save", SuccessMessage: "Saved."},
+		Cancel: &gomukit.CancelSpec{},
 		Brand:  appBrand(),
 		Theme:  appTheme(),
 	}
 }
 
-func galleryFormFields() *gadget.Form {
-	return &gadget.Form{
+func galleryFormFields() *gomukit.Form {
+	return &gomukit.Form{
 		URI:   "ui://preview/gallery-form-fields",
 		Title: "New user",
-		Fields: []gadget.Field{
-			{Name: "id", Type: gadget.FHidden, Default: "0"},
-			{Name: "account", Label: "Workspace", Type: gadget.FReadonly, Default: "acme-eu"},
+		Fields: []gomukit.Field{
+			{Name: "id", Type: gomukit.FHidden, Default: "0"},
+			{Name: "account", Label: "Workspace", Type: gomukit.FReadonly, Default: "acme-eu"},
 			{Name: "name", Label: "Name", Required: true, Placeholder: "Ada Lovelace",
 				Description: "Shown everywhere the record appears.",
-				Validation:  &gadget.Validation{MinLen: ptrInt(2), MaxLen: ptrInt(60)}},
+				Validation:  &gomukit.Validation{MinLen: ptrInt(2), MaxLen: ptrInt(60)}},
 			{Name: "email", Label: "Email", Required: true, Placeholder: "ada@example.com",
-				Validation: &gadget.Validation{Pattern: `[^@\s]+@[^@\s]+`, Message: "Enter a valid email address."}},
-			{Name: "role", Label: "Role", Type: gadget.FSelect, Default: "user",
-				Options: []gadget.Option{gadget.Opt("user"), gadget.Opt("admin"), gadget.Opt("auditor")}},
-			{Name: "scopes", Label: "Scopes", Type: gadget.FMultiSelect, Default: []string{"read"},
-				Options: []gadget.Option{gadget.Opt("read"), gadget.Opt("write"), gadget.Opt("billing")}},
-			{Name: "seats", Label: "Seats", Type: gadget.FNumber, Default: "3",
-				Validation: &gadget.Validation{Min: ptr(1.0), Max: ptr(50.0), Step: ptr(1.0)}},
-			{Name: "startsOn", Label: "Starts on", Type: gadget.FDate, Default: "2026-08-01",
-				Calendar: &gadget.Calendar{Min: "2026-01-01", MonthDropdowns: true, FromYear: 2026, ToYear: 2030}},
-			{Name: "trialFrom", Label: "Trial period", Type: gadget.FDateRange, EndName: "trialTo",
+				Validation: &gomukit.Validation{Pattern: `[^@\s]+@[^@\s]+`, Message: "Enter a valid email address."}},
+			{Name: "role", Label: "Role", Type: gomukit.FSelect, Default: "user",
+				Options: []gomukit.Option{gomukit.Opt("user"), gomukit.Opt("admin"), gomukit.Opt("auditor")}},
+			{Name: "scopes", Label: "Scopes", Type: gomukit.FMultiSelect, Default: []string{"read"},
+				Options: []gomukit.Option{gomukit.Opt("read"), gomukit.Opt("write"), gomukit.Opt("billing")}},
+			{Name: "seats", Label: "Seats", Type: gomukit.FNumber, Default: "3",
+				Validation: &gomukit.Validation{Min: ptr(1.0), Max: ptr(50.0), Step: ptr(1.0)}},
+			{Name: "startsOn", Label: "Starts on", Type: gomukit.FDate, Default: "2026-08-01",
+				Calendar: &gomukit.Calendar{Min: "2026-01-01", MonthDropdowns: true, FromYear: 2026, ToYear: 2030}},
+			{Name: "trialFrom", Label: "Trial period", Type: gomukit.FDateRange, EndName: "trialTo",
 				Description: "The dates the free trial covers.",
-				Calendar: &gadget.Calendar{
+				Calendar: &gomukit.Calendar{
 					Min: "2026-01-01",
-					Presets: []gadget.DatePreset{
-						{Label: "Next 7 days", Span: gadget.SpanNext7Days},
-						{Label: "Next 30 days", Span: gadget.SpanNext30Days},
+					Presets: []gomukit.DatePreset{
+						{Label: "Next 7 days", Span: gomukit.SpanNext7Days},
+						{Label: "Next 30 days", Span: gomukit.SpanNext30Days},
 					},
 				}},
-			{Name: "digestAt", Label: "Daily digest", Type: gadget.FTime, Default: "09:00"},
-			{Name: "notes", Label: "Notes", Type: gadget.FTextarea, Rows: 3,
+			{Name: "digestAt", Label: "Daily digest", Type: gomukit.FTime, Default: "09:00"},
+			{Name: "notes", Label: "Notes", Type: gomukit.FTextarea, Rows: 3,
 				Placeholder: "Anything the team should know",
-				Validation:  &gadget.Validation{MaxLen: ptrInt(280)}},
-			{Name: "notify", Label: "Send notifications", Type: gadget.FCheckbox, Default: true},
+				Validation:  &gomukit.Validation{MaxLen: ptrInt(280)}},
+			{Name: "notify", Label: "Send notifications", Type: gomukit.FCheckbox, Default: true},
 		},
-		Submit: gadget.SubmitSpec{Tool: "sandbox_save", Label: "Create user", SuccessMessage: "User created."},
-		Cancel: &gadget.CancelSpec{},
+		Submit: gomukit.SubmitSpec{Tool: "sandbox_save", Label: "Create user", SuccessMessage: "User created."},
+		Cancel: &gomukit.CancelSpec{},
 		Brand:  appBrand(),
 		Theme:  appTheme(),
 	}
 }
 
-func galleryMenu() *gadget.Menu {
-	return &gadget.Menu{
+func galleryMenu() *gomukit.Menu {
+	return &gomukit.Menu{
 		URI:   "ui://preview/gallery-menu",
 		Title: "Launcher",
 		Intro: "Each tile calls a tool; the host opens the widget bound to it.",
-		Items: []gadget.MenuItem{
+		Items: []gomukit.MenuItem{
 			{Tool: "preview_table_full", Label: "User table", IconSVG: iconTable,
-				Description: "Sortable, filterable directory.", Badge: "read", BadgeVariant: gadget.BadgeInfo},
+				Description: "Sortable, filterable directory.", Badge: "read", BadgeVariant: gomukit.BadgeInfo},
 			{Tool: "preview_form_edit", Label: "Edit user", IconSVG: iconPencil,
-				Description: "Open the edit form for one user.", Badge: "write", BadgeVariant: gadget.BadgeWarning},
+				Description: "Open the edit form for one user.", Badge: "write", BadgeVariant: gomukit.BadgeWarning},
 			{Tool: "preview_confirm_danger", Label: "Delete user", IconSVG: iconTrash,
-				Description: "A confirmation with everything turned on.", Badge: "danger", BadgeVariant: gadget.BadgeDanger},
+				Description: "A confirmation with everything turned on.", Badge: "danger", BadgeVariant: gomukit.BadgeDanger},
 		},
 		Brand: appBrand(),
 		Theme: appTheme(),
 	}
 }
 
-func galleryMenuPlain() *gadget.Menu {
-	return &gadget.Menu{
+func galleryMenuPlain() *gomukit.Menu {
+	return &gomukit.Menu{
 		URI:   "ui://preview/gallery-menu-plain",
 		Title: "Launcher",
-		Items: []gadget.MenuItem{
+		Items: []gomukit.MenuItem{
 			{Tool: "preview_table_full", Label: "Users"},
 			{Tool: "preview_form_fields", Label: "New user"},
 			// No label: the tile falls back to the tool name.
@@ -748,74 +748,74 @@ func galleryMenuPlain() *gadget.Menu {
 	}
 }
 
-func galleryConfirmDanger() *gadget.Confirm {
-	return &gadget.Confirm{
+func galleryConfirmDanger() *gomukit.Confirm {
+	return &gomukit.Confirm{
 		URI:      "ui://preview/gallery-confirm",
 		Title:    "Delete user",
 		Prompt:   "Delete Ada Lovelace?",
 		Body:     "The account and everything attached to it is removed for good.",
-		Severity: gadget.BadgeDanger,
+		Severity: gomukit.BadgeDanger,
 		Details:  galleryConfirmDetails(),
-		Effects: []gadget.Effect{
-			{Text: "Removes the account", Detail: "Sign-in stops working immediately.", Severity: gadget.BadgeDanger},
-			{Text: "Deletes audit records", Value: "128", Severity: gadget.BadgeWarning},
-			{Text: "Frees the seat", Value: "1 seat", Severity: gadget.BadgeSuccess},
+		Effects: []gomukit.Effect{
+			{Text: "Removes the account", Detail: "Sign-in stops working immediately.", Severity: gomukit.BadgeDanger},
+			{Text: "Deletes audit records", Value: "128", Severity: gomukit.BadgeWarning},
+			{Text: "Frees the seat", Value: "1 seat", Severity: gomukit.BadgeSuccess},
 		},
 		Acknowledge:   "I understand this cannot be undone.",
 		TypeToConfirm: "ada@example.com",
-		Accept: gadget.AcceptSpec{
+		Accept: gomukit.AcceptSpec{
 			Tool:           "sandbox_delete",
 			Label:          "Delete user",
-			Args:           map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+			Args:           map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")},
 			SuccessMessage: "User deleted.",
 		},
-		Reject: &gadget.RejectSpec{Label: "Keep user", Message: "Nothing was deleted."},
+		Reject: &gomukit.RejectSpec{Label: "Keep user", Message: "Nothing was deleted."},
 		Brand:  appBrand(),
 		Theme:  appTheme(),
 	}
 }
 
-func galleryConfirmPlain() *gadget.Confirm {
-	return &gadget.Confirm{
+func galleryConfirmPlain() *gomukit.Confirm {
+	return &gomukit.Confirm{
 		URI:      "ui://preview/gallery-confirm-plain",
 		Prompt:   "Archive 4 users?",
 		Body:     "Archived users keep their data but cannot sign in.",
-		Severity: gadget.BadgeWarning,
-		Effects: []gadget.Effect{
-			{Text: "Revokes active sessions", Value: "4", Severity: gadget.BadgeWarning},
-			{Text: "Keeps every record", Severity: gadget.BadgeNeutral},
+		Severity: gomukit.BadgeWarning,
+		Effects: []gomukit.Effect{
+			{Text: "Revokes active sessions", Value: "4", Severity: gomukit.BadgeWarning},
+			{Text: "Keeps every record", Severity: gomukit.BadgeNeutral},
 		},
-		Accept: gadget.AcceptSpec{Tool: "sandbox_archive_all", Label: "Archive", SuccessMessage: "Users archived."},
-		Reject: &gadget.RejectSpec{},
+		Accept: gomukit.AcceptSpec{Tool: "sandbox_archive_all", Label: "Archive", SuccessMessage: "Users archived."},
+		Reject: &gomukit.RejectSpec{},
 		Brand:  appBrand(),
 		Theme:  appTheme(),
 	}
 }
 
-func galleryConfirmRuntime() *gadget.Confirm {
-	return &gadget.Confirm{
+func galleryConfirmRuntime() *gomukit.Confirm {
+	return &gomukit.Confirm{
 		URI:     "ui://preview/gallery-confirm-runtime",
 		Title:   "Delete user",
 		Prompt:  "Delete this user?",
 		Body:    "The record and the consequences below came with the tool result.",
 		Details: galleryConfirmDetails(),
-		Effects: []gadget.Effect{
-			{Text: "Authored at registration time, replaced by any runtime list.", Severity: gadget.BadgeNeutral},
+		Effects: []gomukit.Effect{
+			{Text: "Authored at registration time, replaced by any runtime list.", Severity: gomukit.BadgeNeutral},
 		},
-		Accept: gadget.AcceptSpec{
+		Accept: gomukit.AcceptSpec{
 			Tool:           "sandbox_delete",
 			Label:          "Delete",
-			Args:           map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+			Args:           map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")},
 			SuccessMessage: "User deleted.",
 		},
-		Reject: &gadget.RejectSpec{},
+		Reject: &gomukit.RejectSpec{},
 		Brand:  appBrand(),
 		Theme:  appTheme(),
 	}
 }
 
-func galleryChoice() *gadget.Choice {
-	return &gadget.Choice{
+func galleryChoice() *gomukit.Choice {
+	return &gomukit.Choice{
 		URI:     "ui://preview/gallery-choice",
 		Title:   "Shipping",
 		Prompt:  "How should we ship order ORD-4471?",
@@ -823,31 +823,31 @@ func galleryChoice() *gadget.Choice {
 		Details: galleryChoiceDetails(),
 		Options: galleryShippingOptions(),
 		Submit:  gallerySubmit(),
-		Cancel:  &gadget.RejectSpec{Label: "Decide later", Message: "Nothing was shipped."},
+		Cancel:  &gomukit.RejectSpec{Label: "Decide later", Message: "Nothing was shipped."},
 		Brand:   appBrand(),
 		Theme:   appTheme(),
 	}
 }
 
-func galleryChoiceStacked() *gadget.Choice {
+func galleryChoiceStacked() *gomukit.Choice {
 	c := galleryChoice()
 	c.URI = "ui://preview/gallery-choice-stacked"
-	c.Layout = gadget.ChoiceStacked
-	c.Details = gadget.Descriptions{}
+	c.Layout = gomukit.ChoiceStacked
+	c.Details = gomukit.Descriptions{}
 	return c
 }
 
-func galleryChoiceMulti() *gadget.Choice {
-	return &gadget.Choice{
+func galleryChoiceMulti() *gomukit.Choice {
+	return &gomukit.Choice{
 		URI:      "ui://preview/gallery-choice-multi",
 		Title:    "Add-ons",
 		Prompt:   "Which extras should this shipment carry?",
 		Body:     "Choose two or three; they are billed with the shipping cost.",
-		Layout:   gadget.ChoiceSplit,
+		Layout:   gomukit.ChoiceSplit,
 		Multiple: true,
 		Min:      2,
 		Max:      3,
-		Options: []gadget.ChoiceOption{
+		Options: []gomukit.ChoiceOption{
 			{Value: "insurance", Label: "Extra insurance", Summary: "up to EUR 5,000",
 				Body:    "Covers the declared value against loss and damage in transit.",
 				Bullets: []string{"Claims within 30 days", "Proof of value required"},
@@ -857,118 +857,118 @@ func galleryChoiceMulti() *gadget.Choice {
 			{Value: "saturday", Label: "Saturday delivery", Summary: "weekend slot",
 				Body:         "Delivered on Saturday morning instead of the next business day.",
 				Badge:        "surcharge",
-				BadgeVariant: gadget.BadgeWarning},
+				BadgeVariant: gomukit.BadgeWarning},
 			{Value: "carbon", Label: "Carbon offset", Summary: "adds EUR 0.40",
 				Body: "Buys certified offsets for the leg between the depot and the door."},
 		},
-		Submit: gadget.ChoiceSubmit{Tool: "sandbox_extras", Label: "Add extras",
+		Submit: gomukit.ChoiceSubmit{Tool: "sandbox_extras", Label: "Add extras",
 			ValueArg: "extras", SuccessMessage: "Extras added."},
-		Cancel: &gadget.RejectSpec{},
+		Cancel: &gomukit.RejectSpec{},
 		Brand:  appBrand(),
 		Theme:  appTheme(),
 	}
 }
 
-func galleryChoiceRuntime() *gadget.Choice {
-	return &gadget.Choice{
+func galleryChoiceRuntime() *gomukit.Choice {
+	return &gomukit.Choice{
 		URI:     "ui://preview/gallery-choice-runtime",
 		Title:   "Shipping",
 		Prompt:  "How should we ship this order?",
 		Body:    "The options below were priced by the tool that opened this view.",
 		Details: galleryChoiceDetails(),
 		Submit:  gallerySubmit(),
-		Cancel:  &gadget.RejectSpec{},
+		Cancel:  &gomukit.RejectSpec{},
 		Brand:   appBrand(),
 		Theme:   appTheme(),
 	}
 }
 
-func galleryDatePicker() *gadget.DatePicker {
-	return &gadget.DatePicker{
+func galleryDatePicker() *gomukit.DatePicker {
+	return &gomukit.DatePicker{
 		URI:    "ui://preview/gallery-date",
 		Title:  "Delivery",
 		Prompt: "When should we deliver order ORD-4471?",
 		Body:   "The depot needs one working day's notice.",
-		Calendar: &gadget.Calendar{
+		Calendar: &gomukit.Calendar{
 			Min:      "2026-08-01",
 			Max:      "2026-10-31",
 			Disabled: []string{"2026-08-14", "2026-08-15"},
-			Presets: []gadget.DatePreset{
-				{Label: "Today", Span: gadget.SpanToday},
-				{Label: "Tomorrow", Span: gadget.SpanTomorrow},
+			Presets: []gomukit.DatePreset{
+				{Label: "Today", Span: gomukit.SpanToday},
+				{Label: "Tomorrow", Span: gomukit.SpanTomorrow},
 			},
 		},
 		Details: galleryChoiceDetails(),
-		Submit: gadget.DateSubmit{
+		Submit: gomukit.DateSubmit{
 			Tool:           "sandbox_schedule",
 			Label:          "Book it",
-			Args:           map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+			Args:           map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")},
 			SuccessMessage: "Booked.",
 		},
-		Cancel: &gadget.RejectSpec{Label: "Decide later", Message: "Nothing was booked."},
+		Cancel: &gomukit.RejectSpec{Label: "Decide later", Message: "Nothing was booked."},
 		Brand:  appBrand(),
 		Theme:  appTheme(),
 	}
 }
 
-func galleryDatePickerRange() *gadget.DatePicker {
-	return &gadget.DatePicker{
+func galleryDatePickerRange() *gomukit.DatePicker {
+	return &gomukit.DatePicker{
 		URI:    "ui://preview/gallery-date-range",
 		Title:  "Booking",
 		Prompt: "Which nights should we hold the suite?",
-		Mode:   gadget.DateRange,
-		Calendar: &gadget.Calendar{
+		Mode:   gomukit.DateRange,
+		Calendar: &gomukit.Calendar{
 			Min:         "2026-08-01",
 			Max:         "2026-12-31",
 			Disabled:    []string{"2026-08-27", "2026-08-28", "2026-08-29"},
 			WeekNumbers: true,
-			Presets: []gadget.DatePreset{
-				{Label: "This week", Span: gadget.SpanThisWeek},
-				{Label: "Next 7 days", Span: gadget.SpanNext7Days},
-				{Label: "This month", Span: gadget.SpanThisMonth},
+			Presets: []gomukit.DatePreset{
+				{Label: "This week", Span: gomukit.SpanThisWeek},
+				{Label: "Next 7 days", Span: gomukit.SpanNext7Days},
+				{Label: "This month", Span: gomukit.SpanThisMonth},
 				{Label: "Trade fair", Start: "2026-09-07", End: "2026-09-11"},
 			},
 		},
 		Default:    "2026-08-20",
 		DefaultEnd: "2026-08-23",
-		Submit: gadget.DateSubmit{Tool: "sandbox_schedule", Label: "Hold it",
+		Submit: gomukit.DateSubmit{Tool: "sandbox_schedule", Label: "Hold it",
 			ValueArg: "from", EndArg: "until", SuccessMessage: "Held."},
-		Cancel: &gadget.RejectSpec{},
+		Cancel: &gomukit.RejectSpec{},
 		Brand:  appBrand(),
 		Theme:  appTheme(),
 	}
 }
 
-func galleryDatePickerDropdowns() *gadget.DatePicker {
-	return &gadget.DatePicker{
+func galleryDatePickerDropdowns() *gomukit.DatePicker {
+	return &gomukit.DatePicker{
 		URI:    "ui://preview/gallery-date-dropdowns",
 		Prompt: "When does the contract start?",
 		Body:   "Weekends are not working days.",
-		Calendar: &gadget.Calendar{
+		Calendar: &gomukit.Calendar{
 			Min:             "2020-01-01",
 			Max:             "2030-12-31",
 			DisableWeekends: true,
 			MonthDropdowns:  true,
 			StartOn:         "2027-03-01",
 		},
-		Submit: gadget.DateSubmit{Tool: "sandbox_schedule", Label: "Set the date"},
-		Cancel: &gadget.RejectSpec{},
+		Submit: gomukit.DateSubmit{Tool: "sandbox_schedule", Label: "Set the date"},
+		Cancel: &gomukit.RejectSpec{},
 		Brand:  appBrand(),
 		Theme:  appTheme(),
 	}
 }
 
-func galleryDatePickerRuntime() *gadget.DatePicker {
-	return &gadget.DatePicker{
+func galleryDatePickerRuntime() *gomukit.DatePicker {
+	return &gomukit.DatePicker{
 		URI:      "ui://preview/gallery-date-runtime",
 		Title:    "Availability",
 		Prompt:   "Which nights are you staying?",
-		Mode:     gadget.DateRange,
-		Calendar: &gadget.Calendar{WeekNumbers: true},
+		Mode:     gomukit.DateRange,
+		Calendar: &gomukit.Calendar{WeekNumbers: true},
 		Details:  galleryChoiceDetails(),
-		Submit: gadget.DateSubmit{Tool: "sandbox_schedule", ValueArg: "from", EndArg: "until",
-			Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")}},
-		Cancel: &gadget.RejectSpec{},
+		Submit: gomukit.DateSubmit{Tool: "sandbox_schedule", ValueArg: "from", EndArg: "until",
+			Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")}},
+		Cancel: &gomukit.RejectSpec{},
 		Brand:  appBrand(),
 		Theme:  appTheme(),
 	}
@@ -976,7 +976,7 @@ func galleryDatePickerRuntime() *gadget.DatePicker {
 
 // galleryThemeTokens overrides most of what a Theme can override at once, so
 // the difference from the default palette is unmistakable.
-func galleryThemeTokens() *gadget.Table {
+func galleryThemeTokens() *gomukit.Table {
 	t := galleryTable()
 	t.URI = "ui://preview/gallery-theme"
 	t.Title = "Themed table"
@@ -999,14 +999,14 @@ func galleryThemeTokens() *gadget.Table {
 		SpaceUnit:        "0.3rem",
 		ColorPage:        "#060b16",
 		PagePad:          "16px",
-		Extra:            map[string]string{"--gadget-desc-min": "10rem"},
+		Extra:            map[string]string{"--gomu-desc-min": "10rem"},
 	}
 	return t
 }
 
 // galleryThemeTransparent drops the page fill and the gutter: the frame
 // disappears and only the card sits on whatever the host paints behind it.
-func galleryThemeTransparent() *gadget.Table {
+func galleryThemeTransparent() *gomukit.Table {
 	t := galleryTable()
 	t.URI = "ui://preview/gallery-theme-transparent"
 	t.Title = "Frameless table"
@@ -1016,7 +1016,7 @@ func galleryThemeTransparent() *gadget.Table {
 
 // galleryBrandDataURI uses the base64 logo path and asks the host for a
 // border through the resource's _meta.ui.
-func galleryBrandDataURI() *gadget.Card {
+func galleryBrandDataURI() *gomukit.Card {
 	c := galleryCard()
 	c.URI = "ui://preview/gallery-brand-datauri"
 	c.Title = "Data-URI brand"
@@ -1033,7 +1033,7 @@ func registerGallery(s *mcp.Server) {
 	catalog := galleryCatalog()
 
 	must(gosdk.AddWidgetToolFor(s, galleryIndex(catalog),
-		&mcp.Tool{Name: "preview_index", Description: "Show the gallery of every gadget widget variant."},
+		&mcp.Tool{Name: "preview_index", Description: "Show the gallery of every gomukit widget variant."},
 		func(context.Context, *mcp.CallToolRequest, noArgs) (*mcp.CallToolResult, noOut, error) {
 			return textResult("Showing the widget gallery."), noOut{}, nil
 		}))
@@ -1063,20 +1063,20 @@ func registerGallery(s *mcp.Server) {
 // everywhere. The label is echoed verbatim because it is what the tool's own
 // description leads with, so the model has an unambiguous target among the
 // catalog's several dozen near-identical entries.
-func galleryIndex(catalog []preview) *gadget.Menu {
-	items := make([]gadget.MenuItem, 0, len(catalog))
+func galleryIndex(catalog []preview) *gomukit.Menu {
+	items := make([]gomukit.MenuItem, 0, len(catalog))
 	for _, p := range catalog {
-		items = append(items, gadget.MenuItem{
+		items = append(items, gomukit.MenuItem{
 			Tool:         p.Tool,
 			Prompt:       "Show me the gallery preview for " + p.Label,
 			Label:        p.Label,
 			Description:  p.Desc,
 			IconSVG:      p.Icon,
 			Badge:        p.Group,
-			BadgeVariant: gadget.BadgeNeutral,
+			BadgeVariant: gomukit.BadgeNeutral,
 		})
 	}
-	return &gadget.Menu{
+	return &gomukit.Menu{
 		URI:   "ui://preview/gallery-index",
 		Title: "Widget gallery",
 		Intro: "Every variant this library renders. Each tile asks the chat to open it.",
@@ -1090,7 +1090,7 @@ func galleryIndex(catalog []preview) *gadget.Menu {
 // stateless: each answer is computed from the fixture, so the gallery never
 // disturbs the scenario store. A tool's _meta points at the widget that fires
 // it; several widgets share the record tools, so those anchor on the table.
-func registerSandbox(s *mcp.Server, anchor gadget.Widget, formAnchor *gadget.Form) {
+func registerSandbox(s *mcp.Server, anchor gomukit.Widget, formAnchor *gomukit.Form) {
 	add := func(t *mcp.Tool, h func(ctx context.Context, req *mcp.CallToolRequest, in sandboxInput) (*mcp.CallToolResult, previewOut, error)) {
 		gosdk.AppOnly(t, anchor)
 		must(gosdk.AddWidgetToolFor(s, anchor, t, h))

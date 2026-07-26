@@ -1,10 +1,10 @@
-package gadget
+package gomukit
 
 import (
 	"fmt"
 
-	"github.com/techthos/gadget/theme"
-	"github.com/techthos/gadget/uispec"
+	"github.com/techthos/gomukit/theme"
+	"github.com/techthos/gomukit/uispec"
 )
 
 // DatePicker asks the reader for a date, or for the span between two, and then
@@ -84,7 +84,7 @@ type DatePicker struct {
 
 	// Brand renders the application logo/name on the widget.
 	Brand *Brand
-	// Theme overrides gadget design tokens for this widget.
+	// Theme overrides gomukit design tokens for this widget.
 	Theme *theme.Theme
 	// UI overrides resource _meta.ui (CSP, permissions, prefersBorder).
 	UI *uispec.ResourceUIMeta
@@ -213,9 +213,9 @@ func (d *DatePicker) cancelMessage() string {
 // Validate implements Widget.
 func (d *DatePicker) Validate() error {
 	if err := uispec.ValidateURI(d.URI); err != nil {
-		return fmt.Errorf("gadget: datepicker: %w", err)
+		return fmt.Errorf("gomukit: datepicker: %w", err)
 	}
-	ctx := fmt.Sprintf("gadget: datepicker %s", d.URI)
+	ctx := fmt.Sprintf("gomukit: datepicker %s", d.URI)
 	if d.Prompt == "" {
 		return fmt.Errorf("%s: Prompt is required", ctx)
 	}

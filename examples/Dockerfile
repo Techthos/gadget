@@ -1,15 +1,15 @@
-# Standalone image for the gadget widget harness and preview MCP server.
+# Standalone image for the gomukit widget harness and preview MCP server.
 #
 # It takes no build context: the builder clones the repository itself, so the
 # Dockerfile can be built straight from a URL or piped in on its own.
 #
-#   docker build -t gadget https://github.com/Techthos/gadget.git#main:examples/harness
-#   docker build -t gadget - < examples/harness/Dockerfile
+#   docker build -t gomukit https://github.com/Techthos/gomukit.git#main:examples
+#   docker build -t gomukit - < examples/Dockerfile
 #
 # The image carries two binaries and defaults to the harness:
 #
-#   docker run --rm -p 8090:8090 gadget                      # harness, http://localhost:8090
-#   docker run --rm -p 8081:8081 --entrypoint /preview gadget \
+#   docker run --rm -p 8090:8090 gomukit                      # harness, http://localhost:8090
+#   docker run --rm -p 8081:8081 --entrypoint /preview gomukit \
 #     -addr :8081 -sandbox -cors -session-timeout 30m        # MCP at http://localhost:8081/mcp
 #
 # -sandbox gives every MCP session its own copy of the scenario data, so a
@@ -20,7 +20,7 @@
 # docker-compose.yml in this directory runs both from the one image.
 #
 # Build a different branch, tag or commit:
-#   docker build -t gadget --build-arg GIT_REF=v0.2.0 - < examples/harness/Dockerfile
+#   docker build -t gomukit --build-arg GIT_REF=v0.2.0 - < examples/Dockerfile
 #
 # The clone layer is cached; to pick up new commits on the same ref, pass
 # --no-cache or --build-arg CACHEBUST="$(date +%s)".
@@ -29,7 +29,7 @@ ARG GO_VERSION=1.25
 
 FROM golang:${GO_VERSION}-alpine AS build
 
-ARG REPO_URL=https://github.com/Techthos/gadget.git
+ARG REPO_URL=https://github.com/Techthos/gomukit.git
 ARG GIT_REF=main
 ARG CACHEBUST=0
 

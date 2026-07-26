@@ -1,6 +1,6 @@
 // JSON data-island access. IDs must match internal/htmlx island constants.
-export const CONFIG_ISLAND_ID = "gadget-config";
-export const DATA_ISLAND_ID = "gadget-data";
+export const CONFIG_ISLAND_ID = "gomu-config";
+export const DATA_ISLAND_ID = "gomu-data";
 
 export type Row = Record<string, unknown>;
 

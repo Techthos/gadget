@@ -1,6 +1,6 @@
 # Preview server
 
-`examples/preview` is a runnable MCP server built for looking at gadget
+`examples/preview` is a runnable MCP server built for looking at gomukit
 through a real MCP client. Where `examples/harness` fakes the host in one HTML
 page, this one speaks the protocol: tools are registered tools, widgets are
 `ui://` resources, and every button a widget renders fires an actual
@@ -121,8 +121,8 @@ that. (`go run` does not work here: the inspector needs a command it can start
 from any directory, and `go run` needs the module.)
 
 ```sh
-go build -o /tmp/gadget-preview ./examples/preview
-npx @modelcontextprotocol/inspector /tmp/gadget-preview -stdio
+go build -o /tmp/gomukit-preview ./examples/preview
+npx @modelcontextprotocol/inspector /tmp/gomukit-preview -stdio
 ```
 
 Notes:
@@ -183,14 +183,14 @@ sees ordinary tools returning text and structured content.
 ## Hosting it publicly
 
 Put the endpoint on a URL and anyone with an MCP Apps capable chat client can
-try the widgets without cloning anything. `examples/harness/Dockerfile` builds
+try the widgets without cloning anything. `examples/Dockerfile` builds
 both the harness and this server into one scratch image, and
-`examples/harness/docker-compose.yml` runs them side by side — the harness on
+`examples/docker-compose.yml` runs them side by side — the harness on
 8090, the preview MCP on 8081. Neither needs a checkout: the build context is
 the repository URL.
 
 ```sh
-curl -O https://raw.githubusercontent.com/Techthos/gadget/main/examples/harness/docker-compose.yml
+curl -O https://raw.githubusercontent.com/Techthos/gomukit/main/examples/docker-compose.yml
 docker compose up -d
 ```
 

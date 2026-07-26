@@ -19,9 +19,9 @@ var update = flag.Bool("update", false, "update golden files")
 func TestDocumentGolden(t *testing.T) {
 	doc, err := Document(DocConfig{
 		Title:    "Users",
-		CSS:      ".gadget-root{--gadget-color-bg:#fff}",
-		ThemeCSS: ".gadget-root{--gadget-color-primary:#0f62fe}",
-		Body: h.Div(h.Class("gadget-root"), Data("widget", "table"),
+		CSS:      ".gomu-root{--gomu-color-bg:#fff}",
+		ThemeCSS: ".gomu-root{--gomu-color-primary:#0f62fe}",
+		Body: h.Div(h.Class("gomu-root"), Data("widget", "table"),
 			h.H1(g.Text("Users")),
 		),
 		Config:    map[string]any{"widget": "table", "rowsKey": "rows"},
@@ -53,7 +53,7 @@ func TestDocumentGolden(t *testing.T) {
 }
 
 func TestDocumentDefaults(t *testing.T) {
-	doc, err := Document(DocConfig{Body: h.Div(h.Class("gadget-root"))})
+	doc, err := Document(DocConfig{Body: h.Div(h.Class("gomu-root"))})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestDocumentDefaults(t *testing.T) {
 			t.Errorf("document missing %q:\n%s", want, doc)
 		}
 	}
-	if strings.Contains(doc, "gadget-config") {
+	if strings.Contains(doc, "gomu-config") {
 		t.Error("nil Config should not emit a config island")
 	}
 	mustParse(t, doc)
@@ -76,7 +76,7 @@ func TestJSONIslandHostilePayloads(t *testing.T) {
 		"amp":      `a&b<c>d`,
 	}
 	doc, err := Document(DocConfig{
-		Body:   h.Div(h.Class("gadget-root")),
+		Body:   h.Div(h.Class("gomu-root")),
 		Config: map[string]any{"widget": "table"},
 		Data:   hostile,
 	})

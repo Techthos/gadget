@@ -1,4 +1,4 @@
-package gadget
+package gomukit
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 
 	xhtml "golang.org/x/net/html"
 
-	"github.com/techthos/gadget/theme"
+	"github.com/techthos/gomukit/theme"
 )
 
 // canonicalConfirm exercises every slot: both guards, a mixed detail list,
@@ -76,25 +76,25 @@ func TestConfirmGolden(t *testing.T) {
 		t.Fatalf("document does not parse: %v", err)
 	}
 	for _, want := range []string{
-		`data-gadget-widget="confirm"`,
-		`gadget-confirm--danger`,
+		`data-gomu-widget="confirm"`,
+		`gomu-confirm--danger`,
 		`Delete Ada Lovelace?`,
-		`data-gadget-descriptions`,
-		`data-gadget-effects`,
-		`data-gadget-ack`,
-		`data-gadget-phrase`,
+		`data-gomu-descriptions`,
+		`data-gomu-effects`,
+		`data-gomu-ack`,
+		`data-gomu-phrase`,
 		`<code>ada@example.com</code>`,
-		`data-gadget-reject`,
-		`data-gadget-accept`,
-		`data-gadget-outcome`,
-		`--gadget-color-primary:#7c3aed`,
+		`data-gomu-reject`,
+		`data-gomu-accept`,
+		`data-gomu-outcome`,
+		`--gomu-color-primary:#7c3aed`,
 	} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("document missing %q", want)
 		}
 	}
 	// The guards are enforced before the runtime mounts.
-	if !strings.Contains(doc, `data-gadget-accept="" disabled`) {
+	if !strings.Contains(doc, `data-gomu-accept="" disabled`) {
 		t.Error("guarded accept button must render disabled")
 	}
 	// Detail values are runtime state; only the labels are authored, and they
@@ -132,16 +132,16 @@ func TestConfirmMinimalShell(t *testing.T) {
 	// Every optional block is absent, including the toolbar: an untitled,
 	// unbranded confirmation is the question and nothing above it.
 	for _, unwanted := range []string{
-		"data-gadget-descriptions", "data-gadget-ack", "data-gadget-phrase",
-		"data-gadget-reject", "gadget-toolbar", "gadget-confirm-lede",
+		"data-gomu-descriptions", "data-gomu-ack", "data-gomu-phrase",
+		"data-gomu-reject", "gomu-toolbar", "gomu-confirm-lede",
 	} {
 		if strings.Contains(shell, unwanted) {
 			t.Errorf("minimal shell should not contain %q:\n%s", unwanted, shell)
 		}
 	}
 	for _, want := range []string{
-		`gadget-confirm--info`,
-		`class="gadget-btn gadget-btn--primary" data-gadget-accept`,
+		`gomu-confirm--info`,
+		`class="gomu-btn gomu-btn--primary" data-gomu-accept`,
 		`>Confirm</button>`,
 	} {
 		if !strings.Contains(shell, want) {

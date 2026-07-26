@@ -1,4 +1,4 @@
-package gadget
+package gomukit
 
 import (
 	"strconv"
@@ -6,8 +6,8 @@ import (
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 
-	"github.com/techthos/gadget/internal/assets"
-	"github.com/techthos/gadget/internal/htmlx"
+	"github.com/techthos/gomukit/internal/assets"
+	"github.com/techthos/gomukit/internal/htmlx"
 )
 
 // Document implements Widget. A menu is authored, not fetched: the tiles are
@@ -28,12 +28,12 @@ func (m *Menu) Document() (string, error) {
 }
 
 func (m *Menu) shell() g.Node {
-	chrome := []g.Node{h.Class("gadget-card"), m.toolbar()}
+	chrome := []g.Node{h.Class("gomu-card"), m.toolbar()}
 	if m.Intro != "" {
-		chrome = append(chrome, h.P(h.Class("gadget-menu-intro"), g.Text(m.Intro)))
+		chrome = append(chrome, h.P(h.Class("gomu-menu-intro"), g.Text(m.Intro)))
 	}
 	chrome = append(chrome, m.grid(), statusNode())
-	return h.Div(h.Class("gadget-root"), htmlx.Data("widget", "menu"),
+	return h.Div(h.Class("gomu-root"), htmlx.Data("widget", "menu"),
 		h.Div(chrome...),
 	)
 }
@@ -44,12 +44,12 @@ func (m *Menu) toolbar() g.Node {
 		items = append(items, brand)
 	}
 	if m.Title != "" {
-		items = append(items, h.H2(h.Class("gadget-title"), g.Text(m.Title)))
+		items = append(items, h.H2(h.Class("gomu-title"), g.Text(m.Title)))
 	}
 	if len(items) == 0 {
 		return nil
 	}
-	return h.Div(append([]g.Node{h.Class("gadget-toolbar")}, items...)...)
+	return h.Div(append([]g.Node{h.Class("gomu-toolbar")}, items...)...)
 }
 
 func (m *Menu) grid() g.Node {
@@ -63,7 +63,7 @@ func (m *Menu) grid() g.Node {
 			break
 		}
 	}
-	nodes := []g.Node{h.Class("gadget-menu"), htmlx.Data("menu", "")}
+	nodes := []g.Node{h.Class("gomu-menu"), htmlx.Data("menu", "")}
 	for i, item := range m.Items {
 		nodes = append(nodes, menuTile(item, i, tops))
 	}
@@ -77,15 +77,15 @@ func (m *Menu) grid() g.Node {
 func menuTile(item MenuItem, idx int, top bool) g.Node {
 	nodes := []g.Node{
 		h.Type("button"),
-		h.Class("gadget-menu-item"),
+		h.Class("gomu-menu-item"),
 		htmlx.Data("menu-item", strconv.Itoa(idx)),
 	}
 	if top {
 		nodes = append(nodes, menuTileTop(item))
 	}
-	nodes = append(nodes, h.Span(h.Class("gadget-menu-label"), g.Text(item.label())))
+	nodes = append(nodes, h.Span(h.Class("gomu-menu-label"), g.Text(item.label())))
 	if item.Description != "" {
-		nodes = append(nodes, h.Span(h.Class("gadget-menu-desc"), g.Text(item.Description)))
+		nodes = append(nodes, h.Span(h.Class("gomu-menu-desc"), g.Text(item.Description)))
 	}
 	return h.Button(nodes...)
 }
@@ -96,15 +96,15 @@ func menuTileTop(item MenuItem) g.Node {
 	var parts []g.Node
 	if item.IconSVG != "" {
 		if svg, err := htmlx.RawSVG(item.IconSVG); err == nil {
-			parts = append(parts, h.Span(h.Class("gadget-menu-icon"), h.Aria("hidden", "true"), svg))
+			parts = append(parts, h.Span(h.Class("gomu-menu-icon"), h.Aria("hidden", "true"), svg))
 		}
 	}
 	if item.Badge != "" {
-		class := "gadget-badge gadget-menu-badge"
+		class := "gomu-badge gomu-menu-badge"
 		if item.BadgeVariant != "" && item.BadgeVariant != BadgeNeutral {
-			class += " gadget-badge--" + string(item.BadgeVariant)
+			class += " gomu-badge--" + string(item.BadgeVariant)
 		}
 		parts = append(parts, h.Span(h.Class(class), g.Text(item.Badge)))
 	}
-	return h.Span(append([]g.Node{h.Class("gadget-menu-top")}, parts...)...)
+	return h.Span(append([]g.Node{h.Class("gomu-menu-top")}, parts...)...)
 }

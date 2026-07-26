@@ -1,74 +1,74 @@
-.gadget-form {
-  padding: calc(var(--gadget-space-unit) * 4);
+.gomu-form {
+  padding: calc(var(--gomu-space-unit) * 4);
   display: flex;
   flex-direction: column;
-  gap: calc(var(--gadget-space-unit) * 3.5);
+  gap: calc(var(--gomu-space-unit) * 3.5);
   max-width: 36rem;
 }
 
-.gadget-field {
+.gomu-field {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--gadget-space-unit) * 1);
+  gap: calc(var(--gomu-space-unit) * 1);
 }
 
-.gadget-field label {
+.gomu-field label {
   font-size: 0.8125rem;
   font-weight: 500;
 }
 
-.gadget-field--checkbox {
+.gomu-field--checkbox {
   flex-direction: row;
   align-items: center;
-  gap: calc(var(--gadget-space-unit) * 2);
+  gap: calc(var(--gomu-space-unit) * 2);
 }
 
-.gadget-field--checkbox label {
+.gomu-field--checkbox label {
   font-weight: 400;
 }
 
-.gadget-required {
-  color: var(--gadget-color-danger);
+.gomu-required {
+  color: var(--gomu-color-danger);
 }
 
-.gadget-field-desc {
+.gomu-field-desc {
   margin: 0;
   font-size: 0.75rem;
-  color: var(--gadget-color-text-muted);
+  color: var(--gomu-color-text-muted);
 }
 
-.gadget-field-error {
+.gomu-field-error {
   margin: 0;
   font-size: 0.75rem;
-  color: var(--gadget-color-danger);
+  color: var(--gomu-color-danger);
 }
 
-.gadget-input[aria-invalid="true"] {
-  border-color: var(--gadget-color-danger);
+.gomu-input[aria-invalid="true"] {
+  border-color: var(--gomu-color-danger);
 }
 
-.gadget-input[readonly] {
-  background: var(--gadget-color-surface);
-  color: var(--gadget-color-text-muted);
+.gomu-input[readonly] {
+  background: var(--gomu-color-surface);
+  color: var(--gomu-color-text-muted);
 }
 
-.gadget-form-actions {
+.gomu-form-actions {
   display: flex;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: calc(var(--gadget-space-unit) * 2);
-  margin-top: calc(var(--gadget-space-unit) * 1);
+  gap: calc(var(--gomu-space-unit) * 2);
+  margin-top: calc(var(--gomu-space-unit) * 1);
 }
 
-@container gadget (max-width: 34rem) {
-  .gadget-form {
-    padding: calc(var(--gadget-space-unit) * 3);
+@container gomu (max-width: 34rem) {
+  .gomu-form {
+    padding: calc(var(--gomu-space-unit) * 3);
   }
 
   /* Submit and cancel share the row and grow into it; once labels are long
    * enough that they cannot, each takes a full-width row of its own rather
    * than one of them wrapping mid-label. */
-  .gadget-form-actions .gadget-btn {
+  .gomu-form-actions .gomu-btn {
     flex: 1 1 8rem;
   }
 }

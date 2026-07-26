@@ -1,10 +1,10 @@
-// Package gosdk adapts gadget widgets to the official Go MCP SDK
-// (github.com/modelcontextprotocol/go-sdk). It is the only gadget package
+// Package gosdk adapts gomukit widgets to the official Go MCP SDK
+// (github.com/modelcontextprotocol/go-sdk). It is the only gomukit package
 // that imports the SDK; the core stays SDK-agnostic.
 //
 // Typical wiring:
 //
-//	table := &gadget.Table{URI: "ui://demo/users", Columns: ...}
+//	table := &gomukit.Table{URI: "ui://demo/users", Columns: ...}
 //	server := mcp.NewServer(&mcp.Implementation{Name: "demo"}, gosdk.EnableUI(nil))
 //	gosdk.AddWidgetToolFor(server, table, &mcp.Tool{Name: "list_users"}, listUsers)
 package gosdk
@@ -16,8 +16,8 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/techthos/gadget"
-	"github.com/techthos/gadget/uispec"
+	"github.com/techthos/gomukit"
+	"github.com/techthos/gomukit/uispec"
 )
 
 // EnableUI declares the MCP Apps extension (io.modelcontextprotocol/ui) in
@@ -51,7 +51,7 @@ var (
 // AddWidget registers w's template as a ui:// resource on s. The document
 // is rendered once and served from memory. Registering the same URI on the
 // same server again is a no-op.
-func AddWidget(s *mcp.Server, w gadget.Widget) error {
+func AddWidget(s *mcp.Server, w gomukit.Widget) error {
 	d := w.Descriptor()
 
 	mu.Lock()
@@ -103,7 +103,7 @@ func AddWidget(s *mcp.Server, w gadget.Widget) error {
 
 // AddWidgetTool registers t with its _meta linked to w (registering w's
 // resource first if needed) and installs the raw handler h.
-func AddWidgetTool(s *mcp.Server, w gadget.Widget, t *mcp.Tool, h mcp.ToolHandler) error {
+func AddWidgetTool(s *mcp.Server, w gomukit.Widget, t *mcp.Tool, h mcp.ToolHandler) error {
 	if err := AddWidget(s, w); err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func AddWidgetTool(s *mcp.Server, w gadget.Widget, t *mcp.Tool, h mcp.ToolHandle
 
 // AddWidgetToolFor is AddWidgetTool with the SDK's typed-handler variant:
 // input/output schemas are inferred from In and Out.
-func AddWidgetToolFor[In, Out any](s *mcp.Server, w gadget.Widget, t *mcp.Tool, h mcp.ToolHandlerFor[In, Out]) error {
+func AddWidgetToolFor[In, Out any](s *mcp.Server, w gomukit.Widget, t *mcp.Tool, h mcp.ToolHandlerFor[In, Out]) error {
 	if err := AddWidget(s, w); err != nil {
 		return err
 	}
@@ -123,7 +123,7 @@ func AddWidgetToolFor[In, Out any](s *mcp.Server, w gadget.Widget, t *mcp.Tool, 
 	return nil
 }
 
-func linkTool(t *mcp.Tool, w gadget.Widget) {
+func linkTool(t *mcp.Tool, w gomukit.Widget) {
 	t.Meta = uispec.MergeMeta(t.Meta, w.ToolMeta())
 }
 
@@ -131,7 +131,7 @@ func linkTool(t *mcp.Tool, w gadget.Widget) {
 // from the widget UI, hidden from the model. Use it for row-action and
 // submit tools the model should not invoke directly. Register the tool
 // separately (e.g. via AddWidgetTool, which keeps the merged visibility).
-func AppOnly(t *mcp.Tool, w gadget.Widget) {
+func AppOnly(t *mcp.Tool, w gomukit.Widget) {
 	meta := uispec.ToolUIMeta{
 		ResourceURI: w.Descriptor().URI,
 		Visibility:  []string{uispec.VisibilityApp},

@@ -4,11 +4,11 @@ import { Bridge } from "./bridge";
 import { HostContext } from "./protocol";
 import { setLocale } from "./format";
 
-const FONT_STYLE_ID = "gadget-host-fonts";
+const FONT_STYLE_ID = "gomu-host-fonts";
 
 /** Document event fired after a hostContext has been applied. Behaviors
  * re-render on it because Intl formatting depends on host locale/timeZone. */
-export const HOST_CONTEXT_EVENT = "gadget:hostcontext";
+export const HOST_CONTEXT_EVENT = "gomukit:hostcontext";
 
 export function emitHostContextApplied(): void {
 	document.dispatchEvent(new CustomEvent(HOST_CONTEXT_EVENT));
@@ -46,7 +46,7 @@ export function applyHostContext(
   }
 
   if (ctx.theme === "light" || ctx.theme === "dark") {
-    root.setAttribute("data-gadget-theme", ctx.theme);
+    root.setAttribute("data-gomu-theme", ctx.theme);
     // Pin the root color scheme to the host's. An iframe canvas is transparent
     // only while the embedded root element's used color scheme matches the
     // <iframe> element's; on a mismatch the UA (Chrome; not Firefox) paints an

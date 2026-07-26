@@ -13,8 +13,8 @@ release that ships them; none are reversible after.
 
 | # | Question | Decision | Reason |
 |---|---|---|---|
-| 1 | Package placement | New `gadget/compose` | Keeps the root package about widgets. The root API is already large (Table, Form, Card, CardList, Menu, Confirm, Descriptions, Brand, Action). |
-| 2 | TypeScript types | Emit `ui/types/gadget.d.ts` with `tsc --emitDeclarationOnly` from `ui/src/public.ts`, commit it, document copying it. `ui/package.json` stays private | No npm publishing pipeline, no registry account, deterministic and verifiable in CI like `dist/`. |
+| 1 | Package placement | New `gomukit/compose` | Keeps the root package about widgets. The root API is already large (Table, Form, Card, CardList, Menu, Confirm, Descriptions, Brand, Action). |
+| 2 | TypeScript types | Emit `ui/types/gomukit.d.ts` with `tsc --emitDeclarationOnly` from `ui/src/public.ts`, commit it, document copying it. `ui/package.json` stays private | No npm publishing pipeline, no registry account, deterministic and verifiable in CI like `dist/`. |
 | 3 | `Custom.Body` type | `g.Node` only | A guarded raw HTML string cannot preserve "data reaches HTML only through text nodes". Authors who want strings can call `gomponents.Raw` themselves and own the consequence. |
 | 4 | Kind namespacing | No forced prefix. Kind must match `^[a-z][a-z0-9-]*$` and not be one of the reserved built in names | A prefix is ceremony; a reserved list plus a validation error is enough, and reserved names are cheap to extend. |
 | 5 | `ExtraJS` cardinality | `[]string`, emitted in order, one `<script>` each | Level 3 mounts several components in one document, each possibly bringing its own script. Deduplication is the author's problem until proven otherwise. |
@@ -25,13 +25,13 @@ public surface is a deliberate subset.
 
 ## Level 1: custom Go widgets
 
-Outcome: a third party can render a self contained document with gadget CSS,
+Outcome: a third party can render a self contained document with gomukit CSS,
 theme, host context, brand chrome and sizing, without custom JavaScript.
 
 ### L1.1 Extract shared chrome into `internal/chrome`
 
 Prerequisite for exposing chrome publicly without an import cycle: `compose`
-must import the root package for `gadget.EmptyState` and `gadget.Brand`, so
+must import the root package for `gomukit.EmptyState` and `gomukit.Brand`, so
 the root package cannot import `compose`.
 
 - New `internal/chrome/chrome.go` holding what `render_shared.go`,
@@ -62,10 +62,10 @@ New files:
   re-exported from `internal/htmlx`.
 - `compose/assets.go`: `StylesCSS`, `RuntimeJS` vars from `internal/assets`,
   plus `ConfigIslandID`, `DataIslandID` constants.
-- `compose/chrome.go`: `Status()`, `Empty(gadget.EmptyState)`,
-  `Pagination(sizes []int, current int)`, `Brand(*gadget.Brand)`,
+- `compose/chrome.go`: `Status()`, `Empty(gomukit.EmptyState)`,
+  `Pagination(sizes []int, current int)`, `Brand(*gomukit.Brand)`,
   `Root(kind string, children ...g.Node)` which emits
-  `<div class="gadget-root" data-gadget-widget="kind">`.
+  `<div class="gomu-root" data-gomu-widget="kind">`.
 
 `internal/htmlx.DocConfig` gains `ExtraCSS string` and `ExtraJS []string`;
 `Document` emits `ExtraCSS` after `ThemeCSS` and each `ExtraJS` entry after
@@ -77,7 +77,7 @@ New files:
   and neither when not; `ExtraCSS`/`ExtraJS` land in the right order;
   guards refuse `</script`, `</style`, `<!--`; output contains no `http://`,
   `https://` or `src=` outside data URIs (self containment).
-- `compose/example_test.go`: a `gauge` widget implementing `gadget.Widget`
+- `compose/example_test.go`: a `gauge` widget implementing `gomukit.Widget`
   end to end, doubling as the doc example.
 - Golden: `testdata/golden/custom.html` from that gauge, wired like the other
   golden tests (`-update` flag, same failure message shape).
@@ -89,7 +89,7 @@ New files:
 - `AGENTS.md`: new section "Package `compose`", documenting every exported
   symbol at the same depth as the existing package sections. Required by
   `.claude/rules/agents-md-sync.md`.
-- `docs/architecture.md`: add `gadget/compose` to the layer table, note that
+- `docs/architecture.md`: add `gomukit/compose` to the layer table, note that
   `internal/chrome` is shared by root and compose.
 - `docs/extensibility.md`: replace the level 1 proposal with the shipped API.
 
@@ -111,7 +111,7 @@ status like a built in.
   `RUNTIME_API_VERSION`.
 - `ui/src/index.ts` adds `export * from "./public"` and keeps its side effects
   (auto boot) unchanged.
-- `ui/build.mjs`: add `globalName: "gadget"` to the JS build only.
+- `ui/build.mjs`: add `globalName: "gomukit"` to the JS build only.
 
 Note on boot ordering, which needs no code change: the bundle and the author
 script are both inline in `<body>`, so `document.readyState` is `"loading"`
@@ -129,7 +129,7 @@ only thing keeping the mechanism working.
 - Bump the integer on any breaking change to `MountContext` or the exported
   runtime helpers. Additive changes do not bump.
 
-### L2.3 `gadget.Custom`
+### L2.3 `gomukit.Custom`
 
 New `custom.go` and `custom_render.go` in the root package:
 
@@ -152,8 +152,8 @@ type Custom struct {
 - `Validate()`: URI present and `ui://`; `Kind` matches the pattern and is not
   reserved; `Body` non nil; `CSS`/`JS` pass the raw guards; `Brand.Validate()`.
 - `Document()`: standard root, optional toolbar with brand and title, `Body`,
-  empty state, status bar, `#gadget-config` (author `Config`),
-  `#gadget-data` (`InitialData`), bundle, then author `JS`.
+  empty state, status bar, `#gomu-config` (author `Config`),
+  `#gomu-data` (`InitialData`), bundle, then author `JS`.
 - `Descriptor()`/`ToolMeta()`: identical to `Menu`'s.
 - `reservedKinds`: `table`, `form`, `card`, `cardlist`, `menu`, `confirm`,
   plus `page` reserved ahead of level 3.
@@ -161,7 +161,7 @@ type Custom struct {
 ### L2.4 Types for authors
 
 - `make types`: `tsc --emitDeclarationOnly --declaration` over `public.ts`
-  into `ui/types/gadget.d.ts`, committed.
+  into `ui/types/gomukit.d.ts`, committed.
 - Extend `make verify-dist` to also fail on `ui/types/` drift, so the shipped
   types cannot silently diverge from the bundle.
 
@@ -197,15 +197,15 @@ public API. Do not start it before levels 1 and 2 have real users.
 
 - `internal/htmlx`: `DocConfig.Config any` becomes
   `Configs []IslandConfig{ID string, Value any}`. One entry keeps emitting
-  `#gadget-config` verbatim, so every existing golden file is unchanged;
-  several entries emit `#gadget-config-<id>` and the matching root carries
-  `data-gadget-config="<id>"`.
+  `#gomu-config` verbatim, so every existing golden file is unchanged;
+  several entries emit `#gomu-config-<id>` and the matching root carries
+  `data-gomu-config="<id>"`.
 - `ui/src/data.ts`: `configFor(root)` resolves the attribute to an id and
   falls back to the default island.
 
 ### L3.2 Boot loop
 
-`ui/src/index.ts`: `querySelectorAll("[data-gadget-widget]")`, one shared
+`ui/src/index.ts`: `querySelectorAll("[data-gomu-widget]")`, one shared
 `Bridge`, one shared `ready`, mount each root with its own config and the
 shared bridge, `enhanceSelects` per root (already root scoped), and exactly
 one `watchSize(bridge)` on `document.body`. Brand delegation moves from the
@@ -240,7 +240,7 @@ type Component interface {
 
 Every built in gains exported `Kind`/`Shell`/`Config` implementing it, their
 `Document()` becomes a thin wrapper over `compose.Document`, and a new
-`gadget.Page` (`URI`, `Title`, `Theme`, `Brand`, `Components []Component`)
+`gomukit.Page` (`URI`, `Title`, `Theme`, `Brand`, `Components []Component`)
 assembles the document, allocating island ids and validating uniqueness.
 
 This is the step that grows the public API sharply: six widgets times three
@@ -249,12 +249,12 @@ structure a compatibility promise. Budget the `AGENTS.md` update accordingly.
 
 ### L3.5 CSS and layout
 
-`ui/css/base.css` scopes everything under `.gadget-root` and resets inside it,
+`ui/css/base.css` scopes everything under `.gomu-root` and resets inside it,
 so several roots coexist without change. What does need work: vertical rhythm
 between stacked components, whether `Page` provides a grid or leaves layout to
 author CSS (recommend: a single column stack plus documented tokens, no grid
 API in the first cut), and `ui/src/popup.ts` anchoring dropdowns to the
-nearest `.gadget-root`, which stays correct per component.
+nearest `.gomu-root`, which stays correct per component.
 
 ### L3.6 Tests
 

@@ -13,7 +13,7 @@ paths:
 
 ## What counts as a public API change
 
-- Adding, removing, or renaming any exported identifier (type, interface, function, method, constant, variable) in the root package `gadget` (`widget.go`, `table.go`, `form.go`, `action.go`, `rows.go`) or in `theme/`, `uispec/`, `gosdk/`.
+- Adding, removing, or renaming any exported identifier (type, interface, function, method, constant, variable) in the root package `gomukit` (`widget.go`, `table.go`, `form.go`, `action.go`, `rows.go`) or in `theme/`, `uispec/`, `gosdk/`.
 - Adding, removing, or changing exported struct fields, or changing their meaning or behavior.
 - Changing a documented default value (e.g. `RowsKey` `"rows"`, `RowID` `"id"`, `PrefillKey` `"values"`, `ErrorsKey` `"errors"`).
 - Changing the validation rules enforced by `Validate()` / `Document()`.
@@ -26,7 +26,7 @@ Not covered: `internal/...` packages and `ui/` implementation details that do no
 When making such a change, in the same change set:
 
 1. Update the corresponding `AGENTS.md` section(s) — locate by heading:
-   - Root package `gadget` (Widget interface, shared types, Table, Column, Form, Field, Action, RowsOf, validation rules) → "Package `gadget` — full API reference"
+   - Root package `gomukit` (Widget interface, shared types, Table, Column, Form, Field, Action, RowsOf, validation rules) → "Package `gomukit` — full API reference"
    - structuredContent contract → "The runtime data contract (structuredContent keys)"
    - `gosdk` → "Package `gosdk`"; `theme` → "Package `theme`"; `uispec` → "Package `uispec`"
 2. For removed APIs: delete their documentation everywhere it appears, including examples, cross-references, and constraint lists.

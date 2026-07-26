@@ -1,4 +1,4 @@
-package gadget
+package gomukit
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 
 	xhtml "golang.org/x/net/html"
 
-	"github.com/techthos/gadget/theme"
+	"github.com/techthos/gomukit/theme"
 )
 
 const menuIconSVG = `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="2"/></svg>`
@@ -74,24 +74,24 @@ func TestMenuGolden(t *testing.T) {
 		t.Fatalf("document does not parse: %v", err)
 	}
 	for _, want := range []string{
-		`data-gadget-widget="menu"`,
-		`id="gadget-config"`,
-		`class="gadget-menu-intro">Pick where to start.<`,
-		`data-gadget-menu-item="0"`,
-		`data-gadget-menu-item="1"`,
-		`data-gadget-menu-item="2"`,
-		`class="gadget-menu-label">Users<`,
-		`class="gadget-menu-desc">Browse the user directory.<`,
-		`gadget-badge--info">read<`,
+		`data-gomu-widget="menu"`,
+		`id="gomu-config"`,
+		`class="gomu-menu-intro">Pick where to start.<`,
+		`data-gomu-menu-item="0"`,
+		`data-gomu-menu-item="1"`,
+		`data-gomu-menu-item="2"`,
+		`class="gomu-menu-label">Users<`,
+		`class="gomu-menu-desc">Browse the user directory.<`,
+		`gomu-badge--info">read<`,
 		`<rect x="2" y="3" width="12" height="10" rx="2"/>`,
-		`--gadget-color-primary:#7c3aed`,
+		`--gomu-color-primary:#7c3aed`,
 	} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("document missing %q", want)
 		}
 	}
 	// A menu is authored, not fetched: no data island, no rows contract.
-	if strings.Contains(doc, `id="gadget-data"`) {
+	if strings.Contains(doc, `id="gomu-data"`) {
 		t.Error("menu document should carry no data island")
 	}
 }
@@ -102,7 +102,7 @@ func TestMenuItemLabelFallsBackToTool(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(doc, `class="gadget-menu-label">archive_users<`) {
+	if !strings.Contains(doc, `class="gomu-menu-label">archive_users<`) {
 		t.Error("unlabelled item should show its tool name")
 	}
 }
@@ -147,7 +147,7 @@ func TestMenuConfigOrderMatchesTiles(t *testing.T) {
 	}
 	prev := -1
 	for i := range m.Items {
-		at := strings.Index(doc, `data-gadget-menu-item="`+strconv.Itoa(i)+`"`)
+		at := strings.Index(doc, `data-gomu-menu-item="`+strconv.Itoa(i)+`"`)
 		if at < 0 {
 			t.Fatalf("tile %d missing", i)
 		}

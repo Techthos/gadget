@@ -42,7 +42,7 @@ export function checkbox(
   wrapClass = "",
 ): { wrap: HTMLElement; input: HTMLInputElement } {
   const input = h("input", { type: "checkbox", ...attrs }) as HTMLInputElement;
-  const wrap = h("span", { class: wrapClass ? `gadget-check ${wrapClass}` : "gadget-check" });
+  const wrap = h("span", { class: wrapClass ? `gomu-check ${wrapClass}` : "gomu-check" });
   wrap.append(input, checkIcon());
   return { wrap, input };
 }
@@ -50,7 +50,7 @@ export function checkbox(
 function checkIcon(): SVGElement {
   const svg = document.createElementNS(SVG_NS, "svg");
   for (const [k, v] of Object.entries({
-    class: "gadget-check-icon",
+    class: "gomu-check-icon",
     viewBox: "0 0 16 16",
     fill: "none",
     stroke: "currentColor",
@@ -62,8 +62,8 @@ function checkIcon(): SVGElement {
     svg.setAttribute(k, v);
   }
   const marks: Array<[string, string]> = [
-    ["gadget-check-tick", CHECK_TICK],
-    ["gadget-check-dash", CHECK_DASH],
+    ["gomu-check-tick", CHECK_TICK],
+    ["gomu-check-dash", CHECK_DASH],
   ];
   for (const [cls, d] of marks) {
     const p = document.createElementNS(SVG_NS, "path");
@@ -107,8 +107,8 @@ export function clear(el: Element): void {
 }
 
 /**
- * Event delegation on data-gadget-* attributes: one listener on the widget
- * root dispatches to the nearest ancestor carrying data-gadget-<attr>.
+ * Event delegation on data-gomu-* attributes: one listener on the widget
+ * root dispatches to the nearest ancestor carrying data-gomu-<attr>.
  */
 export function delegate(
   root: HTMLElement,
@@ -116,12 +116,12 @@ export function delegate(
   attr: string,
   handler: (el: HTMLElement, value: string, ev: Event) => void,
 ): void {
-  const selector = `[data-gadget-${attr}]`;
+  const selector = `[data-gomu-${attr}]`;
   root.addEventListener(type, (ev) => {
     const target = ev.target;
     if (!(target instanceof Element)) return;
     const el = target.closest(selector);
     if (!(el instanceof HTMLElement) || !root.contains(el)) return;
-    handler(el, el.getAttribute(`data-gadget-${attr}`) ?? "", ev);
+    handler(el, el.getAttribute(`data-gomu-${attr}`) ?? "", ev);
   });
 }

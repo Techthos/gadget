@@ -65,13 +65,13 @@ describe("brand link", () => {
 
 	it("opens the brand URL through the host", async () => {
 		document.body.innerHTML = `
-      <div class="gadget-root" data-gadget-widget="cardlist">
-        <button type="button" class="gadget-brand" data-gadget-brand="https://acme.test">
-          <span class="gadget-brand-name">Acme</span>
+      <div class="gomu-root" data-gomu-widget="cardlist">
+        <button type="button" class="gomu-brand" data-gomu-brand="https://acme.test">
+          <span class="gomu-brand-name">Acme</span>
         </button>
       </div>`;
 		await boot();
-		document.querySelector<HTMLElement>("[data-gadget-brand]")?.click();
+		document.querySelector<HTMLElement>("[data-gomu-brand]")?.click();
 		await flush();
 
 		const opened = host.received(M.openLink);

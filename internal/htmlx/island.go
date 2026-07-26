@@ -12,10 +12,10 @@ import (
 const (
 	// ConfigIslandID holds the widget's static spec (columns, fields,
 	// action bindings).
-	ConfigIslandID = "gadget-config"
+	ConfigIslandID = "gomu-config"
 	// DataIslandID optionally holds a baked structuredContent snapshot for
 	// instant first paint before any tool-result notification arrives.
-	DataIslandID = "gadget-data"
+	DataIslandID = "gomu-data"
 )
 
 // JSONIsland renders v as a <script type="application/json" id=...> data

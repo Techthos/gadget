@@ -1,10 +1,10 @@
-package gadget
+package gomukit
 
 import (
 	"fmt"
 
-	"github.com/techthos/gadget/theme"
-	"github.com/techthos/gadget/uispec"
+	"github.com/techthos/gomukit/theme"
+	"github.com/techthos/gomukit/uispec"
 )
 
 // CardTemplate describes how one record renders as a card. It is shared by
@@ -271,7 +271,7 @@ type Card struct {
 
 	// Brand renders the application logo/name on the widget.
 	Brand *Brand
-	// Theme overrides gadget design tokens for this widget.
+	// Theme overrides gomukit design tokens for this widget.
 	Theme *theme.Theme
 	// UI overrides resource _meta.ui (CSP, permissions, prefersBorder).
 	UI *uispec.ResourceUIMeta
@@ -294,16 +294,16 @@ func (c *Card) rowID() string {
 // Validate implements Widget.
 func (c *Card) Validate() error {
 	if err := uispec.ValidateURI(c.URI); err != nil {
-		return fmt.Errorf("gadget: card: %w", err)
+		return fmt.Errorf("gomukit: card: %w", err)
 	}
-	if err := c.Template.validate(fmt.Sprintf("gadget: card %s", c.URI)); err != nil {
+	if err := c.Template.validate(fmt.Sprintf("gomukit: card %s", c.URI)); err != nil {
 		return err
 	}
 	if err := c.Brand.Validate(); err != nil {
-		return fmt.Errorf("gadget: card %s: %w", c.URI, err)
+		return fmt.Errorf("gomukit: card %s: %w", c.URI, err)
 	}
 	if err := c.Theme.Validate(); err != nil {
-		return fmt.Errorf("gadget: card %s: %w", c.URI, err)
+		return fmt.Errorf("gomukit: card %s: %w", c.URI, err)
 	}
 	return nil
 }
@@ -401,7 +401,7 @@ type CardList struct {
 
 	// Brand renders the application logo/name on the widget.
 	Brand *Brand
-	// Theme overrides gadget design tokens for this widget.
+	// Theme overrides gomukit design tokens for this widget.
 	Theme *theme.Theme
 	// UI overrides resource _meta.ui (CSP, permissions, prefersBorder).
 	UI *uispec.ResourceUIMeta
@@ -424,40 +424,40 @@ func (l *CardList) rowID() string {
 // Validate implements Widget.
 func (l *CardList) Validate() error {
 	if err := uispec.ValidateURI(l.URI); err != nil {
-		return fmt.Errorf("gadget: cardlist: %w", err)
+		return fmt.Errorf("gomukit: cardlist: %w", err)
 	}
-	if err := l.Template.validate(fmt.Sprintf("gadget: cardlist %s", l.URI)); err != nil {
+	if err := l.Template.validate(fmt.Sprintf("gomukit: cardlist %s", l.URI)); err != nil {
 		return err
 	}
 	if l.PageSize < 0 {
-		return fmt.Errorf("gadget: cardlist %s: PageSize must be >= 0", l.URI)
+		return fmt.Errorf("gomukit: cardlist %s: PageSize must be >= 0", l.URI)
 	}
-	if err := validatePageSizes(fmt.Sprintf("gadget: cardlist %s", l.URI), l.PageSize, l.PageSizes); err != nil {
+	if err := validatePageSizes(fmt.Sprintf("gomukit: cardlist %s", l.URI), l.PageSize, l.PageSizes); err != nil {
 		return err
 	}
 	if l.LoadMore {
 		if l.PageSize <= 0 {
-			return fmt.Errorf("gadget: cardlist %s: LoadMore needs PageSize > 0", l.URI)
+			return fmt.Errorf("gomukit: cardlist %s: LoadMore needs PageSize > 0", l.URI)
 		}
 		if len(l.PageSizes) > 0 {
-			return fmt.Errorf("gadget: cardlist %s: LoadMore and PageSizes are mutually exclusive", l.URI)
+			return fmt.Errorf("gomukit: cardlist %s: LoadMore and PageSizes are mutually exclusive", l.URI)
 		}
 	}
 	if l.DefaultSort != nil && l.DefaultSort.Key == "" {
-		return fmt.Errorf("gadget: cardlist %s: DefaultSort.Key is required", l.URI)
+		return fmt.Errorf("gomukit: cardlist %s: DefaultSort.Key is required", l.URI)
 	}
 	if l.Selection != nil {
 		for _, a := range l.Selection.Bulk {
-			if err := a.validate(fmt.Sprintf("gadget: cardlist %s: bulk", l.URI)); err != nil {
+			if err := a.validate(fmt.Sprintf("gomukit: cardlist %s: bulk", l.URI)); err != nil {
 				return err
 			}
 		}
 	}
 	if err := l.Brand.Validate(); err != nil {
-		return fmt.Errorf("gadget: cardlist %s: %w", l.URI, err)
+		return fmt.Errorf("gomukit: cardlist %s: %w", l.URI, err)
 	}
 	if err := l.Theme.Validate(); err != nil {
-		return fmt.Errorf("gadget: cardlist %s: %w", l.URI, err)
+		return fmt.Errorf("gomukit: cardlist %s: %w", l.URI, err)
 	}
 	return nil
 }

@@ -1,10 +1,10 @@
-package gadget
+package gomukit
 
 import (
 	"fmt"
 
-	"github.com/techthos/gadget/theme"
-	"github.com/techthos/gadget/uispec"
+	"github.com/techthos/gomukit/theme"
+	"github.com/techthos/gomukit/uispec"
 )
 
 // Confirm is an approval widget: it states an operation, shows the record it
@@ -81,7 +81,7 @@ type Confirm struct {
 
 	// Brand renders the application logo/name on the widget.
 	Brand *Brand
-	// Theme overrides gadget design tokens for this widget.
+	// Theme overrides gomukit design tokens for this widget.
 	Theme *theme.Theme
 	// UI overrides resource _meta.ui (CSP, permissions, prefersBorder).
 	UI *uispec.ResourceUIMeta
@@ -223,9 +223,9 @@ func (c *Confirm) rejectLabel() string {
 // Validate implements Widget.
 func (c *Confirm) Validate() error {
 	if err := uispec.ValidateURI(c.URI); err != nil {
-		return fmt.Errorf("gadget: confirm: %w", err)
+		return fmt.Errorf("gomukit: confirm: %w", err)
 	}
-	ctx := fmt.Sprintf("gadget: confirm %s", c.URI)
+	ctx := fmt.Sprintf("gomukit: confirm %s", c.URI)
 	if c.Prompt == "" {
 		return fmt.Errorf("%s: Prompt is required", ctx)
 	}

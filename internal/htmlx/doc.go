@@ -22,14 +22,14 @@ type DocConfig struct {
 	ThemeCSS string // optional theme override block, emitted after CSS
 
 	// Body is the SSR'd widget shell, rooted at an element carrying
-	// class="gadget-root" and data-gadget-widget="<kind>".
+	// class="gomu-root" and data-gomu-widget="<kind>".
 	Body g.Node
 
-	// Config is serialized into the #gadget-config island (required by the
+	// Config is serialized into the #gomu-config island (required by the
 	// runtime to mount a behavior).
 	Config any
 
-	// Data, when non-nil, is serialized into the optional #gadget-data
+	// Data, when non-nil, is serialized into the optional #gomu-data
 	// island as a baked structuredContent snapshot.
 	Data any
 

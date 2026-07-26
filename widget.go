@@ -1,4 +1,4 @@
-// Package gadget provides prebuilt, parameterized, interactive HTML widgets
+// Package gomukit provides prebuilt, parameterized, interactive HTML widgets
 // for MCP Apps (the official Model Context Protocol UI extension,
 // io.modelcontextprotocol/ui). Widgets render as fully self-contained HTML
 // documents — inline CSS, inline JavaScript, no external references — ready
@@ -6,9 +6,9 @@
 //
 // The core packages are SDK-agnostic; package gosdk adapts widgets to the
 // official modelcontextprotocol/go-sdk.
-package gadget
+package gomukit
 
-import "github.com/techthos/gadget/uispec"
+import "github.com/techthos/gomukit/uispec"
 
 // Widget is a renderable MCP Apps UI template. The widget's ui:// URI is
 // available as Descriptor().URI.

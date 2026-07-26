@@ -1,4 +1,4 @@
-// Command demo is a runnable MCP server showcasing gadget widgets: a user
+// Command demo is a runnable MCP server showcasing gomukit widgets: a user
 // table with row/bulk actions, the same users as a card grid, an edit form
 // with server-side validation, a confirmation, and a date picker whose
 // selectable window is computed per call.
@@ -26,9 +26,9 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/techthos/gadget"
-	"github.com/techthos/gadget/gosdk"
-	"github.com/techthos/gadget/theme"
+	"github.com/techthos/gomukit"
+	"github.com/techthos/gomukit/gosdk"
+	"github.com/techthos/gomukit/theme"
 )
 
 // --- in-memory data ---
@@ -73,7 +73,7 @@ func (d *db) rows() []map[string]any {
 		list = append(list, u)
 	}
 	sort.Slice(list, func(i, j int) bool { return list[i].ID < list[j].ID })
-	rows, _ := gadget.RowsOf(list)
+	rows, _ := gomukit.RowsOf(list)
 	return rows
 }
 
@@ -92,7 +92,7 @@ func bookedDays(d *db) []string {
 
 // userRow is one user in the row shape every widget reads (honors json tags).
 func userRow(u *user) map[string]any {
-	rows, _ := gadget.RowsOf([]*user{u})
+	rows, _ := gomukit.RowsOf([]*user{u})
 	if len(rows) == 0 {
 		return map[string]any{}
 	}
@@ -101,107 +101,107 @@ func userRow(u *user) map[string]any {
 
 // --- widgets ---
 
-func usersTable() *gadget.Table {
-	return &gadget.Table{
+func usersTable() *gomukit.Table {
+	return &gomukit.Table{
 		URI:   "ui://demo/users",
 		Title: "Users",
-		Columns: []gadget.Column{
-			gadget.Text("name", "Name"),
-			gadget.Text("email", "Email"),
-			gadget.Number("balance", "Balance", "currency:EUR"),
-			gadget.Date("createdAt", "Created", "date"),
+		Columns: []gomukit.Column{
+			gomukit.Text("name", "Name"),
+			gomukit.Text("email", "Email"),
+			gomukit.Number("balance", "Balance", "currency:EUR"),
+			gomukit.Date("createdAt", "Created", "date"),
 			// Written by the date picker, so the two widgets are visibly the
 			// same record.
-			gadget.Date("followUpAt", "Follow-up", "date"),
-			gadget.Badge("status", "Status", map[string]gadget.BadgeVariant{
-				"active":   gadget.BadgeSuccess,
-				"invited":  gadget.BadgeInfo,
-				"archived": gadget.BadgeNeutral,
+			gomukit.Date("followUpAt", "Follow-up", "date"),
+			gomukit.Badge("status", "Status", map[string]gomukit.BadgeVariant{
+				"active":   gomukit.BadgeSuccess,
+				"invited":  gomukit.BadgeInfo,
+				"archived": gomukit.BadgeNeutral,
 			}),
-			gadget.ActionsColumn(
-				gadget.Action{
-					Label: "Delete", Tool: "delete_user", Variant: gadget.VariantDanger,
+			gomukit.ActionsColumn(
+				gomukit.Action{
+					Label: "Delete", Tool: "delete_user", Variant: gomukit.VariantDanger,
 					Confirm: "Really delete?",
-					Args:    map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+					Args:    map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")},
 				},
 			),
 		},
 		PageSize:    10,
 		PageSizes:   []int{10, 25, 50},
-		DefaultSort: &gadget.SortSpec{Key: "name"},
+		DefaultSort: &gomukit.SortSpec{Key: "name"},
 		Filterable:  true,
-		Selection: &gadget.SelectionConfig{Bulk: []gadget.Action{
+		Selection: &gomukit.SelectionConfig{Bulk: []gomukit.Action{
 			{
 				Label: "Archive", Tool: "archive_users",
-				Args: map[string]gadget.ArgSource{"ids": gadget.FromSelection("id")},
+				Args: map[string]gomukit.ArgSource{"ids": gomukit.FromSelection("id")},
 			},
 		}},
-		Empty: gadget.EmptyState{Title: "No users", Body: "Ask the assistant to create one."},
+		Empty: gomukit.EmptyState{Title: "No users", Body: "Ask the assistant to create one."},
 		Brand: demoBrand(),
 		Theme: &theme.Theme{ColorPrimary: "#7c3aed"},
 	}
 }
 
-func usersCards() *gadget.CardList {
-	return &gadget.CardList{
+func usersCards() *gomukit.CardList {
+	return &gomukit.CardList{
 		URI:   "ui://demo/user-cards",
 		Title: "Users",
-		Template: gadget.CardTemplate{
-			Header: gadget.CardHeader{
+		Template: gomukit.CardTemplate{
+			Header: gomukit.CardHeader{
 				TitleKey:       "name",
 				DescriptionKey: "email",
-				Badge: gadget.Badge("status", "Status", map[string]gadget.BadgeVariant{
-					"active":   gadget.BadgeSuccess,
-					"invited":  gadget.BadgeInfo,
-					"archived": gadget.BadgeNeutral,
+				Badge: gomukit.Badge("status", "Status", map[string]gomukit.BadgeVariant{
+					"active":   gomukit.BadgeSuccess,
+					"invited":  gomukit.BadgeInfo,
+					"archived": gomukit.BadgeNeutral,
 				}),
 			},
-			Content: gadget.CardContent{
-				Items: gadget.Descriptions{Items: []gadget.DescriptionItem{
-					{Label: "Balance", Key: "balance", Type: gadget.ColNumber, Format: "currency:EUR"},
-					{Label: "Joined", Key: "createdAt", Type: gadget.ColDate, Format: "relative"},
+			Content: gomukit.CardContent{
+				Items: gomukit.Descriptions{Items: []gomukit.DescriptionItem{
+					{Label: "Balance", Key: "balance", Type: gomukit.ColNumber, Format: "currency:EUR"},
+					{Label: "Joined", Key: "createdAt", Type: gomukit.ColDate, Format: "relative"},
 				}},
 			},
-			Footer: gadget.CardFooter{Actions: []gadget.Action{
+			Footer: gomukit.CardFooter{Actions: []gomukit.Action{
 				{
-					Label: "Delete", Tool: "delete_user", Variant: gadget.VariantDanger,
+					Label: "Delete", Tool: "delete_user", Variant: gomukit.VariantDanger,
 					Confirm: "Really delete?",
-					Args:    map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+					Args:    map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")},
 				},
 			}},
 		},
 		PageSize:    12,
 		PageSizes:   []int{12, 24, 48},
-		DefaultSort: &gadget.SortSpec{Key: "balance", Desc: true},
+		DefaultSort: &gomukit.SortSpec{Key: "balance", Desc: true},
 		Filterable:  true,
-		Selection: &gadget.SelectionConfig{Bulk: []gadget.Action{
+		Selection: &gomukit.SelectionConfig{Bulk: []gomukit.Action{
 			{
 				Label: "Archive", Tool: "archive_users",
-				Args: map[string]gadget.ArgSource{"ids": gadget.FromSelection("id")},
+				Args: map[string]gomukit.ArgSource{"ids": gomukit.FromSelection("id")},
 			},
 		}},
-		Empty: gadget.EmptyState{Title: "No users", Body: "Ask the assistant to create one."},
+		Empty: gomukit.EmptyState{Title: "No users", Body: "Ask the assistant to create one."},
 		Brand: demoBrand(),
 		Theme: &theme.Theme{ColorPrimary: "#7c3aed"},
 	}
 }
 
-func userForm() *gadget.Form {
-	return &gadget.Form{
+func userForm() *gomukit.Form {
+	return &gomukit.Form{
 		URI:   "ui://demo/user-form",
 		Title: "Edit user",
-		Fields: []gadget.Field{
-			{Name: "id", Type: gadget.FHidden},
+		Fields: []gomukit.Field{
+			{Name: "id", Type: gomukit.FHidden},
 			{Name: "name", Label: "Name", Required: true},
 			{Name: "email", Label: "Email", Required: true,
-				Validation: &gadget.Validation{Pattern: `[^@\s]+@[^@\s]+`, Message: "Enter a valid email address."}},
-			{Name: "status", Label: "Status", Type: gadget.FSelect, Required: true,
-				Options: []gadget.Option{gadget.Opt("active"), gadget.Opt("invited"), gadget.Opt("archived")}},
-			{Name: "balance", Label: "Balance (EUR)", Type: gadget.FNumber,
-				Validation: &gadget.Validation{Min: ptr(0.0), Step: ptr(0.01)}},
+				Validation: &gomukit.Validation{Pattern: `[^@\s]+@[^@\s]+`, Message: "Enter a valid email address."}},
+			{Name: "status", Label: "Status", Type: gomukit.FSelect, Required: true,
+				Options: []gomukit.Option{gomukit.Opt("active"), gomukit.Opt("invited"), gomukit.Opt("archived")}},
+			{Name: "balance", Label: "Balance (EUR)", Type: gomukit.FNumber,
+				Validation: &gomukit.Validation{Min: ptr(0.0), Step: ptr(0.01)}},
 		},
-		Submit: gadget.SubmitSpec{Tool: "save_user", Label: "Save", SuccessMessage: "User saved."},
-		Cancel: &gadget.CancelSpec{},
+		Submit: gomukit.SubmitSpec{Tool: "save_user", Label: "Save", SuccessMessage: "User saved."},
+		Cancel: &gomukit.CancelSpec{},
 		Brand:  demoBrand(),
 		Theme:  &theme.Theme{ColorPrimary: "#7c3aed"},
 	}
@@ -210,32 +210,32 @@ func userForm() *gadget.Form {
 // deleteConfirm asks before a deletion runs. The record and the consequences
 // are per call, so both arrive from confirm_delete_user's result: the user
 // under "rows", what removing them costs under "effects".
-func deleteConfirm() *gadget.Confirm {
-	return &gadget.Confirm{
+func deleteConfirm() *gomukit.Confirm {
+	return &gomukit.Confirm{
 		URI:      "ui://demo/confirm-delete",
 		Title:    "Delete user",
 		Prompt:   "Delete this user?",
 		Body:     "The account and everything attached to it is removed for good.",
-		Severity: gadget.BadgeDanger,
-		Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
+		Severity: gomukit.BadgeDanger,
+		Details: gomukit.Descriptions{Items: []gomukit.DescriptionItem{
 			{Label: "User", Key: "name"},
 			{Label: "Email", Key: "email"},
-			{Label: "Balance", Key: "balance", Type: gadget.ColNumber, Format: "currency:EUR"},
-			{Label: "Status", Key: "status", Type: gadget.ColBadge, Badge: map[string]gadget.BadgeVariant{
-				"active":   gadget.BadgeSuccess,
-				"invited":  gadget.BadgeInfo,
-				"archived": gadget.BadgeNeutral,
+			{Label: "Balance", Key: "balance", Type: gomukit.ColNumber, Format: "currency:EUR"},
+			{Label: "Status", Key: "status", Type: gomukit.ColBadge, Badge: map[string]gomukit.BadgeVariant{
+				"active":   gomukit.BadgeSuccess,
+				"invited":  gomukit.BadgeInfo,
+				"archived": gomukit.BadgeNeutral,
 			}},
 			{Label: "Region", Text: "eu-central-1"},
 		}},
 		Acknowledge: "I understand this cannot be undone.",
-		Accept: gadget.AcceptSpec{
+		Accept: gomukit.AcceptSpec{
 			Tool:           "apply_delete_user",
 			Label:          "Delete user",
-			Args:           map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+			Args:           map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")},
 			SuccessMessage: "User deleted.",
 		},
-		Reject: &gadget.RejectSpec{Label: "Keep user", Message: "Nothing was deleted."},
+		Reject: &gomukit.RejectSpec{Label: "Keep user", Message: "Nothing was deleted."},
 		Brand:  demoBrand(),
 		Theme:  &theme.Theme{ColorPrimary: "#7c3aed"},
 	}
@@ -246,35 +246,35 @@ func deleteConfirm() *gadget.Confirm {
 // still open changes between registration and the question, so
 // schedule_followup computes min/max and the days already taken at call time
 // and delivers them under "value" alongside the record.
-func followUpPicker() *gadget.DatePicker {
-	return &gadget.DatePicker{
+func followUpPicker() *gomukit.DatePicker {
+	return &gomukit.DatePicker{
 		URI:    "ui://demo/followup",
 		Title:  "Follow-up",
 		Prompt: "When should we call this user back?",
 		Body:   "Weekends are not working days, and the diary is already full on some.",
-		Calendar: &gadget.Calendar{
+		Calendar: &gomukit.Calendar{
 			DisableWeekends: true,
-			Presets: []gadget.DatePreset{
-				{Label: "Today", Span: gadget.SpanToday},
-				{Label: "Tomorrow", Span: gadget.SpanTomorrow},
+			Presets: []gomukit.DatePreset{
+				{Label: "Today", Span: gomukit.SpanToday},
+				{Label: "Tomorrow", Span: gomukit.SpanTomorrow},
 			},
 		},
-		Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
+		Details: gomukit.Descriptions{Items: []gomukit.DescriptionItem{
 			{Label: "User", Key: "name"},
 			{Label: "Email", Key: "email"},
-			{Label: "Status", Key: "status", Type: gadget.ColBadge, Badge: map[string]gadget.BadgeVariant{
-				"active":   gadget.BadgeSuccess,
-				"invited":  gadget.BadgeInfo,
-				"archived": gadget.BadgeNeutral,
+			{Label: "Status", Key: "status", Type: gomukit.ColBadge, Badge: map[string]gomukit.BadgeVariant{
+				"active":   gomukit.BadgeSuccess,
+				"invited":  gomukit.BadgeInfo,
+				"archived": gomukit.BadgeNeutral,
 			}},
 		}},
-		Submit: gadget.DateSubmit{
+		Submit: gomukit.DateSubmit{
 			Tool:           "set_followup_date",
 			Label:          "Book the call",
-			Args:           map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+			Args:           map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")},
 			SuccessMessage: "Call booked.",
 		},
-		Cancel: &gadget.RejectSpec{Label: "Not now", Message: "No call was booked."},
+		Cancel: &gomukit.RejectSpec{Label: "Not now", Message: "No call was booked."},
 		Brand:  demoBrand(),
 		Theme:  &theme.Theme{ColorPrimary: "#7c3aed"},
 	}
@@ -282,19 +282,19 @@ func followUpPicker() *gadget.DatePicker {
 
 // demoMenu is the app's front door: one tile per UI-backed tool. Choosing a
 // tile calls that tool, and the host opens the widget bound to it.
-func demoMenu() *gadget.Menu {
-	return &gadget.Menu{
+func demoMenu() *gomukit.Menu {
+	return &gomukit.Menu{
 		URI:   "ui://demo/menu",
 		Title: "Acme users",
 		Intro: "Pick where to start.",
-		Items: []gadget.MenuItem{
+		Items: []gomukit.MenuItem{
 			{
 				Tool:         "list_users",
 				Label:        "User table",
 				Description:  "Sortable, filterable directory with bulk actions.",
 				IconSVG:      iconTable,
 				Badge:        "read",
-				BadgeVariant: gadget.BadgeInfo,
+				BadgeVariant: gomukit.BadgeInfo,
 			},
 			{
 				Tool:         "list_user_cards",
@@ -302,7 +302,7 @@ func demoMenu() *gadget.Menu {
 				Description:  "The same users as a swipeable card strip.",
 				IconSVG:      iconCards,
 				Badge:        "read",
-				BadgeVariant: gadget.BadgeInfo,
+				BadgeVariant: gomukit.BadgeInfo,
 			},
 			{
 				Tool:         "edit_user",
@@ -311,7 +311,7 @@ func demoMenu() *gadget.Menu {
 				Description:  "Open the edit form for the first user.",
 				IconSVG:      iconPencil,
 				Badge:        "write",
-				BadgeVariant: gadget.BadgeWarning,
+				BadgeVariant: gomukit.BadgeWarning,
 			},
 			{
 				Tool:         "schedule_followup",
@@ -320,7 +320,7 @@ func demoMenu() *gadget.Menu {
 				Description:  "Pick the day, from the ones still open.",
 				IconSVG:      iconCalendar,
 				Badge:        "write",
-				BadgeVariant: gadget.BadgeWarning,
+				BadgeVariant: gomukit.BadgeWarning,
 			},
 		},
 		Brand: demoBrand(),
@@ -337,8 +337,8 @@ const (
 )
 
 // demoBrand is the application mark shown at the top left of every widget.
-func demoBrand() *gadget.Brand {
-	return &gadget.Brand{
+func demoBrand() *gomukit.Brand {
+	return &gomukit.Brand{
 		Name:    "Acme",
 		URL:     "https://example.com",
 		LogoSVG: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="8" r="7"/></svg>`,
@@ -351,7 +351,7 @@ func ptr[T any](v T) *T { return &v }
 
 func newServer(data *db) *mcp.Server {
 	server := mcp.NewServer(
-		&mcp.Implementation{Name: "gadget-demo", Version: "0.1.0"},
+		&mcp.Implementation{Name: "gomukit-demo", Version: "0.1.0"},
 		gosdk.EnableUI(nil),
 	)
 	table := usersTable()
@@ -532,7 +532,7 @@ func newServer(data *db) *mcp.Server {
 			if u == nil {
 				return textResult(fmt.Sprintf("User %d not found.", in.ID)), editOut{}, nil
 			}
-			values, err := gadget.RowsOf([]*user{u})
+			values, err := gomukit.RowsOf([]*user{u})
 			if err != nil {
 				return nil, editOut{}, err
 			}
@@ -608,7 +608,7 @@ func main() {
 	}
 
 	handler := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return server }, nil)
-	log.Printf("gadget demo MCP server on http://localhost%s/mcp", *addr)
+	log.Printf("gomukit demo MCP server on http://localhost%s/mcp", *addr)
 	mux := http.NewServeMux()
 	mux.Handle("/mcp", handler)
 	log.Fatal(http.ListenAndServe(*addr, mux))

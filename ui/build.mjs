@@ -1,4 +1,4 @@
-// Builds the gadget runtime bundle (JS + CSS) into internal/assets/dist,
+// Builds the gomukit runtime bundle (JS + CSS) into internal/assets/dist,
 // where Go picks it up via go:embed. Output must be deterministic for a given
 // esbuild version (pinned exactly in package.json) so `make verify-dist` works.
 import esbuild from "esbuild";
@@ -12,7 +12,7 @@ await esbuild.build({
   target: "es2020",
   minify: true,
   legalComments: "none",
-  outfile: `${outdir}/gadget.js`,
+  outfile: `${outdir}/gomukit.js`,
 });
 
 await esbuild.build({
@@ -20,7 +20,7 @@ await esbuild.build({
   bundle: true,
   minify: true,
   legalComments: "none",
-  outfile: `${outdir}/gadget.css`,
+  outfile: `${outdir}/gomukit.css`,
 });
 
-console.log("built internal/assets/dist/gadget.{js,css}");
+console.log("built internal/assets/dist/gomukit.{js,css}");

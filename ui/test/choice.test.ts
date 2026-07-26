@@ -9,24 +9,24 @@ import { FakeHost, flush } from "./fake-host";
 function choiceShell({ cancel = true, details = true, multiple = false } = {}): HTMLElement {
 	document.body.innerHTML = "";
 	const root = document.createElement("div");
-	root.className = "gadget-root";
-	root.setAttribute("data-gadget-widget", "choice");
+	root.className = "gomu-root";
+	root.setAttribute("data-gomu-widget", "choice");
 	root.innerHTML = `
-    <div class="gadget-card gadget-choice gadget-choice--auto">
-      <div class="gadget-choice-prompt"><h3 class="gadget-choice-question" id="gadget-choice-question">How should we ship?</h3></div>
-      ${details ? `<dl class="gadget-descriptions" data-gadget-descriptions="" hidden></dl>` : ""}
-      <div class="gadget-choice-body">
-        <div class="gadget-choice-list" data-gadget-options="" role="${multiple ? "group" : "radiogroup"}"></div>
-        <div class="gadget-choice-panel" data-gadget-panel="" hidden></div>
+    <div class="gomu-card gomu-choice gomu-choice--auto">
+      <div class="gomu-choice-prompt"><h3 class="gomu-choice-question" id="gomu-choice-question">How should we ship?</h3></div>
+      ${details ? `<dl class="gomu-descriptions" data-gomu-descriptions="" hidden></dl>` : ""}
+      <div class="gomu-choice-body">
+        <div class="gomu-choice-list" data-gomu-options="" role="${multiple ? "group" : "radiogroup"}"></div>
+        <div class="gomu-choice-panel" data-gomu-panel="" hidden></div>
       </div>
-      <div class="gadget-empty" data-gadget-empty="" hidden><h3>Nothing to choose from</h3></div>
-      <p class="gadget-choice-hint" data-gadget-hint="" hidden></p>
-      <div class="gadget-choice-actions" data-gadget-decision="">
-        ${cancel ? `<button type="button" data-gadget-cancel="">Cancel</button>` : ""}
-        <button type="button" data-gadget-submit="" disabled>Continue</button>
+      <div class="gomu-empty" data-gomu-empty="" hidden><h3>Nothing to choose from</h3></div>
+      <p class="gomu-choice-hint" data-gomu-hint="" hidden></p>
+      <div class="gomu-choice-actions" data-gomu-decision="">
+        ${cancel ? `<button type="button" data-gomu-cancel="">Cancel</button>` : ""}
+        <button type="button" data-gomu-submit="" disabled>Continue</button>
       </div>
-      <p class="gadget-choice-outcome" data-gadget-outcome="" hidden></p>
-      <div class="gadget-statusbar"><div class="gadget-status" data-gadget-status="" hidden></div></div>
+      <p class="gomu-choice-outcome" data-gomu-outcome="" hidden></p>
+      <div class="gomu-statusbar"><div class="gomu-status" data-gomu-status="" hidden></div></div>
     </div>`;
 	document.body.append(root);
 	return root;
@@ -79,22 +79,22 @@ const DATA = { rows: [{ id: 4471, reference: "ORD-4471" }] };
 
 const el = <T extends HTMLElement>(root: HTMLElement, sel: string): T =>
 	root.querySelector<T>(sel)!;
-const submit = (root: HTMLElement) => el<HTMLButtonElement>(root, "[data-gadget-submit]");
-const cancel = (root: HTMLElement) => el<HTMLButtonElement>(root, "[data-gadget-cancel]");
-const outcome = (root: HTMLElement) => el(root, "[data-gadget-outcome]");
-const decision = (root: HTMLElement) => el(root, "[data-gadget-decision]");
-const status = (root: HTMLElement) => el(root, "[data-gadget-status]");
-const panel = (root: HTMLElement) => el(root, "[data-gadget-panel]");
-const hint = (root: HTMLElement) => el(root, "[data-gadget-hint]");
-const list = (root: HTMLElement) => el(root, "[data-gadget-options]");
+const submit = (root: HTMLElement) => el<HTMLButtonElement>(root, "[data-gomu-submit]");
+const cancel = (root: HTMLElement) => el<HTMLButtonElement>(root, "[data-gomu-cancel]");
+const outcome = (root: HTMLElement) => el(root, "[data-gomu-outcome]");
+const decision = (root: HTMLElement) => el(root, "[data-gomu-decision]");
+const status = (root: HTMLElement) => el(root, "[data-gomu-status]");
+const panel = (root: HTMLElement) => el(root, "[data-gomu-panel]");
+const hint = (root: HTMLElement) => el(root, "[data-gomu-hint]");
+const list = (root: HTMLElement) => el(root, "[data-gomu-options]");
 const options = (root: HTMLElement) => [
-	...root.querySelectorAll<HTMLElement>("[data-gadget-option]"),
+	...root.querySelectorAll<HTMLElement>("[data-gomu-option]"),
 ];
 const option = (root: HTMLElement, i: number) => options(root)[i]!;
 const input = (root: HTMLElement, i: number) =>
 	option(root, i).querySelector<HTMLInputElement>("input")!;
 const labels = (root: HTMLElement) =>
-	options(root).map((o) => o.querySelector(".gadget-choice-label")?.textContent);
+	options(root).map((o) => o.querySelector(".gomu-choice-label")?.textContent);
 
 describe("choice behavior", () => {
 	let host: FakeHost;
@@ -118,9 +118,9 @@ describe("choice behavior", () => {
 		mountChoice({ root, config: config(), initialData: DATA, bridge });
 
 		expect(labels(root)).toEqual(["Standard", "Express", "Depot pickup"]);
-		expect(el(root, "[data-gadget-descriptions] dd").textContent).toBe("ORD-4471");
-		expect(option(root, 1).querySelector(".gadget-badge")?.className).toContain(
-			"gadget-badge--success",
+		expect(el(root, "[data-gomu-descriptions] dd").textContent).toBe("ORD-4471");
+		expect(option(root, 1).querySelector(".gomu-badge")?.className).toContain(
+			"gomu-badge--success",
 		);
 		expect(input(root, 0).type).toBe("radio");
 		expect(input(root, 2).disabled).toBe(true);
@@ -131,7 +131,7 @@ describe("choice behavior", () => {
 		mountChoice({ root, config: config(), initialData: DATA, bridge });
 
 		expect(input(root, 0).checked).toBe(true);
-		expect(option(root, 0).className).toContain("gadget-choice-option--selected");
+		expect(option(root, 0).className).toContain("gomu-choice-option--selected");
 		expect(submit(root).disabled).toBe(false);
 	});
 
@@ -167,7 +167,7 @@ describe("choice behavior", () => {
 		expect(input(root, 2).checked).toBe(false);
 		expect(input(root, 0).checked).toBe(true);
 		// Stacked: what it cannot be chosen for is where the reader looks.
-		expect(option(root, 2).querySelector(".gadget-choice-info-body")?.textContent).toBe(
+		expect(option(root, 2).querySelector(".gomu-choice-info-body")?.textContent).toBe(
 			"No depot near this address.",
 		);
 	});
@@ -176,13 +176,13 @@ describe("choice behavior", () => {
 		const root = choiceShell();
 		mountChoice({ root, config: config(), initialData: DATA, bridge });
 
-		expect(option(root, 0).querySelector(".gadget-choice-info")).not.toBeNull();
-		expect(option(root, 1).querySelector(".gadget-choice-info")).toBeNull();
+		expect(option(root, 0).querySelector(".gomu-choice-info")).not.toBeNull();
+		expect(option(root, 1).querySelector(".gomu-choice-info")).toBeNull();
 		expect(panel(root).hidden).toBe(true);
 
 		option(root, 1).click();
-		expect(option(root, 0).querySelector(".gadget-choice-info")).toBeNull();
-		expect(option(root, 1).querySelector(".gadget-choice-info-body")?.textContent).toBe(
+		expect(option(root, 0).querySelector(".gomu-choice-info")).toBeNull();
+		expect(option(root, 1).querySelector(".gomu-choice-info-body")?.textContent).toBe(
 			"Arrives before 12:00.",
 		);
 	});
@@ -191,18 +191,18 @@ describe("choice behavior", () => {
 		const root = choiceShell();
 		mountChoice({ root, config: config({ layout: "split" }), initialData: DATA, bridge });
 
-		expect(el(root, ".gadget-choice").className).toContain("gadget-choice--split");
+		expect(el(root, ".gomu-choice").className).toContain("gomu-choice--split");
 		expect(panel(root).hidden).toBe(false);
-		expect(panel(root).querySelector(".gadget-choice-info-title")?.textContent).toBe("Standard");
-		expect(panel(root).querySelector(".gadget-choice-bullets li")?.textContent).toBe(
+		expect(panel(root).querySelector(".gomu-choice-info-title")?.textContent).toBe("Standard");
+		expect(panel(root).querySelector(".gomu-choice-bullets li")?.textContent).toBe(
 			"Tracked to the depot",
 		);
 		// The option's typed details are formatted against its own record.
-		expect(panel(root).querySelector(".gadget-choice-details dd")?.textContent).toContain("4.9");
-		expect(option(root, 0).querySelector(".gadget-choice-info")).toBeNull();
+		expect(panel(root).querySelector(".gomu-choice-details dd")?.textContent).toContain("4.9");
+		expect(option(root, 0).querySelector(".gomu-choice-info")).toBeNull();
 
 		option(root, 1).click();
-		expect(panel(root).querySelector(".gadget-choice-info-title")?.textContent).toBe("Express");
+		expect(panel(root).querySelector(".gomu-choice-info-title")?.textContent).toBe("Express");
 	});
 
 	it("split: the panel follows keyboard focus without changing the choice", () => {
@@ -210,7 +210,7 @@ describe("choice behavior", () => {
 		mountChoice({ root, config: config({ layout: "split" }), initialData: DATA, bridge });
 
 		input(root, 1).dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
-		expect(panel(root).querySelector(".gadget-choice-info-title")?.textContent).toBe("Express");
+		expect(panel(root).querySelector(".gomu-choice-info-title")?.textContent).toBe("Express");
 		expect(input(root, 0).checked).toBe(true);
 	});
 
@@ -228,7 +228,7 @@ describe("choice behavior", () => {
 		});
 		expect(decision(root).hidden).toBe(true);
 		expect(outcome(root).textContent).toBe("On its way.");
-		expect(outcome(root).className).toContain("gadget-choice-outcome--accepted");
+		expect(outcome(root).className).toContain("gomu-choice-outcome--accepted");
 	});
 
 	it("submits through the chat with the decision appended to the prompt", async () => {
@@ -338,7 +338,7 @@ describe("choice behavior", () => {
 		submit(root).click();
 		await flush();
 		expect(status(root).textContent).toBe("No couriers.");
-		expect(status(root).className).toContain("gadget-status--error");
+		expect(status(root).className).toContain("gomu-status--error");
 		expect(decision(root).hidden).toBe(false);
 		expect(submit(root).disabled).toBe(false);
 		expect(input(root, 0).disabled).toBe(false);
@@ -358,7 +358,7 @@ describe("choice behavior", () => {
 		await flush();
 		expect(host.received(M.toolsCall)).toHaveLength(0);
 		expect(outcome(root).textContent).toBe("Cancelled.");
-		expect(outcome(root).className).toContain("gadget-choice-outcome--declined");
+		expect(outcome(root).className).toContain("gomu-choice-outcome--declined");
 		expect(decision(root).hidden).toBe(true);
 	});
 
@@ -474,8 +474,8 @@ describe("choice behavior", () => {
 
 		expect(labels(root)).toEqual(["Drone", "Bike courier"]);
 		expect(input(root, 0).checked).toBe(true);
-		expect(el(root, "[data-gadget-descriptions] dd").textContent).toBe("ORD-12");
-		expect(option(root, 0).querySelector(".gadget-choice-details dd")?.textContent).toBe(
+		expect(el(root, "[data-gomu-descriptions] dd").textContent).toBe("ORD-12");
+		expect(option(root, 0).querySelector(".gomu-choice-details dd")?.textContent).toBe(
 			"EUR 39.00",
 		);
 	});
@@ -488,7 +488,7 @@ describe("choice behavior", () => {
 		await flush();
 
 		expect(list(root).hidden).toBe(true);
-		expect(el(root, "[data-gadget-empty]").hidden).toBe(false);
+		expect(el(root, "[data-gomu-empty]").hidden).toBe(false);
 		expect(submit(root).disabled).toBe(true);
 	});
 
@@ -517,7 +517,7 @@ describe("choice behavior", () => {
 			},
 		});
 		await flush();
-		expect(option(root, 0).querySelector(".gadget-badge")?.className).toBe("gadget-badge");
+		expect(option(root, 0).querySelector(".gomu-badge")?.className).toBe("gomu-badge");
 	});
 
 	it("hydrates from LoadTool once a host is connected", async () => {
@@ -567,7 +567,7 @@ describe("choice behavior", () => {
 			bridge,
 		});
 
-		el<HTMLElement>(root, "[data-gadget-link]").click();
+		el<HTMLElement>(root, "[data-gomu-link]").click();
 		await flush();
 		expect(host.received(M.openLink)[0]!.params).toMatchObject({
 			url: "https://example.com/terms",

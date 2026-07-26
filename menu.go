@@ -1,11 +1,11 @@
-package gadget
+package gomukit
 
 import (
 	"fmt"
 
-	"github.com/techthos/gadget/internal/htmlx"
-	"github.com/techthos/gadget/theme"
-	"github.com/techthos/gadget/uispec"
+	"github.com/techthos/gomukit/internal/htmlx"
+	"github.com/techthos/gomukit/theme"
+	"github.com/techthos/gomukit/uispec"
 )
 
 // MenuItem is one entry in a Menu: a tool the user can start from the menu
@@ -100,7 +100,7 @@ type Menu struct {
 
 	// Brand renders the application logo/name on the widget.
 	Brand *Brand
-	// Theme overrides gadget design tokens for this widget.
+	// Theme overrides gomukit design tokens for this widget.
 	Theme *theme.Theme
 	// UI overrides resource _meta.ui (CSP, permissions, prefersBorder).
 	UI *uispec.ResourceUIMeta
@@ -109,22 +109,22 @@ type Menu struct {
 // Validate implements Widget.
 func (m *Menu) Validate() error {
 	if err := uispec.ValidateURI(m.URI); err != nil {
-		return fmt.Errorf("gadget: menu: %w", err)
+		return fmt.Errorf("gomukit: menu: %w", err)
 	}
 	if len(m.Items) == 0 {
-		return fmt.Errorf("gadget: menu %s: at least one item is required", m.URI)
+		return fmt.Errorf("gomukit: menu %s: at least one item is required", m.URI)
 	}
 	for i, item := range m.Items {
-		ctx := fmt.Sprintf("gadget: menu %s: item %d (%s)", m.URI, i, item.label())
+		ctx := fmt.Sprintf("gomukit: menu %s: item %d (%s)", m.URI, i, item.label())
 		if err := item.validate(ctx); err != nil {
 			return err
 		}
 	}
 	if err := m.Brand.Validate(); err != nil {
-		return fmt.Errorf("gadget: menu %s: %w", m.URI, err)
+		return fmt.Errorf("gomukit: menu %s: %w", m.URI, err)
 	}
 	if err := m.Theme.Validate(); err != nil {
-		return fmt.Errorf("gadget: menu %s: %w", m.URI, err)
+		return fmt.Errorf("gomukit: menu %s: %w", m.URI, err)
 	}
 	return nil
 }

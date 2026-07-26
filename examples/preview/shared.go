@@ -5,16 +5,16 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/techthos/gadget"
-	"github.com/techthos/gadget/theme"
+	"github.com/techthos/gomukit"
+	"github.com/techthos/gomukit/theme"
 )
 
 // --- chrome shared by every widget in this server ---
 
 // appBrand is the inline-SVG logo path: no URL, nothing for the host CSP to
 // allow.
-func appBrand() *gadget.Brand {
-	return &gadget.Brand{
+func appBrand() *gomukit.Brand {
+	return &gomukit.Brand{
 		Name:    "Acme Dispatch",
 		URL:     "https://example.com",
 		LogoSVG: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M1.5 5.5 8 2l6.5 3.5v5L8 14 1.5 10.5z"/><path d="M1.5 5.5 8 9l6.5-3.5M8 9v5"/></svg>`,
@@ -23,36 +23,40 @@ func appBrand() *gadget.Brand {
 
 // dataURIBrand is the other logo path: a base64 image, which needs the host
 // to allow img-src data:. One preview uses it so the difference is visible.
-func dataURIBrand() *gadget.Brand {
+func dataURIBrand() *gomukit.Brand {
 	const dot = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiMwZDlhODgiLz48L3N2Zz4="
-	return &gadget.Brand{Name: "Acme Dispatch", LogoDataURI: dot, LogoAlt: "Acme mark"}
+	return &gomukit.Brand{Name: "Acme Dispatch", LogoDataURI: dot, LogoAlt: "Acme mark"}
 }
 
-func appTheme() *theme.Theme { return &theme.Theme{ColorPrimary: "#7c3aed"} }
+// appTheme runs frameless: the host leaves the iframe unpainted, so dropping
+// the page fill and the gutter puts the card straight on the host surface.
+func appTheme() *theme.Theme {
+	return &theme.Theme{ColorPrimary: "#7c3aed", Transparent: true}
+}
 
 // --- shared column and action building blocks ---
 
-func customerStatusBadge() gadget.Column {
-	return gadget.Badge("status", "Status", map[string]gadget.BadgeVariant{
-		"active":   gadget.BadgeSuccess,
-		"invited":  gadget.BadgeInfo,
-		"archived": gadget.BadgeNeutral,
+func customerStatusBadge() gomukit.Column {
+	return gomukit.Badge("status", "Status", map[string]gomukit.BadgeVariant{
+		"active":   gomukit.BadgeSuccess,
+		"invited":  gomukit.BadgeInfo,
+		"archived": gomukit.BadgeNeutral,
 	})
 }
 
-func orderStatusBadge() gadget.Column {
-	return gadget.Badge("status", "Status", map[string]gadget.BadgeVariant{
-		"packed":  gadget.BadgeInfo,
-		"shipped": gadget.BadgeSuccess,
-		"held":    gadget.BadgeWarning,
+func orderStatusBadge() gomukit.Column {
+	return gomukit.Badge("status", "Status", map[string]gomukit.BadgeVariant{
+		"packed":  gomukit.BadgeInfo,
+		"shipped": gomukit.BadgeSuccess,
+		"held":    gomukit.BadgeWarning,
 	})
 }
 
-func customerStatusVariants() map[string]gadget.BadgeVariant {
-	return map[string]gadget.BadgeVariant{
-		"active":   gadget.BadgeSuccess,
-		"invited":  gadget.BadgeInfo,
-		"archived": gadget.BadgeNeutral,
+func customerStatusVariants() map[string]gomukit.BadgeVariant {
+	return map[string]gomukit.BadgeVariant{
+		"active":   gomukit.BadgeSuccess,
+		"invited":  gomukit.BadgeInfo,
+		"archived": gomukit.BadgeNeutral,
 	}
 }
 
@@ -60,18 +64,18 @@ func customerStatusVariants() map[string]gadget.BadgeVariant {
 // delete confirmation all show. Every item type the block supports appears in
 // it: text, badge, three number formats, two date formats, a link, an
 // authored constant, and a key no record carries.
-func customerDetails() gadget.Descriptions {
-	return gadget.Descriptions{Items: []gadget.DescriptionItem{
+func customerDetails() gomukit.Descriptions {
+	return gomukit.Descriptions{Items: []gomukit.DescriptionItem{
 		{Label: "Account", Key: "name"},
 		{Label: "Email", Key: "email"},
 		{Label: "Company", Key: "company"},
-		{Label: "Status", Key: "status", Type: gadget.ColBadge, Badge: customerStatusVariants()},
-		{Label: "Balance", Key: "balance", Type: gadget.ColNumber, Format: "currency:EUR"},
-		{Label: "Seats", Key: "seats", Type: gadget.ColNumber, Format: "int"},
-		{Label: "Utilization", Key: "utilization", Type: gadget.ColNumber, Format: "percent"},
-		{Label: "Customer since", Key: "createdAt", Type: gadget.ColDate, Format: "date"},
-		{Label: "Renews", Key: "renewsAt", Type: gadget.ColDate, Format: "relative"},
-		{Label: "Console", Type: gadget.ColLink, Link: &gadget.LinkSpec{HrefKey: "website", Text: "Open console"}},
+		{Label: "Status", Key: "status", Type: gomukit.ColBadge, Badge: customerStatusVariants()},
+		{Label: "Balance", Key: "balance", Type: gomukit.ColNumber, Format: "currency:EUR"},
+		{Label: "Seats", Key: "seats", Type: gomukit.ColNumber, Format: "int"},
+		{Label: "Utilization", Key: "utilization", Type: gomukit.ColNumber, Format: "percent"},
+		{Label: "Customer since", Key: "createdAt", Type: gomukit.ColDate, Format: "date"},
+		{Label: "Renews", Key: "renewsAt", Type: gomukit.ColDate, Format: "relative"},
+		{Label: "Console", Type: gomukit.ColLink, Link: &gomukit.LinkSpec{HrefKey: "website", Text: "Open console"}},
 		{Label: "Region", Text: "eu-central-1"},
 		{Label: "Owner", Key: "owner"},
 	}}

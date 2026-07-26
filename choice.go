@@ -1,10 +1,10 @@
-package gadget
+package gomukit
 
 import (
 	"fmt"
 
-	"github.com/techthos/gadget/theme"
-	"github.com/techthos/gadget/uispec"
+	"github.com/techthos/gomukit/theme"
+	"github.com/techthos/gomukit/uispec"
 )
 
 // ChoiceLayout places the block that describes an option.
@@ -110,7 +110,7 @@ type Choice struct {
 
 	// Brand renders the application logo/name on the widget.
 	Brand *Brand
-	// Theme overrides gadget design tokens for this widget.
+	// Theme overrides gomukit design tokens for this widget.
 	Theme *theme.Theme
 	// UI overrides resource _meta.ui (CSP, permissions, prefersBorder).
 	UI *uispec.ResourceUIMeta
@@ -334,9 +334,9 @@ func (c *Choice) min() int {
 // Validate implements Widget.
 func (c *Choice) Validate() error {
 	if err := uispec.ValidateURI(c.URI); err != nil {
-		return fmt.Errorf("gadget: choice: %w", err)
+		return fmt.Errorf("gomukit: choice: %w", err)
 	}
-	ctx := fmt.Sprintf("gadget: choice %s", c.URI)
+	ctx := fmt.Sprintf("gomukit: choice %s", c.URI)
 	if c.Prompt == "" {
 		return fmt.Errorf("%s: Prompt is required", ctx)
 	}

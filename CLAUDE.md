@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`gadget` is a Go library of prebuilt interactive HTML widgets (Table, Form) for MCP Apps (`io.modelcontextprotocol/ui`, spec `2026-01-26`). Widgets render as fully self-contained HTML documents (inline CSS/JS, satisfies the spec's locked-down CSP) served as `ui://` template resources from a Go MCP server. Pre-release; APIs unstable.
+`gomukit` is a Go library of prebuilt interactive HTML widgets (Table, Form) for MCP Apps (`io.modelcontextprotocol/ui`, spec `2026-01-26`). Widgets render as fully self-contained HTML documents (inline CSS/JS, satisfies the spec's locked-down CSP) served as `ui://` template resources from a Go MCP server. Pre-release; APIs unstable.
 
 ## Commands
 
@@ -37,14 +37,14 @@ Full details in `docs/architecture.md` (plus `docs/widgets.md`, `docs/theming.md
 
 The MCP Apps spec's template model means the HTML resource cannot contain per-call data — data arrives at runtime via `ui/notifications/tool-result`. So rendering is split:
 
-- **Go renders structure** (registration time): widget shell, table chrome, form fields, plus a `#gadget-config` JSON island describing columns/fields/action bindings (and an optional `#gadget-data` snapshot).
+- **Go renders structure** (registration time): widget shell, table chrome, form fields, plus a `#gomu-config` JSON island describing columns/fields/action bindings (and an optional `#gomu-data` snapshot).
 - **TypeScript renders data** (runtime, in the host's sandboxed iframe): rows, prefill, errors — from the snapshot, then from every tool-result notification or widget-initiated `tools/call` response. All cell/formatting logic lives only in TS (`Intl` with host locale/timeZone).
 
 ### Layers
 
 | Package | Role |
 |---|---|
-| `gadget` (root) | Widget definitions (`Table`, `Form`, actions) + SSR shells via gomponents |
+| `gomukit` (root) | Widget definitions (`Table`, `Form`, actions) + SSR shells via gomponents |
 | `theme` | `Theme` struct → CSS token-override block |
 | `uispec` | Spec constants and `_meta` types (no deps) |
 | `gosdk` | The **only** package importing an MCP SDK (`modelcontextprotocol/go-sdk`); core works with any Go MCP implementation |
@@ -63,9 +63,9 @@ JSON-RPC method names live in `ui/src/spec-constants.json`, consumed by TS and m
 - `bridge.ts` — JSON-RPC 2.0 over `postMessage`: request correlation/timeouts, `ui/initialize` handshake, `tools/call`, size-changed reporting. Only host→view methods are accepted inbound.
 - `host.ts` — applies `hostContext` (style vars, theme, fonts, locale/timeZone); `ResizeObserver` → size-changed notifications.
 - `state.ts` — store + pure reducers (sort/filter/pagination/selection).
-- `dropdown.ts` — upgrades every `<select>` into the gadget dropdown; the
+- `dropdown.ts` — upgrades every `<select>` into the gomukit dropdown; the
   select stays in the DOM as the value holder.
-- `widgets/*.ts` — event-delegated behaviors on `data-gadget-*` attributes.
+- `widgets/*.ts` — event-delegated behaviors on `data-gomu-*` attributes.
 
 ## Security invariants (by construction — do not break)
 

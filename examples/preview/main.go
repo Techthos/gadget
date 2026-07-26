@@ -1,4 +1,4 @@
-// Command preview is a runnable MCP server built for inspecting gadget: it
+// Command preview is a runnable MCP server built for inspecting gomukit: it
 // exposes every widget the library renders as real MCP tools and ui://
 // resources, so an MCP Apps capable inspector drives them over the wire
 // instead of through a fake host page.
@@ -44,8 +44,8 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/techthos/gadget/gosdk"
-	"github.com/techthos/gadget/uispec"
+	"github.com/techthos/gomukit/gosdk"
+	"github.com/techthos/gomukit/uispec"
 )
 
 func main() {
@@ -103,7 +103,7 @@ func main() {
 		_, _ = w.Write([]byte("ok\n"))
 	})
 
-	log.Printf("gadget preview server on http://localhost%s/mcp (mode %s, spec %s, sandbox %t)", *addr, *mode, uispec.SpecVersion, *sandbox)
+	log.Printf("gomukit preview server on http://localhost%s/mcp (mode %s, spec %s, sandbox %t)", *addr, *mode, uispec.SpecVersion, *sandbox)
 	log.Printf("inspector: npx @modelcontextprotocol/inspector, then connect over Streamable HTTP to that URL")
 	srv := &http.Server{
 		Addr:              *addr,
@@ -139,7 +139,7 @@ func withCORS(next http.Handler, on bool) http.Handler {
 
 func newServer(scenario, gallery, logCalls bool) *mcp.Server {
 	server := mcp.NewServer(
-		&mcp.Implementation{Name: "gadget-preview", Version: "0.1.0"},
+		&mcp.Implementation{Name: "gomukit-preview", Version: "0.1.0"},
 		gosdk.EnableUI(nil),
 	)
 	if logCalls {

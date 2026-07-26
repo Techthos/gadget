@@ -1,11 +1,11 @@
-# AGENTS.md — Working with `gadget`
+# AGENTS.md — Working with `gomukit`
 
 This document is the complete reference an LLM (or any agent) needs to **use**
-the `gadget` library. For repo-contribution guidance (build commands, asset
+the `gomukit` library. For repo-contribution guidance (build commands, asset
 pipeline, invariants when editing this codebase) see `CLAUDE.md`; deeper design
 docs live in `docs/architecture.md`, `docs/widgets.md`, `docs/theming.md`.
 
-- **Module**: `github.com/techthos/gadget` (Go >= 1.25)
+- **Module**: `github.com/techthos/gomukit` (Go >= 1.25)
 - **What it is**: prebuilt, parameterized, interactive HTML widgets (**Table**,
   **CardList**, **Card**, **Form**, **Menu**, **Confirm**, **Choice**,
   **DatePicker**) for **MCP Apps** — the official MCP UI extension
@@ -22,13 +22,13 @@ docs live in `docs/architecture.md`, `docs/widgets.md`, `docs/theming.md`.
 ## 1. Mental model (read this first)
 
 The MCP Apps spec uses a **template model**: the HTML resource is registered
-once and cannot contain per-call data. Data arrives at runtime. `gadget`
+once and cannot contain per-call data. Data arrives at runtime. `gomukit`
 therefore splits rendering:
 
 1. **Go renders structure** (registration time): the widget shell (table
    chrome, form fields with native validation attributes, card chrome) plus a
-   `#gadget-config` JSON island describing columns/fields/action bindings, and
-   an optional `#gadget-data` snapshot (`InitialData`).
+   `#gomu-config` JSON island describing columns/fields/action bindings, and
+   an optional `#gomu-data` snapshot (`InitialData`).
 2. **The embedded TypeScript runtime renders data** (runtime, inside the
    host's sandboxed iframe): rows, prefill values, errors — first from the
    snapshot, then from every `ui/notifications/tool-result` notification and
@@ -49,10 +49,10 @@ Consequences for you as a library user:
 
 | Package | Import path | Role |
 |---|---|---|
-| `gadget` | `github.com/techthos/gadget` | Widget definitions (`Table`, `Form`, `Card`, `CardList`, `Menu`, `Confirm`, `Choice`, `DatePicker`, `Action`, columns, fields) + `RowsOf` |
-| `theme` | `github.com/techthos/gadget/theme` | `Theme` struct → CSS design-token overrides |
-| `uispec` | `github.com/techthos/gadget/uispec` | MCP Apps spec constants and `_meta` types (zero deps) |
-| `gosdk` | `github.com/techthos/gadget/gosdk` | Adapter for the official `github.com/modelcontextprotocol/go-sdk` — the **only** package importing an MCP SDK |
+| `gomukit` | `github.com/techthos/gomukit` | Widget definitions (`Table`, `Form`, `Card`, `CardList`, `Menu`, `Confirm`, `Choice`, `DatePicker`, `Action`, columns, fields) + `RowsOf` |
+| `theme` | `github.com/techthos/gomukit/theme` | `Theme` struct → CSS design-token overrides |
+| `uispec` | `github.com/techthos/gomukit/uispec` | MCP Apps spec constants and `_meta` types (zero deps) |
+| `gosdk` | `github.com/techthos/gomukit/gosdk` | Adapter for the official `github.com/modelcontextprotocol/go-sdk` — the **only** package importing an MCP SDK |
 
 The core is SDK-agnostic: with any other Go MCP implementation, wire widgets
 manually via the `Widget` interface (section 8).
@@ -69,19 +69,19 @@ import (
     "net/http"
 
     "github.com/modelcontextprotocol/go-sdk/mcp"
-    "github.com/techthos/gadget"
-    "github.com/techthos/gadget/gosdk"
+    "github.com/techthos/gomukit"
+    "github.com/techthos/gomukit/gosdk"
 )
 
 func main() {
-    table := &gadget.Table{
+    table := &gomukit.Table{
         URI:   "ui://myapp/users",
         Title: "Users",
-        Columns: []gadget.Column{
-            gadget.Text("name", "Name"),
-            gadget.Number("balance", "Balance", "currency:EUR"),
-            gadget.Badge("status", "Status", map[string]gadget.BadgeVariant{
-                "active": gadget.BadgeSuccess,
+        Columns: []gomukit.Column{
+            gomukit.Text("name", "Name"),
+            gomukit.Number("balance", "Balance", "currency:EUR"),
+            gomukit.Badge("status", "Status", map[string]gomukit.BadgeVariant{
+                "active": gomukit.BadgeSuccess,
             }),
         },
         Filterable: true,
@@ -98,7 +98,7 @@ func main() {
     gosdk.AddWidgetToolFor(server, table,
         &mcp.Tool{Name: "list_users", Description: "List users in a table."},
         func(context.Context, *mcp.CallToolRequest, in) (*mcp.CallToolResult, out, error) {
-            rows, _ := gadget.RowsOf(loadUsers())
+            rows, _ := gomukit.RowsOf(loadUsers())
             return nil, out{Rows: rows}, nil
         })
 
@@ -112,7 +112,7 @@ result's `structuredContent`; the widget reads its data from there.
 
 ---
 
-## 3. Package `gadget` — full API reference
+## 3. Package `gomukit` — full API reference
 
 ### 3.1 The `Widget` interface
 
@@ -226,12 +226,12 @@ type LinkSpec struct {
 **Column constructors** (sugar — plain struct literals work too):
 
 ```go
-gadget.Text(key, label)                    // text column
-gadget.Number(key, label, format...)       // number column, right-aligned (Align: AlignEnd)
-gadget.Date(key, label, format...)         // date column
-gadget.Badge(key, label, variants)         // badge column
-gadget.Link(hrefKey, label)                // link column (Key and Link.HrefKey both set to hrefKey)
-gadget.ActionsColumn(actions...)           // per-row actions column (empty Label)
+gomukit.Text(key, label)                    // text column
+gomukit.Number(key, label, format...)       // number column, right-aligned (Align: AlignEnd)
+gomukit.Date(key, label, format...)         // date column
+gomukit.Badge(key, label, variants)         // badge column
+gomukit.Link(hrefKey, label)                // link column (Key and Link.HrefKey both set to hrefKey)
+gomukit.ActionsColumn(actions...)           // per-row actions column (empty Label)
 ```
 
 ### 3.5 `Form`
@@ -291,7 +291,7 @@ type Field struct {
 `FTextarea`, `FNumber`, `FCheckbox`, `FSelect`, `FMultiSelect`, `FDate`,
 `FDateRange`, `FTime`, `FHidden`, `FReadonly`.
 
-`FSelect` and `FMultiSelect` render as the gadget dropdown: the runtime
+`FSelect` and `FMultiSelect` render as the gomukit dropdown: the runtime
 upgrades the `<select>` into a styled trigger and popup listbox (keyboard
 navigation, typeahead, check marks on the chosen entries) while the select
 itself stays the value holder, so submitted value types are unchanged. Every
@@ -301,7 +301,7 @@ page-size chooser — is the same control.
 If a `Placeholder` is set on a select field, it is the empty-state text of the
 trigger.
 
-`FDate` and `FDateRange` render the gadget calendar (the same grid the
+`FDate` and `FDateRange` render the gomukit calendar (the same grid the
 `DatePicker` widget renders inline, configured by `Field.Calendar` — see 3.16.1):
 the runtime upgrades the native date input into a trigger showing the date in
 the host's locale, with the grid in a popover, while the input stays the value
@@ -316,7 +316,7 @@ type Option struct {
     Value string `json:"value"`
     Label string `json:"label"`
 }
-gadget.Opt("admin") // Option{Value: "admin", Label: "admin"}
+gomukit.Opt("admin") // Option{Value: "admin", Label: "admin"}
 ```
 
 **Client-side validation** — rendered as native HTML attributes and enforced
@@ -374,9 +374,9 @@ type Action struct {
 **Argument sources** (`ArgSource` is opaque — construct ONLY with these):
 
 ```go
-gadget.Static(v)             // fixed value
-gadget.FromRow("field")      // value of the field on the row the action was triggered on
-gadget.FromSelection("field") // values of the field across ALL selected rows — bulk actions ONLY
+gomukit.Static(v)             // fixed value
+gomukit.FromRow("field")      // value of the field on the row the action was triggered on
+gomukit.FromSelection("field") // values of the field across ALL selected rows — bulk actions ONLY
 ```
 
 `FromSelection` in a per-row (column) action is a validation error. An
@@ -445,7 +445,7 @@ Converts a typed slice (e.g. `[]User` or `[]*User`) into row maps via
 `Table.InitialData` or a tool result:
 
 ```go
-rows, err := gadget.RowsOf(users)
+rows, err := gomukit.RowsOf(users)
 table.InitialData = map[string]any{"rows": rows}
 ```
 
@@ -468,7 +468,7 @@ type CardHeader struct {
     TitleKey       string  // REQUIRED: row field shown as the card title
     DescriptionKey string  // row field shown under the title
     Description    string  // fixed text under the title, instead of DescriptionKey
-    Badge          Column  // status badge for the header's end slot (build with gadget.Badge); present when its Key is set — must be a badge column
+    Badge          Column  // status badge for the header's end slot (build with gomukit.Badge); present when its Key is set — must be a badge column
     Action         *Action // button for the header's end slot, instead of Badge
 }
 
@@ -563,7 +563,7 @@ Carousel behavior is automatic: prev/next controls appear only when the cards
 overflow the available width and disable at each end, the strip is draggable
 with the mouse and swipeable on touch, and its scrollbar is hidden. `PageSize`
 still applies and bounds how many cards are in the strip at once. Card width comes from the
-`--gadget-card-width` token (default `17rem`), overridable per widget through
+`--gomu-card-width` token (default `17rem`), overridable per widget through
 `theme.Theme.Extra`.
 
 ### 3.12 `Menu`
@@ -575,7 +575,7 @@ its own.
 
 Unlike the data widgets, a `Menu` is **fully authored at registration time**:
 the tiles are server-rendered from `Items`, the document carries no
-`#gadget-data` island, and the menu reads nothing from `structuredContent`.
+`#gomu-data` island, and the menu reads nothing from `structuredContent`.
 The config island holds only the tool name and static args behind each tile,
 matched positionally to the rendered buttons.
 
@@ -604,14 +604,14 @@ type MenuItem struct {
 ```
 
 ```go
-menu := &gadget.Menu{
+menu := &gomukit.Menu{
     URI:   "ui://demo/menu",
     Title: "Acme users",
     Intro: "Pick where to start.",
-    Items: []gadget.MenuItem{
+    Items: []gomukit.MenuItem{
         {Tool: "list_users", Label: "User table",
          Description: "Sortable, filterable directory.",
-         Badge: "read", BadgeVariant: gadget.BadgeInfo},
+         Badge: "read", BadgeVariant: gomukit.BadgeInfo},
         {Tool: "edit_user", Args: map[string]any{"id": 1}, Label: "Edit Ada"},
     },
 }
@@ -652,7 +652,7 @@ Runtime behavior: the whole grid goes inert while a tile's call is in flight
 shown in the status region with the menu left usable. Nothing else is rendered
 from the result — the host is expected to take over the view. A `Prompt` tile
 carries no tool result to inspect, so it clears its status as soon as the host
-accepts the turn. Tile width comes from the `--gadget-menu-tile-min` token
+accepts the turn. Tile width comes from the `--gomu-menu-tile-min` token
 (default `11rem`), overridable per widget through `theme.Theme.Extra`.
 
 Documents are self-contained, so `IconSVG` is inline markup, never a URL — the
@@ -688,7 +688,7 @@ item type.
 
 There are no layout options by design: the list flows into as many columns as
 the widget's own width allows and collapses to one in a narrow pane. The item
-floor is the `--gadget-desc-min` token (default `12rem`), overridable through
+floor is the `--gomu-desc-min` token (default `12rem`), overridable through
 `theme.Theme.Extra`. A data-bound value the record does not carry renders as an
 em dash rather than vanishing.
 
@@ -752,23 +752,23 @@ type RejectSpec struct {
 ```
 
 ```go
-confirm := &gadget.Confirm{
+confirm := &gomukit.Confirm{
     URI:      "ui://demo/delete-user",
     Prompt:   "Delete Ada Lovelace?",
-    Severity: gadget.BadgeDanger,
-    Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
+    Severity: gomukit.BadgeDanger,
+    Details: gomukit.Descriptions{Items: []gomukit.DescriptionItem{
         {Label: "User", Key: "name"},
-        {Label: "Balance", Key: "balance", Type: gadget.ColNumber, Format: "currency:EUR"},
+        {Label: "Balance", Key: "balance", Type: gomukit.ColNumber, Format: "currency:EUR"},
     }},
-    Effects: []gadget.Effect{
-        {Text: "Removes the account", Severity: gadget.BadgeDanger},
-        {Text: "Deletes audit records", Value: "128", Severity: gadget.BadgeWarning},
+    Effects: []gomukit.Effect{
+        {Text: "Removes the account", Severity: gomukit.BadgeDanger},
+        {Text: "Deletes audit records", Value: "128", Severity: gomukit.BadgeWarning},
     },
     TypeToConfirm: "ada@example.com",
-    Accept: gadget.AcceptSpec{Tool: "delete_user", Label: "Delete user",
-        Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+    Accept: gomukit.AcceptSpec{Tool: "delete_user", Label: "Delete user",
+        Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")},
         SuccessMessage: "User deleted."},
-    Reject: &gadget.RejectSpec{Label: "Keep user"},
+    Reject: &gomukit.RejectSpec{Label: "Keep user"},
 }
 ```
 
@@ -863,30 +863,30 @@ type ChoiceSubmit struct {
 (default "Cancelled.").
 
 ```go
-choice := &gadget.Choice{
+choice := &gomukit.Choice{
     URI:    "ui://demo/shipping",
     Prompt: "How should we ship order ORD-4471?",
-    Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
+    Details: gomukit.Descriptions{Items: []gomukit.DescriptionItem{
         {Label: "Order", Key: "reference"},
     }},
-    Options: []gadget.ChoiceOption{
+    Options: []gomukit.ChoiceOption{
         {
             Value: "standard", Label: "Standard", Summary: "3-5 business days",
             Body:    "Handed to the postal service tonight.",
             Bullets: []string{"Tracked to the depot", "No signature"},
-            Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
-                {Label: "Price", Key: "price", Type: gadget.ColNumber, Format: "currency:EUR"},
+            Details: gomukit.Descriptions{Items: []gomukit.DescriptionItem{
+                {Label: "Price", Key: "price", Type: gomukit.ColNumber, Format: "currency:EUR"},
             }},
             Data:    map[string]any{"price": 4.9},
             Default: true,
         },
         {Value: "express", Label: "Express", Summary: "next business day",
-         Badge: "fastest", BadgeVariant: gadget.BadgeSuccess},
+         Badge: "fastest", BadgeVariant: gomukit.BadgeSuccess},
     },
-    Submit: gadget.ChoiceSubmit{Tool: "ship_order", Label: "Ship it", ValueArg: "method",
-        Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+    Submit: gomukit.ChoiceSubmit{Tool: "ship_order", Label: "Ship it", ValueArg: "method",
+        Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")},
         SuccessMessage: "On its way."},
-    Cancel: &gadget.RejectSpec{Label: "Decide later"},
+    Cancel: &gomukit.RejectSpec{Label: "Decide later"},
 }
 ```
 
@@ -1310,7 +1310,7 @@ height (margin sits outside it and would clip the bottom edge).
 ## 5. Package `gosdk` — official go-sdk adapter
 
 ```go
-import "github.com/techthos/gadget/gosdk"
+import "github.com/techthos/gomukit/gosdk"
 ```
 
 ```go
@@ -1323,20 +1323,20 @@ func EnableUI(opts *mcp.ServerOptions) *mcp.ServerOptions
 // Registers w's template as a ui:// resource on s. The document is rendered
 // ONCE and served from memory. Idempotent per (server, URI): re-registering
 // the same URI is a no-op. Returns render/validation errors.
-func AddWidget(s *mcp.Server, w gadget.Widget) error
+func AddWidget(s *mcp.Server, w gomukit.Widget) error
 
 // Registers tool t linked to w via _meta (registers w's resource first if
 // needed); raw-handler variant.
-func AddWidgetTool(s *mcp.Server, w gadget.Widget, t *mcp.Tool, h mcp.ToolHandler) error
+func AddWidgetTool(s *mcp.Server, w gomukit.Widget, t *mcp.Tool, h mcp.ToolHandler) error
 
 // Same, with the SDK's typed handler: input/output JSON schemas inferred
 // from In and Out. Out's JSON form becomes structuredContent.
-func AddWidgetToolFor[In, Out any](s *mcp.Server, w gadget.Widget, t *mcp.Tool, h mcp.ToolHandlerFor[In, Out]) error
+func AddWidgetToolFor[In, Out any](s *mcp.Server, w gomukit.Widget, t *mcp.Tool, h mcp.ToolHandlerFor[In, Out]) error
 
 // Marks t app-only (_meta.ui.visibility: ["app"]): callable from the widget
 // UI, hidden from the model. Call BEFORE registering the tool (registration
 // merges, so the visibility is kept). Use for row-action and submit tools.
-func AppOnly(t *mcp.Tool, w gadget.Widget)
+func AppOnly(t *mcp.Tool, w gomukit.Widget)
 
 // Merges data into the result's _meta — delivered to the widget but hidden
 // from the model (per spec).
@@ -1371,7 +1371,7 @@ is idempotent. Serve via `mcp.NewStreamableHTTPHandler` (HTTP) or
 
 ## 6. Package `theme` — styling overrides
 
-Widgets ship a `--gadget-*` design-token system scoped under `.gadget-root`.
+Widgets ship a `--gomu-*` design-token system scoped under `.gomu-root`.
 Every semantic token defaults to the **host-injected MCP Apps CSS variable**
 (delivered via `hostContext.styles.variables` during `ui/initialize`) with a
 built-in fallback — so widgets automatically match Claude/ChatGPT theming with
@@ -1406,10 +1406,10 @@ type Theme struct {
     ColorPage   string // page fill alone (cards/controls/overlays keep ColorBackground); ignored when Transparent
     PagePad     string // gutter between widget and iframe edge (default 8px); ignored when Transparent
 
-    Extra map[string]string // extra/override raw custom properties; keys MUST start with "--gadget-"
+    Extra map[string]string // extra/override raw custom properties; keys MUST start with "--gomu-"
 }
 
-func (t *Theme) CSS() string      // ":root{...}" (page tokens) + ".gadget-root{...}", "" when nothing set
+func (t *Theme) CSS() string      // ":root{...}" (page tokens) + ".gomu-root{...}", "" when nothing set
 func (t *Theme) Validate() error  // surfaces what CSS() would silently skip
 ```
 
@@ -1417,18 +1417,18 @@ func (t *Theme) Validate() error  // surfaces what CSS() would silently skip
   values (`"#0f62fe"`, `"0.5rem"`, `"Inter, sans-serif"`). Non-empty fields
   win the cascade over host values; empty fields keep host-aware defaults.
 - **Value safety**: values must not contain `{`, `}`, `;`, `</`, or `<!--`
-  (CSS/HTML breakout guard). `Extra` keys must start with `--gadget-` and use
+  (CSS/HTML breakout guard). `Extra` keys must start with `--gomu-` and use
   only `[A-Za-z0-9_-]`. Widget `Validate()` calls `Theme.Validate()`.
 
-Token → host variable mapping (for reference): `--gadget-color-bg` ←
-`--color-background-primary`, `--gadget-color-surface` ←
-`--color-background-secondary`, `--gadget-color-text` ←
-`--color-text-primary`, `--gadget-color-text-muted` ←
-`--color-text-secondary`, `--gadget-color-border` ←
-`--color-border-primary`, `--gadget-color-primary` ← `--color-text-accent`,
+Token → host variable mapping (for reference): `--gomu-color-bg` ←
+`--color-background-primary`, `--gomu-color-surface` ←
+`--color-background-secondary`, `--gomu-color-text` ←
+`--color-text-primary`, `--gomu-color-text-muted` ←
+`--color-text-secondary`, `--gomu-color-border` ←
+`--color-border-primary`, `--gomu-color-primary` ← `--color-text-accent`,
 danger/success/warning ← `--color-text-danger/success/warning`,
-`--gadget-font`/`--gadget-font-mono` ← `--font-sans`/`--font-mono`,
-`--gadget-radius-s/m/l` ← `--border-radius-sm/md/lg`.
+`--gomu-font`/`--gomu-font-mono` ← `--font-sans`/`--font-mono`,
+`--gomu-radius-s/m/l` ← `--border-radius-sm/md/lg`.
 
 ### Embedding without a visible frame
 
@@ -1508,7 +1508,7 @@ type ToolUIMeta struct {
 // Everything needed to register a widget's template resource, SDK-agnostic.
 type ResourceDescriptor struct {
     URI, Name, Title, Description string
-    MIMEType                      string // always uispec.MIMEType for gadget widgets
+    MIMEType                      string // always uispec.MIMEType for gomukit widgets
     UI                            *ResourceUIMeta
 }
 
@@ -1523,13 +1523,13 @@ func MergeMeta(dst, src map[string]any) map[string]any
 func ValidateURI(uri string) error
 ```
 
-Note: gadget widgets don't need any `CSP` declarations — documents are fully
+Note: gomukit widgets don't need any `CSP` declarations — documents are fully
 self-contained and satisfy the spec's default locked-down policy. Only set
 `UI.CSP` if you know a host-specific reason to.
 
 ---
 
-## 8. Using gadget WITHOUT the official go-sdk
+## 8. Using gomukit WITHOUT the official go-sdk
 
 The core emits plain spec-shaped values; adapt to any Go MCP implementation:
 
@@ -1575,7 +1575,7 @@ d := w.Descriptor()      // d.URI, d.Name (derived: "ui://demo/users" -> "demo-u
    document a single time and serves it from memory. Don't mutate a widget
    struct after registration and expect changes; per-call variation belongs
    in tool-result data, not the template.
-10. **Use `gadget.RowsOf`** to convert typed slices; it honors `json` tags,
+10. **Use `gomukit.RowsOf`** to convert typed slices; it honors `json` tags,
     so column `Key`s must match the JSON tag names, not Go field names.
 11. **`InitialData`** is optional and only an instant-first-paint snapshot; it
     is shaped like `structuredContent` (e.g. `{"rows": [...]}`), and is
@@ -1583,7 +1583,7 @@ d := w.Descriptor()      // d.URI, d.Name (derived: "ui://demo/users" -> "demo-u
 12. **Sort/filter/pagination are client-side** over delivered rows. For big
     datasets, page/filter server-side in the tool and deliver a bounded list.
 13. **Theming**: prefer no `Theme` (host-matched look). When overriding,
-    values are raw CSS; `Extra` keys must start with `--gadget-`.
+    values are raw CSS; `Extra` keys must start with `--gomu-`.
 14. **Errors surface at startup**: `AddWidget*` returns validation errors
     (bad URI, missing keys, duplicate columns/fields, unsafe theme values) —
     check them (`log.Fatal`/`must`).

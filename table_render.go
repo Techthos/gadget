@@ -1,4 +1,4 @@
-package gadget
+package gomukit
 
 import (
 	"strconv"
@@ -6,8 +6,8 @@ import (
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 
-	"github.com/techthos/gadget/internal/assets"
-	"github.com/techthos/gadget/internal/htmlx"
+	"github.com/techthos/gomukit/internal/assets"
+	"github.com/techthos/gomukit/internal/htmlx"
 )
 
 // Document implements Widget. The rendered shell contains the table chrome
@@ -33,17 +33,17 @@ func (t *Table) Document() (string, error) {
 }
 
 func (t *Table) shell() g.Node {
-	return h.Div(h.Class("gadget-root"), htmlx.Data("widget", "table"),
-		h.Div(h.Class("gadget-card"),
+	return h.Div(h.Class("gomu-root"), htmlx.Data("widget", "table"),
+		h.Div(h.Class("gomu-card"),
 			t.toolbar(),
-			h.Div(h.Class("gadget-table-wrap"),
+			h.Div(h.Class("gomu-table-wrap"),
 				// The roles are spelled out because the compact tier restacks
 				// each row as a block (see table.css), and `display: block`
 				// drops a table's implicit roles. Explicit ones survive the
 				// change, so the structure a screen reader hears is the same
 				// at every width. The runtime writes the matching row/cell
 				// roles on the rows it renders.
-				h.Table(h.Class("gadget-table"), h.Role("table"),
+				h.Table(h.Class("gomu-table"), h.Role("table"),
 					h.THead(h.Role("rowgroup"), h.Tr(append([]g.Node{h.Role("row")}, t.headerCells()...)...)),
 					h.TBody(h.Role("rowgroup"), htmlx.Data("rows", "")),
 				),
@@ -61,12 +61,12 @@ func (t *Table) toolbar() g.Node {
 		items = append(items, brand)
 	}
 	if t.Title != "" {
-		items = append(items, h.H2(h.Class("gadget-title"), g.Text(t.Title)))
+		items = append(items, h.H2(h.Class("gomu-title"), g.Text(t.Title)))
 	}
 	if t.Filterable {
 		items = append(items, h.Input(
 			h.Type("search"),
-			h.Class("gadget-input gadget-filter"),
+			h.Class("gomu-input gomu-filter"),
 			htmlx.Data("filter", ""),
 			h.Placeholder("Filter…"),
 			h.Aria("label", "Filter rows"),
@@ -77,17 +77,17 @@ func (t *Table) toolbar() g.Node {
 	}
 	if t.Selection != nil && len(t.Selection.Bulk) > 0 {
 		items = append(items, h.Div(
-			h.Class("gadget-bulk"),
+			h.Class("gomu-bulk"),
 			htmlx.Data("bulk", ""),
 			g.Attr("hidden"),
-			h.Span(h.Class("gadget-bulk-count"), htmlx.Data("bulk-count", "")),
+			h.Span(h.Class("gomu-bulk-count"), htmlx.Data("bulk-count", "")),
 			bulkMenuButton(),
 		))
 	}
 	if len(items) == 0 {
 		return nil
 	}
-	return h.Div(append([]g.Node{h.Class("gadget-toolbar")}, items...)...)
+	return h.Div(append([]g.Node{h.Class("gomu-toolbar")}, items...)...)
 }
 
 // sortControl renders the compact tier's sort control. Below the stacking
@@ -96,7 +96,7 @@ func (t *Table) toolbar() g.Node {
 // there. Option values are "<key>|asc" / "<key>|desc", as for CardList.
 func (t *Table) sortControl() g.Node {
 	children := []g.Node{
-		h.Class("gadget-input gadget-sort-select"),
+		h.Class("gomu-input gomu-sort-select"),
 		htmlx.Data("sort-select", ""),
 		h.Aria("label", "Sort rows"),
 		h.Option(h.Value(""), g.Text("Sort…")),
@@ -119,13 +119,13 @@ func (t *Table) sortControl() g.Node {
 	if n == 0 {
 		return nil
 	}
-	return h.Div(h.Class("gadget-table-sort"), h.Select(children...))
+	return h.Div(h.Class("gomu-table-sort"), h.Select(children...))
 }
 
 func (t *Table) headerCells() []g.Node {
 	var cells []g.Node
 	if t.Selection != nil {
-		cells = append(cells, h.Th(h.Class("gadget-th-select"), h.Role("columnheader"),
+		cells = append(cells, h.Th(h.Class("gomu-th-select"), h.Role("columnheader"),
 			checkboxNode(htmlx.Data("select-all", ""), h.Aria("label", "Select all rows")),
 		))
 	}
@@ -135,13 +135,13 @@ func (t *Table) headerCells() []g.Node {
 			attrs = append(attrs, h.Style("width:"+c.Width))
 		}
 		if c.Align != "" {
-			attrs = append(attrs, h.Class("gadget-align-"+string(c.Align)))
+			attrs = append(attrs, h.Class("gomu-align-"+string(c.Align)))
 		}
 		if c.sortable() {
 			attrs = append(attrs,
 				h.Aria("sort", "none"),
 				htmlx.Data("sort", c.Key),
-				h.Button(h.Type("button"), h.Class("gadget-sort-btn"), g.Text(c.Label)),
+				h.Button(h.Type("button"), h.Class("gomu-sort-btn"), g.Text(c.Label)),
 			)
 		} else {
 			attrs = append(attrs, g.Text(c.Label))
@@ -158,12 +158,12 @@ func (t *Table) headerCells() []g.Node {
 func bulkMenuButton() g.Node {
 	return h.Button(
 		h.Type("button"),
-		h.Class("gadget-btn gadget-bulk-menu"),
+		h.Class("gomu-btn gomu-bulk-menu"),
 		htmlx.Data("bulk-menu", ""),
 		h.Aria("haspopup", "menu"),
 		h.Aria("expanded", "false"),
 		g.Text("Actions"),
-		chevronIconNode("gadget-bulk-menu-chevron"),
+		chevronIconNode("gomu-bulk-menu-chevron"),
 	)
 }
 
@@ -186,9 +186,9 @@ func chevronIconNode(class string) g.Node {
 // actionButton renders a server-side action button (CardList bulk actions;
 // per-row buttons are runtime-rendered from the config island).
 func actionButton(a Action, attr string, idx int) g.Node {
-	class := "gadget-btn"
+	class := "gomu-btn"
 	if a.Variant != "" {
-		class += " gadget-btn--" + string(a.Variant)
+		class += " gomu-btn--" + string(a.Variant)
 	}
 	return h.Button(
 		h.Type("button"),

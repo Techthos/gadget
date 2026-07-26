@@ -17,6 +17,7 @@ import {
 	sortRows,
 	Store,
 } from "../state";
+import { errorText, textOf } from "../status";
 import {
 	ActionCfg,
 	CardTemplateCfg,
@@ -24,7 +25,6 @@ import {
 	resolveArgs,
 	templateActions,
 	templateKeys,
-	textOf,
 } from "./card-common";
 import { carouselState, stepFor } from "./carousel";
 
@@ -73,21 +73,21 @@ export function mountCardList(ctx: MountContext): void {
 	const cfg = ctx.config as unknown as CardListCfg;
 	const { root, bridge } = ctx;
 
-	const stripEl = root.querySelector<HTMLElement>("[data-gadget-cards]");
+	const stripEl = root.querySelector<HTMLElement>("[data-gomu-cards]");
 	if (!stripEl || typeof cfg.card !== "object" || typeof cfg.card.header !== "object") return;
 	const strip: HTMLElement = stripEl;
-	const navEls = [...root.querySelectorAll<HTMLButtonElement>("[data-gadget-scroll]")];
-	const statusEl = root.querySelector<HTMLElement>("[data-gadget-status]");
-	const emptyEl = root.querySelector<HTMLElement>("[data-gadget-empty]");
+	const navEls = [...root.querySelectorAll<HTMLButtonElement>("[data-gomu-scroll]")];
+	const statusEl = root.querySelector<HTMLElement>("[data-gomu-status]");
+	const emptyEl = root.querySelector<HTMLElement>("[data-gomu-empty]");
 	const emptyTitleEl = emptyEl?.querySelector("h3") ?? null;
 	const emptyTitleDefault = emptyTitleEl?.textContent ?? "";
-	const paginationEl = root.querySelector<HTMLElement>("[data-gadget-pagination]");
-	const pageInfoEl = root.querySelector<HTMLElement>("[data-gadget-page-info]");
-	const bulkEl = root.querySelector<HTMLElement>("[data-gadget-bulk]");
-	const bulkCountEl = root.querySelector<HTMLElement>("[data-gadget-bulk-count]");
-	const selectAllEl = root.querySelector<HTMLInputElement>("[data-gadget-select-all]");
-	const sortSelectEl = root.querySelector<HTMLSelectElement>("[data-gadget-sort-select]");
-	const pageSizeEl = root.querySelector<HTMLSelectElement>("[data-gadget-page-size]");
+	const paginationEl = root.querySelector<HTMLElement>("[data-gomu-pagination]");
+	const pageInfoEl = root.querySelector<HTMLElement>("[data-gomu-page-info]");
+	const bulkEl = root.querySelector<HTMLElement>("[data-gomu-bulk]");
+	const bulkCountEl = root.querySelector<HTMLElement>("[data-gomu-bulk-count]");
+	const selectAllEl = root.querySelector<HTMLInputElement>("[data-gomu-select-all]");
+	const sortSelectEl = root.querySelector<HTMLSelectElement>("[data-gomu-sort-select]");
+	const pageSizeEl = root.querySelector<HTMLSelectElement>("[data-gomu-page-size]");
 
 	const filterKeys = templateKeys(cfg.card);
 	const cardActions = templateActions(cfg.card);
@@ -161,7 +161,7 @@ export function mountCardList(ctx: MountContext): void {
 			store.set({
 				status: "idle",
 				statusKind: "error",
-				statusMsg: e instanceof Error ? e.message : String(e),
+				statusMsg: errorText(e, "The action failed."),
 			});
 		}
 	}
@@ -170,12 +170,12 @@ export function mountCardList(ctx: MountContext): void {
 	// confirmation is a two-phase button: first click arms it and shows the
 	// confirm text, a second click within the window fires.
 	function armOrFire(btn: HTMLElement, action: ActionCfg, row: Row | null): void {
-		if (action.confirm && !btn.hasAttribute("data-gadget-armed")) {
+		if (action.confirm && !btn.hasAttribute("data-gomu-armed")) {
 			const original = btn.textContent;
-			btn.setAttribute("data-gadget-armed", "");
+			btn.setAttribute("data-gomu-armed", "");
 			btn.textContent = action.confirm;
 			setTimeout(() => {
-				btn.removeAttribute("data-gadget-armed");
+				btn.removeAttribute("data-gomu-armed");
 				btn.textContent = original;
 			}, CONFIRM_RESET_MS);
 			return;
@@ -190,10 +190,10 @@ export function mountCardList(ctx: MountContext): void {
 	function focusedControl(): string | null {
 		const el = document.activeElement as HTMLElement | null;
 		if (!el || !strip.contains(el)) return null;
-		const card = el.closest<HTMLElement>("[data-gadget-card-id]");
-		if (!card) return el.hasAttribute("data-gadget-reveal") ? "reveal" : null;
-		const id = card.getAttribute("data-gadget-card-id") ?? "";
-		const action = el.getAttribute("data-gadget-action");
+		const card = el.closest<HTMLElement>("[data-gomu-card-id]");
+		if (!card) return el.hasAttribute("data-gomu-reveal") ? "reveal" : null;
+		const id = card.getAttribute("data-gomu-card-id") ?? "";
+		const action = el.getAttribute("data-gomu-action");
 		return action !== null ? `action:${id}:${action}` : `select:${id}`;
 	}
 
@@ -201,14 +201,14 @@ export function mountCardList(ctx: MountContext): void {
 		if (key === null) return;
 		let sel: string;
 		if (key === "reveal") {
-			sel = "[data-gadget-reveal]";
+			sel = "[data-gomu-reveal]";
 		} else {
 			const [kind, id, index] = key.split(":");
-			const card = `[data-gadget-card-id="${CSS.escape(id ?? "")}"]`;
+			const card = `[data-gomu-card-id="${CSS.escape(id ?? "")}"]`;
 			sel =
 				kind === "action"
-					? `${card} [data-gadget-action="${CSS.escape(index ?? "")}"]`
-					: `${card} [data-gadget-select-card]`;
+					? `${card} [data-gomu-action="${CSS.escape(index ?? "")}"]`
+					: `${card} [data-gomu-select-card]`;
 		}
 		// preventScroll: refocusing must not undo the scroll just restored.
 		strip.querySelector<HTMLElement>(sel)?.focus({ preventScroll: true });
@@ -232,13 +232,13 @@ export function mountCardList(ctx: MountContext): void {
 			"button",
 			{
 				type: "button",
-				class: "gadget-card-more",
-				"data-gadget-reveal": "",
+				class: "gomu-card-more",
+				"data-gomu-reveal": "",
 				disabled: busy,
 				"aria-label": `Load more records (${shown} of ${total} shown)`,
 			},
-			h("span", { class: "gadget-card-more-label" }, "Load more"),
-			h("span", { class: "gadget-card-more-count" }, `${shown} of ${total}`),
+			h("span", { class: "gomu-card-more-label" }, "Load more"),
+			h("span", { class: "gomu-card-more-count" }, `${shown} of ${total}`),
 		);
 	}
 
@@ -302,8 +302,8 @@ export function mountCardList(ctx: MountContext): void {
 				const to = Math.min((s.page + 1) * s.pageSize, total);
 				pageInfoEl.textContent = `${from}–${to} of ${total}`;
 			}
-			for (const btn of paginationEl.querySelectorAll<HTMLButtonElement>("[data-gadget-page]")) {
-				const dir = btn.getAttribute("data-gadget-page");
+			for (const btn of paginationEl.querySelectorAll<HTMLButtonElement>("[data-gomu-page]")) {
+				const dir = btn.getAttribute("data-gomu-page");
 				btn.disabled = busy || (dir === "prev" ? s.page <= 0 : s.page >= pages - 1);
 			}
 			if (pageSizeEl) {
@@ -320,7 +320,7 @@ export function mountCardList(ctx: MountContext): void {
 		if (bulkEl) {
 			bulkEl.hidden = selected.size === 0;
 			if (bulkCountEl) bulkCountEl.textContent = `${selected.size} selected`;
-			for (const btn of bulkEl.querySelectorAll<HTMLButtonElement>("[data-gadget-bulk-action]")) {
+			for (const btn of bulkEl.querySelectorAll<HTMLButtonElement>("[data-gomu-bulk-action]")) {
 				btn.disabled = busy;
 			}
 		}
@@ -330,9 +330,9 @@ export function mountCardList(ctx: MountContext): void {
 			const msg = s.statusMsg ?? "";
 			statusEl.hidden = msg === "";
 			statusEl.textContent = msg;
-			statusEl.className = "gadget-status";
-			if (busy) statusEl.className += " gadget-status--loading";
-			else if (s.statusKind) statusEl.className += ` gadget-status--${s.statusKind}`;
+			statusEl.className = "gomu-status";
+			if (busy) statusEl.className += " gomu-status--loading";
+			else if (s.statusKind) statusEl.className += ` gomu-status--${s.statusKind}`;
 		}
 
 		syncCarousel();
@@ -350,11 +350,11 @@ export function mountCardList(ctx: MountContext): void {
 		const key = `${state.overflowing}${state.atStart}${state.atEnd}`;
 		if (key === lastCarousel) return;
 		lastCarousel = key;
-		strip.classList.toggle("gadget-card-strip--scrollable", state.overflowing);
+		strip.classList.toggle("gomu-card-strip--scrollable", state.overflowing);
 		for (const btn of navEls) {
 			btn.hidden = !state.overflowing;
 			btn.disabled =
-				btn.getAttribute("data-gadget-scroll") === "prev" ? state.atStart : state.atEnd;
+				btn.getAttribute("data-gomu-scroll") === "prev" ? state.atStart : state.atEnd;
 		}
 	}
 
@@ -398,7 +398,7 @@ export function mountCardList(ctx: MountContext): void {
 		if (!drag.moved) {
 			if (Math.abs(dx) < DRAG_THRESHOLD_PX) return;
 			drag.moved = true;
-			strip.classList.add("gadget-card-strip--dragging");
+			strip.classList.add("gomu-card-strip--dragging");
 			if (typeof strip.setPointerCapture === "function") strip.setPointerCapture(drag.id);
 		}
 		strip.scrollLeft = drag.startScroll - dx;
@@ -409,7 +409,7 @@ export function mountCardList(ctx: MountContext): void {
 		if (!drag) return;
 		if (drag.moved) {
 			swallowClick = true;
-			strip.classList.remove("gadget-card-strip--dragging");
+			strip.classList.remove("gomu-card-strip--dragging");
 			// Do not wait for the trailing scroll event to settle the controls.
 			syncCarousel();
 		}
@@ -482,7 +482,7 @@ export function mountCardList(ctx: MountContext): void {
 	});
 
 	delegate(root, "change", "select-card", (el) => {
-		const id = el.closest("[data-gadget-card-id]")?.getAttribute("data-gadget-card-id");
+		const id = el.closest("[data-gomu-card-id]")?.getAttribute("data-gomu-card-id");
 		if (id === null || id === undefined) return;
 		const sel = new Set(store.get().selected);
 		if ((el as HTMLInputElement).checked) sel.add(id);
@@ -505,7 +505,7 @@ export function mountCardList(ctx: MountContext): void {
 	delegate(root, "click", "action", (el, value) => {
 		const action = cardActions[Number(value)];
 		if (!action) return;
-		const id = el.closest("[data-gadget-card-id]")?.getAttribute("data-gadget-card-id");
+		const id = el.closest("[data-gomu-card-id]")?.getAttribute("data-gomu-card-id");
 		const row = store.get().rows.find((r) => rowID(r) === id) ?? null;
 		armOrFire(el, action, row);
 	});

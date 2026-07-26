@@ -2,7 +2,7 @@
 // extension (io.modelcontextprotocol/ui), spec version 2026-01-26.
 //
 // It is deliberately free of any MCP SDK dependency: everything is expressed
-// as plain Go types and map[string]any meta maps, so gadget widgets can be
+// as plain Go types and map[string]any meta maps, so gomukit widgets can be
 // wired into any Go MCP implementation. The official go-sdk adapter lives in
 // package gosdk.
 //
@@ -23,7 +23,7 @@ const (
 	// negotiation.
 	ExtensionID = "io.modelcontextprotocol/ui"
 
-	// SpecVersion is the ext-apps specification version gadget targets.
+	// SpecVersion is the ext-apps specification version gomukit targets.
 	SpecVersion = "2026-01-26"
 
 	// MIMEType is the media type of MCP Apps HTML template resources.
@@ -94,7 +94,7 @@ type ResourceDescriptor struct {
 	Name        string
 	Title       string
 	Description string
-	MIMEType    string // always MIMEType for gadget widgets
+	MIMEType    string // always MIMEType for gomukit widgets
 	UI          *ResourceUIMeta
 }
 

@@ -1,8 +1,8 @@
 {
-  "name": "@techthos/gadget-ui",
+  "name": "@techthos/gomukit-ui",
   "private": true,
   "type": "module",
-  "description": "TypeScript runtime and CSS for the gadget widget library. Built output is committed to internal/assets/dist and embedded into the Go binary.",
+  "description": "TypeScript runtime and CSS for the gomukit widget library. Built output is committed to internal/assets/dist and embedded into the Go binary.",
   "scripts": {
     "build": "node build.mjs",
     "test": "vitest run",

@@ -1,4 +1,4 @@
-package gadget
+package gomukit
 
 import (
 	"fmt"
@@ -7,8 +7,8 @@ import (
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 
-	"github.com/techthos/gadget/internal/assets"
-	"github.com/techthos/gadget/internal/htmlx"
+	"github.com/techthos/gomukit/internal/assets"
+	"github.com/techthos/gomukit/internal/htmlx"
 )
 
 // Document implements Widget. Field structure is fully SSR'd (it is static
@@ -36,16 +36,16 @@ func (f *Form) shell() g.Node {
 	var body []g.Node
 	brand := brandNode(f.Brand)
 	if f.Title != "" || brand != nil {
-		toolbar := []g.Node{h.Class("gadget-toolbar"), brand}
+		toolbar := []g.Node{h.Class("gomu-toolbar"), brand}
 		if f.Title != "" {
-			toolbar = append(toolbar, h.H2(h.Class("gadget-title"), g.Text(f.Title)))
+			toolbar = append(toolbar, h.H2(h.Class("gomu-title"), g.Text(f.Title)))
 		}
 		body = append(body, h.Div(toolbar...))
 	}
 	// novalidate: the runtime runs checkValidity itself and renders inline
 	// errors; native validation would swallow the submit event and rely on
 	// browser bubbles that hosts' sandboxed iframes may not show.
-	formChildren := []g.Node{h.Class("gadget-form"), htmlx.Data("form", ""), g.Attr("novalidate")}
+	formChildren := []g.Node{h.Class("gomu-form"), htmlx.Data("form", ""), g.Attr("novalidate")}
 	for _, fd := range f.Fields {
 		formChildren = append(formChildren, fieldNode(fd))
 	}
@@ -54,20 +54,20 @@ func (f *Form) shell() g.Node {
 	if submitLabel == "" {
 		submitLabel = "Submit"
 	}
-	actions := []g.Node{h.Class("gadget-form-actions")}
+	actions := []g.Node{h.Class("gomu-form-actions")}
 	if f.Cancel != nil {
 		cancelLabel := f.Cancel.Label
 		if cancelLabel == "" {
 			cancelLabel = "Cancel"
 		}
-		actions = append(actions, h.Button(h.Type("button"), h.Class("gadget-btn"), htmlx.Data("cancel", ""), g.Text(cancelLabel)))
+		actions = append(actions, h.Button(h.Type("button"), h.Class("gomu-btn"), htmlx.Data("cancel", ""), g.Text(cancelLabel)))
 	}
 	// type=button, not submit: hosts sandbox the widget iframe without
 	// allow-forms, which blocks native form submission outright (the submit
 	// event never fires). The runtime drives submission from this click.
 	actions = append(actions, h.Button(
 		h.Type("button"),
-		h.Class("gadget-btn gadget-btn--primary"),
+		h.Class("gomu-btn gomu-btn--primary"),
 		htmlx.Data("submit", ""),
 		g.Text(submitLabel),
 	))
@@ -75,14 +75,14 @@ func (f *Form) shell() g.Node {
 
 	body = append(body, h.Form(formChildren...), statusNode())
 
-	return h.Div(h.Class("gadget-root"), htmlx.Data("widget", "form"),
-		h.Div(append([]g.Node{h.Class("gadget-card")}, body...)...),
+	return h.Div(h.Class("gomu-root"), htmlx.Data("widget", "form"),
+		h.Div(append([]g.Node{h.Class("gomu-card")}, body...)...),
 	)
 }
 
 func fieldNode(fd Field) g.Node {
 	ft := fd.fieldType()
-	id := "gadget-f-" + fd.Name
+	id := "gomu-f-" + fd.Name
 
 	if ft == FHidden {
 		return h.Input(h.Type("hidden"), h.Name(fd.Name), h.Value(defaultString(fd.Default)))
@@ -117,7 +117,7 @@ func fieldNode(fd Field) g.Node {
 		control = dateRangeNode(fd, id)
 	case FCheckbox:
 		// Not controlAttrs: the box draws itself (ui/css/check.css) rather than
-		// wearing .gadget-input, and none of the text/number validation
+		// wearing .gomu-input, and none of the text/number validation
 		// attributes mean anything on a checkbox.
 		attrs := []g.Node{h.ID(id), h.Name(fd.Name)}
 		if fd.Required {
@@ -149,10 +149,10 @@ func fieldNode(fd Field) g.Node {
 	var labelChildren []g.Node
 	labelChildren = append(labelChildren, h.For(id), g.Text(labelText))
 	if fd.Required {
-		labelChildren = append(labelChildren, h.Span(h.Class("gadget-required"), h.Aria("hidden", "true"), g.Text(" *")))
+		labelChildren = append(labelChildren, h.Span(h.Class("gomu-required"), h.Aria("hidden", "true"), g.Text(" *")))
 	}
 
-	nodes := []g.Node{h.Class("gadget-field gadget-field--" + string(ft))}
+	nodes := []g.Node{h.Class("gomu-field gomu-field--" + string(ft))}
 	if ft == FCheckbox {
 		// Checkbox: control first, label after.
 		nodes = append(nodes, control, h.Label(labelChildren...))
@@ -160,9 +160,9 @@ func fieldNode(fd Field) g.Node {
 		nodes = append(nodes, h.Label(labelChildren...), control)
 	}
 	if fd.Description != "" {
-		nodes = append(nodes, h.P(h.Class("gadget-field-desc"), g.Text(fd.Description)))
+		nodes = append(nodes, h.P(h.Class("gomu-field-desc"), g.Text(fd.Description)))
 	}
-	nodes = append(nodes, h.P(h.Class("gadget-field-error"), htmlx.Data("error-for", fd.Name), g.Attr("hidden")))
+	nodes = append(nodes, h.P(h.Class("gomu-field-error"), htmlx.Data("error-for", fd.Name), g.Attr("hidden")))
 	return h.Div(nodes...)
 }
 
@@ -184,7 +184,7 @@ func dateRangeNode(fd Field, id string) g.Node {
 		attrs := []g.Node{
 			h.Type("date"),
 			h.Name(name),
-			h.Class("gadget-input " + class),
+			h.Class("gomu-input " + class),
 			h.Aria("label", aria),
 		}
 		if id != "" {
@@ -204,10 +204,10 @@ func dateRangeNode(fd Field, id string) g.Node {
 	// dropdown performs over a <select>. Each input also names itself, since
 	// without the script the two are all the reader gets.
 	return h.Div(
-		h.Class("gadget-daterange"),
+		h.Class("gomu-daterange"),
 		htmlx.Data("daterange", fd.Name),
-		part(id, fd.Name, start, "gadget-daterange-start", label+" start date"),
-		part("", fd.endName(), end, "gadget-daterange-end", label+" end date"),
+		part(id, fd.Name, start, "gomu-daterange-start", label+" start date"),
+		part("", fd.endName(), end, "gomu-daterange-end", label+" end date"),
 	)
 }
 
@@ -230,7 +230,7 @@ func dateBounds(c *Calendar) []g.Node {
 
 // controlAttrs renders the shared attributes incl. native validation.
 func controlAttrs(fd Field, id string) []g.Node {
-	attrs := []g.Node{h.ID(id), h.Name(fd.Name), h.Class("gadget-input")}
+	attrs := []g.Node{h.ID(id), h.Name(fd.Name), h.Class("gomu-input")}
 	if fd.Placeholder != "" {
 		attrs = append(attrs, h.Placeholder(fd.Placeholder))
 	}

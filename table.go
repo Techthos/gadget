@@ -1,11 +1,11 @@
-package gadget
+package gomukit
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/techthos/gadget/theme"
-	"github.com/techthos/gadget/uispec"
+	"github.com/techthos/gomukit/theme"
+	"github.com/techthos/gomukit/uispec"
 )
 
 // Table is an interactive data table widget: typed columns, client-side
@@ -61,7 +61,7 @@ type Table struct {
 
 	// Brand renders the application logo/name on the widget.
 	Brand *Brand
-	// Theme overrides gadget design tokens for this widget.
+	// Theme overrides gomukit design tokens for this widget.
 	Theme *theme.Theme
 	// UI overrides resource _meta.ui (CSP, permissions, prefersBorder).
 	UI *uispec.ResourceUIMeta
@@ -206,14 +206,14 @@ func (t *Table) rowID() string {
 // Validate implements Widget.
 func (t *Table) Validate() error {
 	if err := uispec.ValidateURI(t.URI); err != nil {
-		return fmt.Errorf("gadget: table: %w", err)
+		return fmt.Errorf("gomukit: table: %w", err)
 	}
 	if len(t.Columns) == 0 {
-		return fmt.Errorf("gadget: table %s: at least one column is required", t.URI)
+		return fmt.Errorf("gomukit: table %s: at least one column is required", t.URI)
 	}
 	seen := map[string]bool{}
 	for i, c := range t.Columns {
-		ctx := fmt.Sprintf("gadget: table %s: column %d (%s)", t.URI, i, c.Label)
+		ctx := fmt.Sprintf("gomukit: table %s: column %d (%s)", t.URI, i, c.Label)
 		switch c.columnType() {
 		case ColText, ColNumber, ColDate, ColBadge:
 			if c.Key == "" {
@@ -250,26 +250,26 @@ func (t *Table) Validate() error {
 		}
 	}
 	if t.PageSize < 0 {
-		return fmt.Errorf("gadget: table %s: PageSize must be >= 0", t.URI)
+		return fmt.Errorf("gomukit: table %s: PageSize must be >= 0", t.URI)
 	}
-	if err := validatePageSizes(fmt.Sprintf("gadget: table %s", t.URI), t.PageSize, t.PageSizes); err != nil {
+	if err := validatePageSizes(fmt.Sprintf("gomukit: table %s", t.URI), t.PageSize, t.PageSizes); err != nil {
 		return err
 	}
 	if t.DefaultSort != nil && t.DefaultSort.Key == "" {
-		return fmt.Errorf("gadget: table %s: DefaultSort.Key is required", t.URI)
+		return fmt.Errorf("gomukit: table %s: DefaultSort.Key is required", t.URI)
 	}
 	if t.Selection != nil {
 		for _, a := range t.Selection.Bulk {
-			if err := a.validate(fmt.Sprintf("gadget: table %s: bulk", t.URI)); err != nil {
+			if err := a.validate(fmt.Sprintf("gomukit: table %s: bulk", t.URI)); err != nil {
 				return err
 			}
 		}
 	}
 	if err := t.Brand.Validate(); err != nil {
-		return fmt.Errorf("gadget: table %s: %w", t.URI, err)
+		return fmt.Errorf("gomukit: table %s: %w", t.URI, err)
 	}
 	if err := t.Theme.Validate(); err != nil {
-		return fmt.Errorf("gadget: table %s: %w", t.URI, err)
+		return fmt.Errorf("gomukit: table %s: %w", t.URI, err)
 	}
 	return nil
 }
@@ -290,7 +290,7 @@ func (t *Table) ToolMeta() map[string]any {
 	return uispec.ToolUIMeta{ResourceURI: t.URI}.MetaMap()
 }
 
-// columnConfig serializes one column for the #gadget-config island. Shared
+// columnConfig serializes one column for the #gomu-config island. Shared
 // by Table columns and Card fields so both sides format cells identically.
 func columnConfig(c Column) map[string]any {
 	col := map[string]any{
@@ -317,7 +317,7 @@ func columnConfig(c Column) map[string]any {
 	return col
 }
 
-// config builds the #gadget-config island content.
+// config builds the #gomu-config island content.
 func (t *Table) config() map[string]any {
 	cols := make([]map[string]any, len(t.Columns))
 	for i, c := range t.Columns {

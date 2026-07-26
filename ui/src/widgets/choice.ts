@@ -12,7 +12,8 @@ import { HOST_CONTEXT_EVENT } from "../host";
 import { Row, rowsFrom } from "../data";
 import { checkbox, clear, delegate, h } from "../dom";
 import { CallToolResult, M } from "../protocol";
-import { ActionCfg, resolveArgs, textOf } from "./card-common";
+import { errorText, textOf } from "../status";
+import { ActionCfg, resolveArgs } from "./card-common";
 import { DescriptionItemCfg, fillDescriptions } from "./descriptions";
 
 interface OptionCfg {
@@ -61,24 +62,24 @@ const VARIANTS = new Set(["neutral", "info", "success", "warning", "danger"]);
 // The width, in rem, at or above which the auto layout puts the description
 // beside the options. Below it there is no room for two readable columns, and
 // the description goes under the option it belongs to. Matches the breakpoint
-// the rest of the bundle narrows at (grep "container gadget").
+// the rest of the bundle narrows at (grep "container gomu").
 const SPLIT_AT_REM = 34;
 
 export function mountChoice(ctx: MountContext): void {
 	const cfg = ctx.config as unknown as ChoiceCfg;
 	const { root, bridge } = ctx;
 
-	const cardEl = root.querySelector<HTMLElement>(".gadget-choice");
-	const detailsEl = root.querySelector<HTMLElement>("[data-gadget-descriptions]");
-	const listEl = root.querySelector<HTMLElement>("[data-gadget-options]");
-	const panelEl = root.querySelector<HTMLElement>("[data-gadget-panel]");
-	const emptyEl = root.querySelector<HTMLElement>("[data-gadget-empty]");
-	const hintEl = root.querySelector<HTMLElement>("[data-gadget-hint]");
-	const decisionEl = root.querySelector<HTMLElement>("[data-gadget-decision]");
-	const outcomeEl = root.querySelector<HTMLElement>("[data-gadget-outcome]");
-	const statusEl = root.querySelector<HTMLElement>("[data-gadget-status]");
-	const submitEl = root.querySelector<HTMLButtonElement>("[data-gadget-submit]");
-	const cancelEl = root.querySelector<HTMLButtonElement>("[data-gadget-cancel]");
+	const cardEl = root.querySelector<HTMLElement>(".gomu-choice");
+	const detailsEl = root.querySelector<HTMLElement>("[data-gomu-descriptions]");
+	const listEl = root.querySelector<HTMLElement>("[data-gomu-options]");
+	const panelEl = root.querySelector<HTMLElement>("[data-gomu-panel]");
+	const emptyEl = root.querySelector<HTMLElement>("[data-gomu-empty]");
+	const hintEl = root.querySelector<HTMLElement>("[data-gomu-hint]");
+	const decisionEl = root.querySelector<HTMLElement>("[data-gomu-decision]");
+	const outcomeEl = root.querySelector<HTMLElement>("[data-gomu-outcome]");
+	const statusEl = root.querySelector<HTMLElement>("[data-gomu-status]");
+	const submitEl = root.querySelector<HTMLButtonElement>("[data-gomu-submit]");
+	const cancelEl = root.querySelector<HTMLButtonElement>("[data-gomu-cancel]");
 
 	const items = Array.isArray(cfg.details) ? cfg.details : [];
 	const multiple = !!cfg.multiple;
@@ -98,7 +99,7 @@ export function mountChoice(ctx: MountContext): void {
 		if (!statusEl) return;
 		statusEl.hidden = msg === "";
 		statusEl.textContent = msg;
-		statusEl.className = "gadget-status" + (kind ? ` gadget-status--${kind}` : "");
+		statusEl.className = "gomu-status" + (kind ? ` gomu-status--${kind}` : "");
 	}
 
 	function selectable(): OptionCfg[] {
@@ -159,16 +160,16 @@ export function mountChoice(ctx: MountContext): void {
 		const details = opt.details ?? [];
 		if (!opt.body && bullets.length === 0 && details.length === 0) return null;
 
-		const info = h("div", { class: "gadget-choice-info" });
-		info.append(h("h4", { class: "gadget-choice-info-title" }, opt.label));
-		if (opt.body) info.append(h("p", { class: "gadget-choice-info-body" }, opt.body));
+		const info = h("div", { class: "gomu-choice-info" });
+		info.append(h("h4", { class: "gomu-choice-info-title" }, opt.label));
+		if (opt.body) info.append(h("p", { class: "gomu-choice-info-body" }, opt.body));
 		if (bullets.length > 0) {
-			const ul = h("ul", { class: "gadget-choice-bullets" });
+			const ul = h("ul", { class: "gomu-choice-bullets" });
 			for (const b of bullets) ul.append(h("li", {}, b));
 			info.append(ul);
 		}
 		if (details.length > 0) {
-			const dl = h("dl", { class: "gadget-descriptions gadget-choice-details" });
+			const dl = h("dl", { class: "gomu-descriptions gomu-choice-details" });
 			fillDescriptions(dl, details, opt.data ?? {});
 			info.append(dl);
 		}
@@ -182,43 +183,43 @@ export function mountChoice(ctx: MountContext): void {
 		const capped = multiple && !!max && !selected && chosen.size >= max;
 		const disabled = !!opt.disabled || capped || phase !== "deciding";
 
-		let cls = "gadget-choice-option";
-		if (selected) cls += " gadget-choice-option--selected";
-		if (disabled) cls += " gadget-choice-option--disabled";
-		if (opt.value === active) cls += " gadget-choice-option--active";
+		let cls = "gomu-choice-option";
+		if (selected) cls += " gomu-choice-option--selected";
+		if (disabled) cls += " gomu-choice-option--disabled";
+		if (opt.value === active) cls += " gomu-choice-option--active";
 
-		const label = h("label", { class: cls, "data-gadget-option": String(index) });
+		const label = h("label", { class: cls, "data-gomu-option": String(index) });
 
 		let input: HTMLInputElement;
 		if (multiple) {
-			const box = checkbox({ "data-gadget-pick": "" }, "gadget-choice-mark");
+			const box = checkbox({ "data-gomu-pick": "" }, "gomu-choice-mark");
 			input = box.input;
 			label.append(box.wrap);
 		} else {
 			input = h("input", {
 				type: "radio",
-				name: "gadget-choice",
-				class: "gadget-choice-radio",
-				"data-gadget-pick": "",
+				name: "gomu-choice",
+				class: "gomu-choice-radio",
+				"data-gomu-pick": "",
 			}) as HTMLInputElement;
-			label.append(h("span", { class: "gadget-choice-mark gadget-choice-mark--radio" }, input));
+			label.append(h("span", { class: "gomu-choice-mark gomu-choice-mark--radio" }, input));
 		}
 		input.checked = selected;
 		input.disabled = disabled;
 		input.value = opt.value;
 
-		const text = h("div", { class: "gadget-choice-text" });
-		const head = h("div", { class: "gadget-choice-head" });
-		head.append(h("span", { class: "gadget-choice-label" }, opt.label));
+		const text = h("div", { class: "gomu-choice-text" });
+		const head = h("div", { class: "gomu-choice-head" });
+		head.append(h("span", { class: "gomu-choice-label" }, opt.label));
 		if (opt.badge) {
 			const variant =
 				opt.badgeVariant && VARIANTS.has(opt.badgeVariant) && opt.badgeVariant !== "neutral"
-					? ` gadget-badge--${opt.badgeVariant}`
+					? ` gomu-badge--${opt.badgeVariant}`
 					: "";
-			head.append(h("span", { class: `gadget-badge${variant}` }, opt.badge));
+			head.append(h("span", { class: `gomu-badge${variant}` }, opt.badge));
 		}
 		text.append(head);
-		if (opt.summary) text.append(h("span", { class: "gadget-choice-summary" }, opt.summary));
+		if (opt.summary) text.append(h("span", { class: "gomu-choice-summary" }, opt.summary));
 
 		// Stacked: the description lives with its option, and only the chosen
 		// one is unfolded — an unfolded list of every case is not a list. An
@@ -243,8 +244,8 @@ export function mountChoice(ctx: MountContext): void {
 		listEl.hidden = options.length === 0;
 		if (emptyEl) emptyEl.hidden = options.length > 0;
 		if (cardEl) {
-			cardEl.classList.remove("gadget-choice--auto", "gadget-choice--split", "gadget-choice--stacked");
-			cardEl.classList.add(`gadget-choice--${layout}`);
+			cardEl.classList.remove("gomu-choice--auto", "gomu-choice--split", "gomu-choice--stacked");
+			cardEl.classList.add(`gomu-choice--${layout}`);
 		}
 
 		renderPanel();
@@ -257,7 +258,7 @@ export function mountChoice(ctx: MountContext): void {
 		const idx = options.findIndex((o) => o.value === active);
 		if (idx < 0) return;
 		listEl
-			?.querySelector<HTMLInputElement>(`[data-gadget-option="${idx}"] input`)
+			?.querySelector<HTMLInputElement>(`[data-gomu-option="${idx}"] input`)
 			?.focus({ preventScroll: true });
 	}
 
@@ -311,7 +312,7 @@ export function mountChoice(ctx: MountContext): void {
 		if (outcomeEl) {
 			outcomeEl.hidden = false;
 			outcomeEl.textContent = message;
-			outcomeEl.className = `gadget-choice-outcome gadget-choice-outcome--${kind}`;
+			outcomeEl.className = `gomu-choice-outcome gomu-choice-outcome--${kind}`;
 		}
 		showStatus("", "");
 	}
@@ -344,7 +345,7 @@ export function mountChoice(ctx: MountContext): void {
 			}
 			return res;
 		} catch (e) {
-			fail(e instanceof Error ? e.message : String(e));
+			fail(errorText(e, fallback));
 			return null;
 		}
 	}
@@ -376,7 +377,7 @@ export function mountChoice(ctx: MountContext): void {
 			await bridge.sendMessage(text);
 			return true;
 		} catch (e) {
-			fail(e instanceof Error ? e.message : String(e));
+			fail(errorText(e, "The request failed."));
 			return false;
 		}
 	}

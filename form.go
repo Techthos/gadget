@@ -1,10 +1,10 @@
-package gadget
+package gomukit
 
 import (
 	"fmt"
 
-	"github.com/techthos/gadget/theme"
-	"github.com/techthos/gadget/uispec"
+	"github.com/techthos/gomukit/theme"
+	"github.com/techthos/gomukit/uispec"
 )
 
 // Form is a create/edit form widget: typed fields with client-side
@@ -47,7 +47,7 @@ type Form struct {
 
 	// Brand renders the application logo/name on the widget.
 	Brand *Brand
-	// Theme overrides gadget design tokens for this widget.
+	// Theme overrides gomukit design tokens for this widget.
 	Theme *theme.Theme
 	// UI overrides resource _meta.ui.
 	UI *uispec.ResourceUIMeta
@@ -220,13 +220,13 @@ func (f *Form) errorsKey() string {
 // Validate implements Widget.
 func (f *Form) Validate() error {
 	if err := uispec.ValidateURI(f.URI); err != nil {
-		return fmt.Errorf("gadget: form: %w", err)
+		return fmt.Errorf("gomukit: form: %w", err)
 	}
 	if len(f.Fields) == 0 {
-		return fmt.Errorf("gadget: form %s: at least one field is required", f.URI)
+		return fmt.Errorf("gomukit: form %s: at least one field is required", f.URI)
 	}
 	if f.Submit.Tool == "" {
-		return fmt.Errorf("gadget: form %s: Submit.Tool is required", f.URI)
+		return fmt.Errorf("gomukit: form %s: Submit.Tool is required", f.URI)
 	}
 	// One namespace for both: a range's end argument is as much a tool
 	// argument as any field name, and a collision would send one value where
@@ -240,7 +240,7 @@ func (f *Form) Validate() error {
 		return nil
 	}
 	for i, fd := range f.Fields {
-		ctx := fmt.Sprintf("gadget: form %s: field %d (%s)", f.URI, i, fd.Name)
+		ctx := fmt.Sprintf("gomukit: form %s: field %d (%s)", f.URI, i, fd.Name)
 		if fd.Name == "" {
 			return fmt.Errorf("%s: name is required", ctx)
 		}
@@ -280,10 +280,10 @@ func (f *Form) Validate() error {
 		}
 	}
 	if err := f.Brand.Validate(); err != nil {
-		return fmt.Errorf("gadget: form %s: %w", f.URI, err)
+		return fmt.Errorf("gomukit: form %s: %w", f.URI, err)
 	}
 	if err := f.Theme.Validate(); err != nil {
-		return fmt.Errorf("gadget: form %s: %w", f.URI, err)
+		return fmt.Errorf("gomukit: form %s: %w", f.URI, err)
 	}
 	return nil
 }
@@ -304,7 +304,7 @@ func (f *Form) ToolMeta() map[string]any {
 	return uispec.ToolUIMeta{ResourceURI: f.URI}.MetaMap()
 }
 
-// config builds the #gadget-config island content. The runtime needs field
+// config builds the #gomu-config island content. The runtime needs field
 // names/types for value coercion, plus submit wiring; markup is SSR'd.
 func (f *Form) config() map[string]any {
 	fields := make([]map[string]any, len(f.Fields))

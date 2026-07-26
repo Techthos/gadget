@@ -22,12 +22,12 @@ func TestCSSEmission(t *testing.T) {
 		RadiusM:      "0.5rem",
 		FontFamily:   `"Inter", sans-serif`,
 		Extra: map[string]string{
-			"--gadget-table-stripe": "rgb(0 0 0 / 4%)",
-			"--gadget-focus-width":  "2px",
+			"--gomu-table-stripe": "rgb(0 0 0 / 4%)",
+			"--gomu-focus-width":  "2px",
 		},
 	}
 	got := th.CSS()
-	want := `.gadget-root{--gadget-color-primary:#0f62fe;--gadget-font:"Inter", sans-serif;--gadget-radius-m:0.5rem;--gadget-focus-width:2px;--gadget-table-stripe:rgb(0 0 0 / 4%)}`
+	want := `.gomu-root{--gomu-color-primary:#0f62fe;--gomu-font:"Inter", sans-serif;--gomu-radius-m:0.5rem;--gomu-focus-width:2px;--gomu-table-stripe:rgb(0 0 0 / 4%)}`
 	if got != want {
 		t.Errorf("CSS():\n got %q\nwant %q", got, want)
 	}
@@ -39,7 +39,7 @@ func TestCSSEmission(t *testing.T) {
 func TestTransparentEmission(t *testing.T) {
 	th := Theme{Transparent: true}
 	got := th.CSS()
-	want := `:root{--gadget-page-pad:0}.gadget-root{--gadget-color-page:transparent}`
+	want := `:root{--gomu-page-pad:0}.gomu-root{--gomu-color-page:transparent}`
 	if got != want {
 		t.Errorf("CSS():\n got %q\nwant %q", got, want)
 	}
@@ -56,7 +56,7 @@ func TestTransparentEmission(t *testing.T) {
 func TestPageTokensEmission(t *testing.T) {
 	th := Theme{ColorPage: "#faf7f2", PagePad: "0"}
 	got := th.CSS()
-	want := `:root{--gadget-page-pad:0}.gadget-root{--gadget-color-page:#faf7f2}`
+	want := `:root{--gomu-page-pad:0}.gomu-root{--gomu-color-page:#faf7f2}`
 	if got != want {
 		t.Errorf("CSS():\n got %q\nwant %q", got, want)
 	}
@@ -71,7 +71,7 @@ func TestUnsafeValuesSkippedAndReported(t *testing.T) {
 	if strings.Contains(got, "script") || strings.Contains(got, "}<") {
 		t.Errorf("unsafe value leaked into CSS: %q", got)
 	}
-	if !strings.Contains(got, "--gadget-color-primary:#0f62fe") {
+	if !strings.Contains(got, "--gomu-color-primary:#0f62fe") {
 		t.Errorf("safe value missing from CSS: %q", got)
 	}
 	if err := th.Validate(); err == nil {
@@ -82,8 +82,8 @@ func TestUnsafeValuesSkippedAndReported(t *testing.T) {
 func TestExtraKeyValidation(t *testing.T) {
 	cases := map[string]Theme{
 		"bad prefix":  {Extra: map[string]string{"--evil": "x"}},
-		"unsafe key":  {Extra: map[string]string{"--gadget-a:b": "x"}},
-		"empty value": {Extra: map[string]string{"--gadget-a": ""}},
+		"unsafe key":  {Extra: map[string]string{"--gomu-a:b": "x"}},
+		"empty value": {Extra: map[string]string{"--gomu-a": ""}},
 	}
 	for name, th := range cases {
 		if err := th.Validate(); err == nil {

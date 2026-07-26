@@ -7,45 +7,45 @@ import { FakeHost, flush } from "./fake-host";
 function shell(): HTMLElement {
   document.body.innerHTML = "";
   const root = document.createElement("div");
-  root.className = "gadget-root";
-  root.setAttribute("data-gadget-widget", "form");
+  root.className = "gomu-root";
+  root.setAttribute("data-gomu-widget", "form");
   root.innerHTML = `
-    <div data-gadget-status="" hidden></div>
-    <form data-gadget-form="">
-      <div class="gadget-field">
+    <div data-gomu-status="" hidden></div>
+    <form data-gomu-form="">
+      <div class="gomu-field">
         <label for="f-name">Name</label>
         <input id="f-name" name="name" type="text" required>
-        <p data-gadget-error-for="name" hidden></p>
+        <p data-gomu-error-for="name" hidden></p>
       </div>
-      <div class="gadget-field">
+      <div class="gomu-field">
         <label for="f-age">Age</label>
         <input id="f-age" name="age" type="number">
-        <p data-gadget-error-for="age" hidden></p>
+        <p data-gomu-error-for="age" hidden></p>
       </div>
-      <div class="gadget-field">
+      <div class="gomu-field">
         <input id="f-active" name="active" type="checkbox">
         <label for="f-active">Active</label>
-        <p data-gadget-error-for="active" hidden></p>
+        <p data-gomu-error-for="active" hidden></p>
       </div>
-      <div class="gadget-field">
+      <div class="gomu-field">
         <label for="f-tags">Tags</label>
         <select id="f-tags" name="tags" multiple>
           <option value="a">A</option>
           <option value="b">B</option>
         </select>
-        <p data-gadget-error-for="tags" hidden></p>
+        <p data-gomu-error-for="tags" hidden></p>
       </div>
-      <div class="gadget-field gadget-field--daterange">
+      <div class="gomu-field gomu-field--daterange">
         <label for="f-stay">Stay</label>
-        <div class="gadget-daterange" data-gadget-daterange="stay">
-          <input type="date" name="stay" class="gadget-daterange-start" id="f-stay">
-          <input type="date" name="stay_until" class="gadget-daterange-end">
+        <div class="gomu-daterange" data-gomu-daterange="stay">
+          <input type="date" name="stay" class="gomu-daterange-start" id="f-stay">
+          <input type="date" name="stay_until" class="gomu-daterange-end">
         </div>
-        <p data-gadget-error-for="stay" hidden></p>
+        <p data-gomu-error-for="stay" hidden></p>
       </div>
-      <div class="gadget-form-actions">
-        <button type="button" data-gadget-cancel="">Cancel</button>
-        <button type="button" data-gadget-submit="">Save</button>
+      <div class="gomu-form-actions">
+        <button type="button" data-gomu-cancel="">Cancel</button>
+        <button type="button" data-gomu-submit="">Save</button>
       </div>
     </form>`;
   document.body.append(root);
@@ -72,7 +72,7 @@ function config(over: Record<string, unknown> = {}): Record<string, unknown> {
 // Submission runs off the button click: hosts sandbox the widget without
 // allow-forms, so a native form submit never fires.
 function submit(root: HTMLElement): void {
-  root.querySelector<HTMLElement>("[data-gadget-submit]")!.click();
+  root.querySelector<HTMLElement>("[data-gomu-submit]")!.click();
 }
 
 describe("form behavior", () => {
@@ -99,7 +99,7 @@ describe("form behavior", () => {
     submit(root); // name is required and empty
     await flush();
     expect(host.received(M.toolsCall)).toHaveLength(0);
-    const slot = root.querySelector<HTMLElement>('[data-gadget-error-for="name"]')!;
+    const slot = root.querySelector<HTMLElement>('[data-gomu-error-for="name"]')!;
     expect(slot.hidden).toBe(false);
     expect(slot.textContent).toBe("Name is required.");
     expect(root.querySelector("#f-name")?.getAttribute("aria-invalid")).toBe("true");
@@ -130,9 +130,32 @@ describe("form behavior", () => {
       name: "save_user",
       arguments: { org: "acme", name: "Ada", age: 36, active: true, tags: ["b"] },
     });
-    const status = root.querySelector<HTMLElement>("[data-gadget-status]")!;
+    const status = root.querySelector<HTMLElement>("[data-gomu-status]")!;
     expect(status.textContent).toBe("Saved!");
-    expect(status.className).toContain("gadget-status--success");
+    expect(status.className).toContain("gomu-status--success");
+  });
+
+  it("never shows a serialized structuredContent payload as status", async () => {
+    const root = shell();
+    // What an SDK sends when the handler returns only structured output: the
+    // JSON is mirrored into a text block.
+    host.onToolCall = () => ({
+      content: [{ type: "text", text: JSON.stringify({ values: { name: "Ada" } }) }],
+      structuredContent: { values: { name: "Ada" } },
+    });
+    mountForm({
+      root,
+      config: config({ submit: { tool: "save_user" } }),
+      initialData: null,
+      bridge,
+    });
+    (root.querySelector("#f-name") as HTMLInputElement).value = "Ada";
+    submit(root);
+    await flush();
+
+    const status = root.querySelector<HTMLElement>("[data-gomu-status]")!;
+    expect(status.textContent).toBe("Saved.");
+    expect(status.className).toContain("gomu-status--success");
   });
 
   it("omits empty number fields from the payload", async () => {
@@ -154,11 +177,11 @@ describe("form behavior", () => {
     (root.querySelector("#f-name") as HTMLInputElement).value = "Ada";
     submit(root);
     await flush();
-    const slot = root.querySelector<HTMLElement>('[data-gadget-error-for="name"]')!;
+    const slot = root.querySelector<HTMLElement>('[data-gomu-error-for="name"]')!;
     expect(slot.hidden).toBe(false);
     expect(slot.textContent).toBe("Already taken.");
-    const status = root.querySelector<HTMLElement>("[data-gadget-status]")!;
-    expect(status.className).toContain("gadget-status--error");
+    const status = root.querySelector<HTMLElement>("[data-gomu-status]")!;
+    expect(status.className).toContain("gomu-status--error");
   });
 
   it("prefills from the baked initial data and from tool results", async () => {
@@ -186,12 +209,12 @@ describe("form behavior", () => {
     const name = root.querySelector("#f-name") as HTMLInputElement;
     submit(root); // empty required name -> validation error
     await flush();
-    expect(root.querySelector<HTMLElement>('[data-gadget-error-for="name"]')!.hidden).toBe(false);
+    expect(root.querySelector<HTMLElement>('[data-gomu-error-for="name"]')!.hidden).toBe(false);
 
     name.value = "Ada";
-    root.querySelector<HTMLElement>("[data-gadget-cancel]")!.click();
-    expect(root.querySelector<HTMLElement>('[data-gadget-error-for="name"]')!.hidden).toBe(true);
-    expect(root.querySelector<HTMLElement>("[data-gadget-status]")!.hidden).toBe(true);
+    root.querySelector<HTMLElement>("[data-gomu-cancel]")!.click();
+    expect(root.querySelector<HTMLElement>('[data-gomu-error-for="name"]')!.hidden).toBe(true);
+    expect(root.querySelector<HTMLElement>("[data-gomu-status]")!.hidden).toBe(true);
     expect(name.value).toBe(""); // form.reset()
   });
 
@@ -207,7 +230,7 @@ describe("form behavior", () => {
     submit(root);
     await flush();
     expect((root.querySelector("#f-name") as HTMLInputElement).disabled).toBe(true);
-    expect(root.querySelector<HTMLElement>("[data-gadget-status]")!.className).toContain("loading");
+    expect(root.querySelector<HTMLElement>("[data-gomu-status]")!.className).toContain("loading");
 
     release({ structuredContent: {} });
     await flush();
@@ -257,17 +280,17 @@ describe("form behavior", () => {
     // reader sees (see ui/src/calendar.ts).
     const start = root.querySelector<HTMLInputElement>('input[name="stay"]')!;
     const end = root.querySelector<HTMLInputElement>('input[name="stay_until"]')!;
-    const trigger = root.querySelector<HTMLButtonElement>(".gadget-dt-trigger")!;
+    const trigger = root.querySelector<HTMLButtonElement>(".gomu-dt-trigger")!;
     expect(trigger.id).toBe("f-stay");
-    expect(start.classList.contains("gadget-dt-native")).toBe(true);
+    expect(start.classList.contains("gomu-dt-native")).toBe(true);
 
     trigger.click();
-    const panel = root.querySelector<HTMLElement>(".gadget-cal-panel")!;
-    panel.querySelector<HTMLButtonElement>('[data-gadget-cal-day]')!.click();
+    const panel = root.querySelector<HTMLElement>(".gomu-cal-panel")!;
+    panel.querySelector<HTMLButtonElement>('[data-gomu-cal-day]')!.click();
     const picked = start.value;
     expect(picked).not.toBe("");
     // Second click finishes the range and closes the popover.
-    panel.querySelectorAll<HTMLButtonElement>("[data-gadget-cal-day]")[5]!.click();
+    panel.querySelectorAll<HTMLButtonElement>("[data-gomu-cal-day]")[5]!.click();
 
     submit(root);
     await flush();
@@ -292,7 +315,7 @@ describe("form behavior", () => {
     );
     // The trigger read the prefill: a programmatic write fires no event, so the
     // form has to hand it over.
-    expect(root.querySelector<HTMLElement>(".gadget-dt-value")!.textContent).not.toBe(
+    expect(root.querySelector<HTMLElement>(".gomu-dt-value")!.textContent).not.toBe(
       "Pick a date range",
     );
   });
@@ -308,7 +331,7 @@ describe("form behavior", () => {
     await flush();
 
     expect(host.received(M.toolsCall)).toHaveLength(0);
-    const slot = root.querySelector<HTMLElement>('[data-gadget-error-for="stay"]')!;
+    const slot = root.querySelector<HTMLElement>('[data-gomu-error-for="stay"]')!;
     expect(slot.hidden).toBe(false);
     expect(slot.textContent).toBe("The end date is before the start date.");
   });

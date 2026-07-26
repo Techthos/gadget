@@ -1,10 +1,10 @@
-package gadget
+package gomukit
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/techthos/gadget/internal/htmlx"
+	"github.com/techthos/gomukit/internal/htmlx"
 )
 
 // Brand identifies the application a widget belongs to: an optional logo, a

@@ -36,7 +36,7 @@ let globalsBound = false;
 
 /** The element a popup's panel is appended to and positioned against. */
 export function popupHost(el: Element): HTMLElement {
-  return el.closest<HTMLElement>(".gadget-root") ?? document.body;
+  return el.closest<HTMLElement>(".gomu-root") ?? document.body;
 }
 
 /**
@@ -98,7 +98,7 @@ export function positionPanel(
 
   const above =
     window.innerHeight - t.bottom < height + PANEL_GAP_PX && t.top > height + PANEL_GAP_PX;
-  panel.classList.toggle("gadget-pop-panel--above", above);
+  panel.classList.toggle("gomu-pop-panel--above", above);
   panel.style.top = above
     ? `${t.top - h0.top - height - PANEL_GAP_PX}px`
     : `${t.bottom - h0.top + PANEL_GAP_PX}px`;

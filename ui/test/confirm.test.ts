@@ -14,27 +14,27 @@ function confirmShell({
 } = {}): HTMLElement {
 	document.body.innerHTML = "";
 	const root = document.createElement("div");
-	root.className = "gadget-root";
-	root.setAttribute("data-gadget-widget", "confirm");
+	root.className = "gomu-root";
+	root.setAttribute("data-gomu-widget", "confirm");
 	const guarded = ack || phrase;
 	root.innerHTML = `
-    <div class="gadget-confirm-prompt"><h3 class="gadget-confirm-question">Delete Ada?</h3></div>
-    ${details ? `<dl class="gadget-descriptions" data-gadget-descriptions="" hidden></dl>` : ""}
-    <ul class="gadget-effects" data-gadget-effects="" hidden></ul>
+    <div class="gomu-confirm-prompt"><h3 class="gomu-confirm-question">Delete Ada?</h3></div>
+    ${details ? `<dl class="gomu-descriptions" data-gomu-descriptions="" hidden></dl>` : ""}
+    <ul class="gomu-effects" data-gomu-effects="" hidden></ul>
     ${
 			guarded
-				? `<div class="gadget-confirm-guards">
-             ${ack ? `<label><input type="checkbox" data-gadget-ack=""><span>I understand.</span></label>` : ""}
-             ${phrase ? `<div><label for="p">Type</label><input id="p" type="text" data-gadget-phrase=""></div>` : ""}
+				? `<div class="gomu-confirm-guards">
+             ${ack ? `<label><input type="checkbox" data-gomu-ack=""><span>I understand.</span></label>` : ""}
+             ${phrase ? `<div><label for="p">Type</label><input id="p" type="text" data-gomu-phrase=""></div>` : ""}
            </div>`
 				: ""
 		}
-    <div class="gadget-confirm-actions" data-gadget-decision="">
-      ${reject ? `<button type="button" data-gadget-reject="">Cancel</button>` : ""}
-      <button type="button" data-gadget-accept="" ${guarded ? "disabled" : ""}>Confirm</button>
+    <div class="gomu-confirm-actions" data-gomu-decision="">
+      ${reject ? `<button type="button" data-gomu-reject="">Cancel</button>` : ""}
+      <button type="button" data-gomu-accept="" ${guarded ? "disabled" : ""}>Confirm</button>
     </div>
-    <p class="gadget-confirm-outcome" data-gadget-outcome="" hidden></p>
-    <div class="gadget-statusbar"><div class="gadget-status" data-gadget-status="" hidden></div></div>`;
+    <p class="gomu-confirm-outcome" data-gomu-outcome="" hidden></p>
+    <div class="gomu-statusbar"><div class="gomu-status" data-gomu-status="" hidden></div></div>`;
 	document.body.append(root);
 	return root;
 }
@@ -60,12 +60,12 @@ const DATA = { rows: [{ id: 7, name: "Ada" }] };
 
 const el = <T extends HTMLElement>(root: HTMLElement, sel: string): T =>
 	root.querySelector<T>(sel)!;
-const accept = (root: HTMLElement) => el<HTMLButtonElement>(root, "[data-gadget-accept]");
-const reject = (root: HTMLElement) => el<HTMLButtonElement>(root, "[data-gadget-reject]");
-const outcome = (root: HTMLElement) => el(root, "[data-gadget-outcome]");
-const decision = (root: HTMLElement) => el(root, "[data-gadget-decision]");
-const status = (root: HTMLElement) => el(root, "[data-gadget-status]");
-const effects = (root: HTMLElement) => el(root, "[data-gadget-effects]");
+const accept = (root: HTMLElement) => el<HTMLButtonElement>(root, "[data-gomu-accept]");
+const reject = (root: HTMLElement) => el<HTMLButtonElement>(root, "[data-gomu-reject]");
+const outcome = (root: HTMLElement) => el(root, "[data-gomu-outcome]");
+const decision = (root: HTMLElement) => el(root, "[data-gomu-decision]");
+const status = (root: HTMLElement) => el(root, "[data-gomu-status]");
+const effects = (root: HTMLElement) => el(root, "[data-gomu-effects]");
 
 describe("confirm behavior", () => {
 	let host: FakeHost;
@@ -88,15 +88,15 @@ describe("confirm behavior", () => {
 		const root = confirmShell();
 		mountConfirm({ root, config: config(), initialData: DATA, bridge });
 
-		const dl = el(root, "[data-gadget-descriptions]");
+		const dl = el(root, "[data-gomu-descriptions]");
 		expect(dl.hidden).toBe(false);
 		expect([...dl.querySelectorAll("dd")].map((d) => d.textContent)).toEqual([
 			"Ada",
 			"eu-central-1",
 		]);
 		expect(effects(root).hidden).toBe(false);
-		expect(effects(root).querySelector(".gadget-effect")?.className).toContain(
-			"gadget-effect--danger",
+		expect(effects(root).querySelector(".gomu-effect")?.className).toContain(
+			"gomu-effect--danger",
 		);
 	});
 
@@ -114,7 +114,7 @@ describe("confirm behavior", () => {
 		expect(decision(root).hidden).toBe(true);
 		expect(outcome(root).hidden).toBe(false);
 		expect(outcome(root).textContent).toBe("User deleted.");
-		expect(outcome(root).className).toContain("gadget-confirm-outcome--accepted");
+		expect(outcome(root).className).toContain("gomu-confirm-outcome--accepted");
 		expect(status(root).hidden).toBe(true);
 	});
 
@@ -140,7 +140,7 @@ describe("confirm behavior", () => {
 		// The decision is still made: the widget settles rather than staying armed.
 		expect(decision(root).hidden).toBe(true);
 		expect(outcome(root).textContent).toBe("Sent.");
-		expect(outcome(root).className).toContain("gadget-confirm-outcome--accepted");
+		expect(outcome(root).className).toContain("gomu-confirm-outcome--accepted");
 	});
 
 	it("re-arms when the host refuses the chat turn", async () => {
@@ -205,7 +205,7 @@ describe("confirm behavior", () => {
 		expect(accept(root).disabled).toBe(true);
 		expect(reject(root).disabled).toBe(true);
 		expect(status(root).textContent).toBe("Working…");
-		expect(status(root).className).toContain("gadget-status--loading");
+		expect(status(root).className).toContain("gomu-status--loading");
 
 		release!();
 		await flush();
@@ -220,7 +220,7 @@ describe("confirm behavior", () => {
 		accept(root).click();
 		await flush();
 		expect(status(root).textContent).toBe("Locked.");
-		expect(status(root).className).toContain("gadget-status--error");
+		expect(status(root).className).toContain("gomu-status--error");
 		expect(decision(root).hidden).toBe(false);
 		expect(accept(root).disabled).toBe(false);
 
@@ -239,7 +239,7 @@ describe("confirm behavior", () => {
 		await flush();
 		expect(host.received(M.toolsCall)).toHaveLength(0);
 		expect(outcome(root).textContent).toBe("Cancelled.");
-		expect(outcome(root).className).toContain("gadget-confirm-outcome--declined");
+		expect(outcome(root).className).toContain("gomu-confirm-outcome--declined");
 		expect(decision(root).hidden).toBe(true);
 	});
 
@@ -268,7 +268,7 @@ describe("confirm behavior", () => {
 		mountConfirm({ root, config: config({ acknowledge: true }), initialData: DATA, bridge });
 
 		expect(accept(root).disabled).toBe(true);
-		const box = el<HTMLInputElement>(root, "[data-gadget-ack]");
+		const box = el<HTMLInputElement>(root, "[data-gomu-ack]");
 		box.checked = true;
 		box.dispatchEvent(new Event("change", { bubbles: true }));
 		expect(accept(root).disabled).toBe(false);
@@ -287,7 +287,7 @@ describe("confirm behavior", () => {
 			bridge,
 		});
 
-		const input = el<HTMLInputElement>(root, "[data-gadget-phrase]");
+		const input = el<HTMLInputElement>(root, "[data-gomu-phrase]");
 		input.value = "ada@example.co";
 		input.dispatchEvent(new Event("input", { bubbles: true }));
 		expect(accept(root).disabled).toBe(true);
@@ -306,12 +306,12 @@ describe("confirm behavior", () => {
 			bridge,
 		});
 
-		const box = el<HTMLInputElement>(root, "[data-gadget-ack]");
+		const box = el<HTMLInputElement>(root, "[data-gomu-ack]");
 		box.checked = true;
 		box.dispatchEvent(new Event("change", { bubbles: true }));
 		expect(accept(root).disabled).toBe(true);
 
-		const input = el<HTMLInputElement>(root, "[data-gadget-phrase]");
+		const input = el<HTMLInputElement>(root, "[data-gomu-phrase]");
 		input.value = "yes";
 		input.dispatchEvent(new Event("input", { bubbles: true }));
 		expect(accept(root).disabled).toBe(false);
@@ -340,12 +340,12 @@ describe("confirm behavior", () => {
 		});
 		await flush();
 
-		expect(el(root, "[data-gadget-descriptions] dd").textContent).toBe("Grace");
-		const rows = [...effects(root).querySelectorAll(".gadget-effect")];
+		expect(el(root, "[data-gomu-descriptions] dd").textContent).toBe("Grace");
+		const rows = [...effects(root).querySelectorAll(".gomu-effect")];
 		expect(rows).toHaveLength(1);
-		expect(rows[0]!.className).toContain("gadget-effect--warning");
-		expect(rows[0]!.querySelector(".gadget-effect-detail")?.textContent).toBe("Not recoverable.");
-		expect(rows[0]!.querySelector(".gadget-effect-value")?.textContent).toBe("12");
+		expect(rows[0]!.className).toContain("gomu-effect--warning");
+		expect(rows[0]!.querySelector(".gomu-effect-detail")?.textContent).toBe("Not recoverable.");
+		expect(rows[0]!.querySelector(".gomu-effect-value")?.textContent).toBe("12");
 	});
 
 	it("keeps a decided widget decided when the host pushes a later result", async () => {
@@ -359,7 +359,7 @@ describe("confirm behavior", () => {
 
 		expect(decision(root).hidden).toBe(true);
 		expect(outcome(root).textContent).toBe("Cancelled.");
-		expect(el(root, "[data-gadget-descriptions] dd").textContent).toBe("Grace");
+		expect(el(root, "[data-gomu-descriptions] dd").textContent).toBe("Grace");
 	});
 
 	it("ignores an effect severity that is not a known variant", async () => {
@@ -370,7 +370,7 @@ describe("confirm behavior", () => {
 			structuredContent: { effects: [{ text: "Odd", severity: "danger; injected" }] },
 		});
 		await flush();
-		expect(effects(root).querySelector(".gadget-effect")?.className).toBe("gadget-effect");
+		expect(effects(root).querySelector(".gomu-effect")?.className).toBe("gomu-effect");
 	});
 
 	it("hydrates from LoadTool once a host is connected", async () => {
@@ -391,8 +391,8 @@ describe("confirm behavior", () => {
 			name: "get_user",
 			arguments: { id: 3 },
 		});
-		expect(el(root, "[data-gadget-descriptions] dd").textContent).toBe("Grace");
-		expect(effects(root).querySelector(".gadget-effect-label")?.textContent).toBe("Fresh");
+		expect(el(root, "[data-gomu-descriptions] dd").textContent).toBe("Grace");
+		expect(effects(root).querySelector(".gomu-effect-label")?.textContent).toBe("Fresh");
 		expect(status(root).hidden).toBe(true);
 	});
 
@@ -420,7 +420,7 @@ describe("confirm behavior", () => {
 			bridge,
 		});
 
-		el<HTMLElement>(root, "[data-gadget-link]").click();
+		el<HTMLElement>(root, "[data-gomu-link]").click();
 		await flush();
 		expect(host.received(M.openLink)[0]!.params).toMatchObject({ url: "https://example.com" });
 	});

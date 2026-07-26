@@ -64,7 +64,7 @@ inspect:
 		kill -0 $$preview 2>/dev/null || { echo "server exited"; exit 1; }; \
 		sleep 0.2; \
 	done; \
-	token=$$(openssl rand -hex 16 2>/dev/null || echo gadget-preview); \
+	token=$$(openssl rand -hex 16 2>/dev/null || echo gomukit-preview); \
 	url="http://localhost:$(INSPECTOR_PORT)/?transport=streamable-http&serverUrl=$(PREVIEW_URL)&MCP_PROXY_AUTH_TOKEN=$$token"; \
 	echo; \
 	echo "inspector:  $$url"; \

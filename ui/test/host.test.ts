@@ -3,9 +3,9 @@ import { applyHostContext } from "../src/host";
 import { formatCell, setLocale } from "../src/format";
 
 afterEach(() => {
-  document.documentElement.removeAttribute("data-gadget-theme");
+  document.documentElement.removeAttribute("data-gomu-theme");
   document.documentElement.removeAttribute("style");
-  document.getElementById("gadget-host-fonts")?.remove();
+  document.getElementById("gomu-host-fonts")?.remove();
   setLocale(undefined, undefined);
 });
 
@@ -26,9 +26,9 @@ describe("applyHostContext", () => {
 
   it("sets the theme attribute for valid themes only", () => {
     applyHostContext({ theme: "dark" });
-    expect(document.documentElement.getAttribute("data-gadget-theme")).toBe("dark");
+    expect(document.documentElement.getAttribute("data-gomu-theme")).toBe("dark");
     applyHostContext({ theme: "purple" as never });
-    expect(document.documentElement.getAttribute("data-gadget-theme")).toBe("dark");
+    expect(document.documentElement.getAttribute("data-gomu-theme")).toBe("dark");
   });
 
   it("pins the root color scheme to the host theme so the canvas stays transparent", () => {
@@ -43,7 +43,7 @@ describe("applyHostContext", () => {
   it("injects host fonts once and replaces on update", () => {
     applyHostContext({ styles: { css: { fonts: "@font-face{font-family:A}" } } });
     applyHostContext({ styles: { css: { fonts: "@font-face{font-family:B}" } } });
-    const els = document.querySelectorAll("#gadget-host-fonts");
+    const els = document.querySelectorAll("#gomu-host-fonts");
     expect(els).toHaveLength(1);
     expect(els[0]!.textContent).toContain("font-family:B");
   });

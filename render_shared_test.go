@@ -1,4 +1,4 @@
-package gadget
+package gomukit
 
 import (
 	"slices"
@@ -30,13 +30,13 @@ func TestPageSizeOptions(t *testing.T) {
 
 func TestPaginationNodePageSizeChooser(t *testing.T) {
 	plain := renderNode(t, paginationNode(nil, 0))
-	if strings.Contains(plain, "data-gadget-page-size") {
+	if strings.Contains(plain, "data-gomu-page-size") {
 		t.Error("pagination without page sizes must not render a chooser")
 	}
 
 	withSizes := renderNode(t, paginationNode([]int{10, 25}, 25))
 	for _, want := range []string{
-		`data-gadget-page-size`,
+		`data-gomu-page-size`,
 		`aria-label="Items per page"`,
 		`<option value="10">10</option>`,
 		`<option value="25" selected>25</option>`,

@@ -4,8 +4,8 @@ import { fillDescriptions } from "../src/widgets/descriptions";
 function host(): HTMLElement {
 	document.body.innerHTML = "";
 	const dl = document.createElement("dl");
-	dl.className = "gadget-descriptions";
-	dl.setAttribute("data-gadget-descriptions", "");
+	dl.className = "gomu-descriptions";
+	dl.setAttribute("data-gomu-descriptions", "");
 	dl.hidden = true;
 	document.body.append(dl);
 	return dl;
@@ -59,7 +59,7 @@ describe("descriptions", () => {
 		const dl = host();
 		fillDescriptions(dl, [{ key: "missing", label: "Nope", type: "text" }], ROW);
 		expect(values(dl)).toEqual(["—"]);
-		expect(dl.querySelector("dd")?.className).toContain("gadget-desc-value--missing");
+		expect(dl.querySelector("dd")?.className).toContain("gomu-desc-value--missing");
 	});
 
 	it("renders a badge value as a variant-mapped pill", () => {
@@ -69,9 +69,9 @@ describe("descriptions", () => {
 			[{ key: "status", label: "Status", type: "badge", badge: { active: "success" } }],
 			ROW,
 		);
-		const badge = dl.querySelector(".gadget-badge");
+		const badge = dl.querySelector(".gomu-badge");
 		expect(badge?.textContent).toBe("active");
-		expect(badge?.className).toContain("gadget-badge--success");
+		expect(badge?.className).toContain("gomu-badge--success");
 	});
 
 	it("renders a link value as a button carrying the href", () => {
@@ -81,9 +81,9 @@ describe("descriptions", () => {
 			[{ key: "", label: "Website", type: "link", link: { hrefKey: "website" } }],
 			ROW,
 		);
-		const link = dl.querySelector<HTMLElement>("[data-gadget-link]");
+		const link = dl.querySelector<HTMLElement>("[data-gomu-link]");
 		expect(link?.tagName).toBe("BUTTON");
-		expect(link?.getAttribute("data-gadget-link")).toBe("https://example.com");
+		expect(link?.getAttribute("data-gomu-link")).toBe("https://example.com");
 	});
 
 	it("replaces previous content and hides itself when there is nothing to show", () => {

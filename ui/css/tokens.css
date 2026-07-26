@@ -1,11 +1,11 @@
-/* gadget design tokens: two layers.
- * Primitives (--gadget-p-*) are library-owned fallbacks.
- * Semantic tokens (--gadget-*) resolve host-injected MCP Apps variables
+/* gomukit design tokens: two layers.
+ * Primitives (--gomu-p-*) are library-owned fallbacks.
+ * Semantic tokens (--gomu-*) resolve host-injected MCP Apps variables
  * first (set as inline style on :root by the runtime from
  * hostContext.styles.variables), then fall back to primitives.
  * Component styles reference semantic tokens only. */
 
-/* Document-level knobs. They live on :root, not .gadget-root, because the
+/* Document-level knobs. They live on :root, not .gomu-root, because the
  * canvas and the body gutter are outside the widget element.
  *
  * color-scheme decides whether the host sees through this document at all: an
@@ -20,72 +20,72 @@
   /* gutter between the widget and the iframe edge. Padding, not margin: body
    * margin sits outside body.scrollHeight and would clip the bottom of
    * auto-resized host iframes. */
-  --gadget-page-pad: 8px;
+  --gomu-page-pad: 8px;
 }
 
-.gadget-root {
+.gomu-root {
   /* primitives */
-  --gadget-p-white: #ffffff;
-  --gadget-p-gray-50: #f9fafb;
-  --gadget-p-gray-100: #f3f4f6;
-  --gadget-p-gray-200: #e5e7eb;
-  --gadget-p-gray-400: #9ca3af;
-  --gadget-p-gray-500: #6b7280;
-  --gadget-p-gray-700: #374151;
-  --gadget-p-gray-900: #111827;
-  --gadget-p-blue-600: #2563eb;
-  --gadget-p-red-600: #dc2626;
-  --gadget-p-green-600: #16a34a;
-  --gadget-p-amber-600: #d97706;
-  --gadget-p-font-sans: ui-sans-serif, system-ui, sans-serif;
-  --gadget-p-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --gomu-p-white: #ffffff;
+  --gomu-p-gray-50: #f9fafb;
+  --gomu-p-gray-100: #f3f4f6;
+  --gomu-p-gray-200: #e5e7eb;
+  --gomu-p-gray-400: #9ca3af;
+  --gomu-p-gray-500: #6b7280;
+  --gomu-p-gray-700: #374151;
+  --gomu-p-gray-900: #111827;
+  --gomu-p-blue-600: #2563eb;
+  --gomu-p-red-600: #dc2626;
+  --gomu-p-green-600: #16a34a;
+  --gomu-p-amber-600: #d97706;
+  --gomu-p-font-sans: ui-sans-serif, system-ui, sans-serif;
+  --gomu-p-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* semantic: host variable -> primitive fallback */
-  --gadget-color-bg: var(--color-background-primary, var(--gadget-p-white));
+  --gomu-color-bg: var(--color-background-primary, var(--gomu-p-white));
   /* Page fill: the full-bleed rectangle behind the widget, i.e. the visible
    * extent of the iframe. Set to transparent (theme.Theme.Transparent) and the
    * frame disappears — only the card and its rounded corners sit on the host
    * background, with no square slab behind them. */
-  --gadget-color-page: var(--gadget-color-bg);
-  --gadget-color-surface: var(--color-background-secondary, var(--gadget-p-gray-50));
-  --gadget-color-text: var(--color-text-primary, var(--gadget-p-gray-900));
-  --gadget-color-text-muted: var(--color-text-secondary, var(--gadget-p-gray-500));
-  --gadget-color-border: var(--color-border-primary, var(--gadget-p-gray-200));
-  --gadget-color-primary: var(--color-text-accent, var(--gadget-p-blue-600));
-  --gadget-color-primary-text: var(--gadget-p-white);
-  --gadget-color-danger: var(--color-text-danger, var(--gadget-p-red-600));
-  --gadget-color-success: var(--color-text-success, var(--gadget-p-green-600));
-  --gadget-color-warning: var(--color-text-warning, var(--gadget-p-amber-600));
-  --gadget-font: var(--font-sans, var(--gadget-p-font-sans));
-  --gadget-font-mono: var(--font-mono, var(--gadget-p-font-mono));
-  --gadget-radius-s: var(--border-radius-sm, 4px);
-  --gadget-radius-m: var(--border-radius-md, 8px);
-  --gadget-radius-l: var(--border-radius-lg, 12px);
-  --gadget-space-unit: 0.25rem;
+  --gomu-color-page: var(--gomu-color-bg);
+  --gomu-color-surface: var(--color-background-secondary, var(--gomu-p-gray-50));
+  --gomu-color-text: var(--color-text-primary, var(--gomu-p-gray-900));
+  --gomu-color-text-muted: var(--color-text-secondary, var(--gomu-p-gray-500));
+  --gomu-color-border: var(--color-border-primary, var(--gomu-p-gray-200));
+  --gomu-color-primary: var(--color-text-accent, var(--gomu-p-blue-600));
+  --gomu-color-primary-text: var(--gomu-p-white);
+  --gomu-color-danger: var(--color-text-danger, var(--gomu-p-red-600));
+  --gomu-color-success: var(--color-text-success, var(--gomu-p-green-600));
+  --gomu-color-warning: var(--color-text-warning, var(--gomu-p-amber-600));
+  --gomu-font: var(--font-sans, var(--gomu-p-font-sans));
+  --gomu-font-mono: var(--font-mono, var(--gomu-p-font-mono));
+  --gomu-radius-s: var(--border-radius-sm, 4px);
+  --gomu-radius-m: var(--border-radius-md, 8px);
+  --gomu-radius-l: var(--border-radius-lg, 12px);
+  --gomu-space-unit: 0.25rem;
   /* fixed width of one card in the CardList carousel */
-  --gadget-card-width: 17rem;
+  --gomu-card-width: 17rem;
   /* smallest a Menu tile may get before the grid drops a column */
-  --gadget-menu-tile-min: 11rem;
+  --gomu-menu-tile-min: 11rem;
   /* smallest a Descriptions item may get before the list drops a column */
-  --gadget-desc-min: 12rem;
+  --gomu-desc-min: 12rem;
 }
 
 /* Dark primitives when the host declares a dark theme… */
-:root[data-gadget-theme="dark"] .gadget-root {
-  --gadget-color-bg: var(--color-background-primary, #171717);
-  --gadget-color-surface: var(--color-background-secondary, #262626);
-  --gadget-color-text: var(--color-text-primary, #fafafa);
-  --gadget-color-text-muted: var(--color-text-secondary, #a3a3a3);
-  --gadget-color-border: var(--color-border-primary, #404040);
+:root[data-gomu-theme="dark"] .gomu-root {
+  --gomu-color-bg: var(--color-background-primary, #171717);
+  --gomu-color-surface: var(--color-background-secondary, #262626);
+  --gomu-color-text: var(--color-text-primary, #fafafa);
+  --gomu-color-text-muted: var(--color-text-secondary, #a3a3a3);
+  --gomu-color-border: var(--color-border-primary, #404040);
 }
 
 /* …or, without an explicit host theme, when the OS prefers dark. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-gadget-theme]) .gadget-root {
-    --gadget-color-bg: var(--color-background-primary, #171717);
-    --gadget-color-surface: var(--color-background-secondary, #262626);
-    --gadget-color-text: var(--color-text-primary, #fafafa);
-    --gadget-color-text-muted: var(--color-text-secondary, #a3a3a3);
-    --gadget-color-border: var(--color-border-primary, #404040);
+  :root:not([data-gomu-theme]) .gomu-root {
+    --gomu-color-bg: var(--color-background-primary, #171717);
+    --gomu-color-surface: var(--color-background-secondary, #262626);
+    --gomu-color-text: var(--color-text-primary, #fafafa);
+    --gomu-color-text-muted: var(--color-text-secondary, #a3a3a3);
+    --gomu-color-border: var(--color-border-primary, #404040);
   }
 }

@@ -1,8 +1,8 @@
 /* Action menu: the "⋯" trigger of a row's actions column or of a selection's
  * bulk actions, and the menu it opens (see ui/src/actionmenu.ts). The panel
- * surface is .gadget-pop-panel (popup.css). */
+ * surface is .gomu-pop-panel (popup.css). */
 
-.gadget-action-trigger {
+.gomu-action-trigger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -11,85 +11,85 @@
   width: 1.75rem;
   height: 1.75rem;
   padding: 0;
-  color: var(--gadget-color-text-muted);
+  color: var(--gomu-color-text-muted);
   background: transparent;
   border-color: transparent;
 }
 
-.gadget-action-trigger:hover:not(:disabled),
-.gadget-action-trigger[aria-expanded="true"] {
-  color: var(--gadget-color-text);
-  background: var(--gadget-color-surface);
-  border-color: var(--gadget-color-border);
+.gomu-action-trigger:hover:not(:disabled),
+.gomu-action-trigger[aria-expanded="true"] {
+  color: var(--gomu-color-text);
+  background: var(--gomu-color-surface);
+  border-color: var(--gomu-color-border);
 }
 
-.gadget-action-trigger:disabled {
+.gomu-action-trigger:disabled {
   opacity: 0.5;
   cursor: default;
 }
 
-.gadget-action-dots {
+.gomu-action-dots {
   width: 1rem;
   height: 1rem;
   /* Dots, not dashes: the paths are near-zero runs painted by the line cap. */
   stroke-width: 2.5;
 }
 
-.gadget-action-panel {
+.gomu-action-panel {
   min-width: 9rem;
 }
 
-.gadget-action-item {
-  padding: calc(var(--gadget-space-unit) * 1.5) calc(var(--gadget-space-unit) * 2.5);
-  border-radius: var(--gadget-radius-s);
+.gomu-action-item {
+  padding: calc(var(--gomu-space-unit) * 1.5) calc(var(--gomu-space-unit) * 2.5);
+  border-radius: var(--gomu-radius-s);
   white-space: nowrap;
   cursor: pointer;
 }
 
-.gadget-action-item:focus,
-.gadget-action-item:hover {
-  background: var(--gadget-color-surface);
+.gomu-action-item:focus,
+.gomu-action-item:hover {
+  background: var(--gomu-color-surface);
   outline: none;
 }
 
-.gadget-action-item--danger {
-  color: var(--gadget-color-danger);
+.gomu-action-item--danger {
+  color: var(--gomu-color-danger);
 }
 
-.gadget-action-item--primary {
-  color: var(--gadget-color-primary);
+.gomu-action-item--primary {
+  color: var(--gomu-color-primary);
 }
 
 /* An armed item is showing its confirmation text and waiting for the second
  * choice, so it reads as the consequence rather than as the label. */
-.gadget-action-item[data-gadget-armed] {
-  color: var(--gadget-color-primary-text);
-  background: var(--gadget-color-danger);
+.gomu-action-item[data-gomu-armed] {
+  color: var(--gomu-color-primary-text);
+  background: var(--gomu-color-danger);
   font-weight: 500;
 }
 
 /* Bulk actions: a labelled trigger rather than an icon, because the toolbar
  * has the room and the selection count beside it needs the sentence finished. */
-.gadget-bulk-menu {
+.gomu-bulk-menu {
   display: inline-flex;
   align-items: center;
-  gap: calc(var(--gadget-space-unit) * 1.5);
+  gap: calc(var(--gomu-space-unit) * 1.5);
 }
 
-.gadget-bulk-menu-chevron {
+.gomu-bulk-menu-chevron {
   flex: none;
   width: 0.875rem;
   height: 0.875rem;
-  color: var(--gadget-color-text-muted);
+  color: var(--gomu-color-text-muted);
   transition: transform 0.18s ease;
 }
 
-.gadget-bulk-menu[aria-expanded="true"] .gadget-bulk-menu-chevron {
+.gomu-bulk-menu[aria-expanded="true"] .gomu-bulk-menu-chevron {
   transform: rotate(180deg);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gadget-bulk-menu-chevron {
+  .gomu-bulk-menu-chevron {
     transition: none;
   }
 }

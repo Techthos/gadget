@@ -21,7 +21,8 @@ import { HOST_CONTEXT_EVENT } from "../host";
 import { Row, rowsFrom } from "../data";
 import { delegate } from "../dom";
 import { CallToolResult, M } from "../protocol";
-import { ActionCfg, resolveArgs, textOf } from "./card-common";
+import { errorText, textOf } from "../status";
+import { ActionCfg, resolveArgs } from "./card-common";
 import { DescriptionItemCfg, fillDescriptions } from "./descriptions";
 
 interface DatePickerCfg {
@@ -51,14 +52,14 @@ export function mountDatePicker(ctx: MountContext): void {
 	const cfg = ctx.config as unknown as DatePickerCfg;
 	const { root, bridge } = ctx;
 
-	const calEl = root.querySelector<HTMLElement>("[data-gadget-calendar]");
-	const detailsEl = root.querySelector<HTMLElement>("[data-gadget-descriptions]");
-	const summaryEl = root.querySelector<HTMLElement>("[data-gadget-summary]");
-	const decisionEl = root.querySelector<HTMLElement>("[data-gadget-decision]");
-	const outcomeEl = root.querySelector<HTMLElement>("[data-gadget-outcome]");
-	const statusEl = root.querySelector<HTMLElement>("[data-gadget-status]");
-	const submitEl = root.querySelector<HTMLButtonElement>("[data-gadget-submit]");
-	const cancelEl = root.querySelector<HTMLButtonElement>("[data-gadget-cancel]");
+	const calEl = root.querySelector<HTMLElement>("[data-gomu-calendar]");
+	const detailsEl = root.querySelector<HTMLElement>("[data-gomu-descriptions]");
+	const summaryEl = root.querySelector<HTMLElement>("[data-gomu-summary]");
+	const decisionEl = root.querySelector<HTMLElement>("[data-gomu-decision]");
+	const outcomeEl = root.querySelector<HTMLElement>("[data-gomu-outcome]");
+	const statusEl = root.querySelector<HTMLElement>("[data-gomu-status]");
+	const submitEl = root.querySelector<HTMLButtonElement>("[data-gomu-submit]");
+	const cancelEl = root.querySelector<HTMLButtonElement>("[data-gomu-cancel]");
 	if (!calEl) return;
 
 	const items = Array.isArray(cfg.details) ? cfg.details : [];
@@ -77,7 +78,7 @@ export function mountDatePicker(ctx: MountContext): void {
 		if (!statusEl) return;
 		statusEl.hidden = msg === "";
 		statusEl.textContent = msg;
-		statusEl.className = "gadget-status" + (kind ? ` gadget-status--${kind}` : "");
+		statusEl.className = "gomu-status" + (kind ? ` gomu-status--${kind}` : "");
 	}
 
 	/** What is picked, spelled out in the host's locale: a range says so as one
@@ -102,7 +103,7 @@ export function mountDatePicker(ctx: MountContext): void {
 			summaryEl.hidden = locked;
 			summaryEl.textContent = summaryText();
 		}
-		calEl?.classList.toggle("gadget-cal--locked", locked);
+		calEl?.classList.toggle("gomu-cal--locked", locked);
 	}
 
 	function renderDetails(): void {
@@ -117,7 +118,7 @@ export function mountDatePicker(ctx: MountContext): void {
 		if (outcomeEl) {
 			outcomeEl.hidden = false;
 			outcomeEl.textContent = message;
-			outcomeEl.className = `gadget-datepicker-outcome gadget-datepicker-outcome--${kind}`;
+			outcomeEl.className = `gomu-datepicker-outcome gomu-datepicker-outcome--${kind}`;
 		}
 		showStatus("", "");
 	}
@@ -148,7 +149,7 @@ export function mountDatePicker(ctx: MountContext): void {
 			}
 			return res;
 		} catch (e) {
-			fail(e instanceof Error ? e.message : String(e));
+			fail(errorText(e, fallback));
 			return null;
 		}
 	}
@@ -165,7 +166,7 @@ export function mountDatePicker(ctx: MountContext): void {
 			await bridge.sendMessage(text);
 			return true;
 		} catch (e) {
-			fail(e instanceof Error ? e.message : String(e));
+			fail(errorText(e, "The request failed."));
 			return false;
 		}
 	}

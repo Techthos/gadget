@@ -1,4 +1,4 @@
-package gadget
+package gomukit
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 
 	xhtml "golang.org/x/net/html"
 
-	"github.com/techthos/gadget/theme"
+	"github.com/techthos/gomukit/theme"
 )
 
 // canonicalDatePicker exercises every slot: a range, a context record, a bound
@@ -76,25 +76,25 @@ func TestDatePickerGolden(t *testing.T) {
 		t.Fatalf("document does not parse: %v", err)
 	}
 	for _, want := range []string{
-		`data-gadget-widget="datepicker"`,
-		`gadget-datepicker--range`,
+		`data-gomu-widget="datepicker"`,
+		`gomu-datepicker--range`,
 		`Which nights should we hold the room?`,
-		`data-gadget-descriptions`,
-		`data-gadget-calendar`,
-		`data-gadget-summary`,
-		`data-gadget-cancel`,
-		`data-gadget-submit`,
-		`data-gadget-outcome`,
+		`data-gomu-descriptions`,
+		`data-gomu-calendar`,
+		`data-gomu-summary`,
+		`data-gomu-cancel`,
+		`data-gomu-submit`,
+		`data-gomu-outcome`,
 		`>Hold it</button>`,
 		`>Decide later</button>`,
-		`--gadget-color-primary:#7c3aed`,
+		`--gomu-color-primary:#7c3aed`,
 	} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("document missing %q", want)
 		}
 	}
 	// Nothing can be submitted before the runtime knows what is picked.
-	if !strings.Contains(doc, `data-gadget-submit="" disabled`) {
+	if !strings.Contains(doc, `data-gomu-submit="" disabled`) {
 		t.Error("submit button must render disabled")
 	}
 }
@@ -129,15 +129,15 @@ func TestDatePickerMinimalShell(t *testing.T) {
 		t.Fatalf("document does not parse: %v", err)
 	}
 	for _, unwanted := range []string{
-		"data-gadget-descriptions", "data-gadget-cancel", "gadget-toolbar", "gadget-datepicker-lede",
+		"data-gomu-descriptions", "data-gomu-cancel", "gomu-toolbar", "gomu-datepicker-lede",
 	} {
 		if strings.Contains(shell, unwanted) {
 			t.Errorf("minimal shell should not contain %q:\n%s", unwanted, shell)
 		}
 	}
 	for _, want := range []string{
-		`gadget-datepicker--single`,
-		`class="gadget-btn gadget-btn--primary" data-gadget-submit`,
+		`gomu-datepicker--single`,
+		`class="gomu-btn gomu-btn--primary" data-gomu-submit`,
 		`>Continue</button>`,
 	} {
 		if !strings.Contains(shell, want) {
@@ -145,7 +145,7 @@ func TestDatePickerMinimalShell(t *testing.T) {
 		}
 	}
 	// The grid is runtime work: no day, month or weekday name is server-rendered.
-	if strings.Contains(shell, "gadget-cal-day") {
+	if strings.Contains(shell, "gomu-cal-day") {
 		t.Errorf("the grid must not be server-rendered:\n%s", shell)
 	}
 }

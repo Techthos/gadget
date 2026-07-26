@@ -9,21 +9,21 @@ import { FakeHost, flush } from "./fake-host";
 function menuShell(): HTMLElement {
 	document.body.innerHTML = "";
 	const root = document.createElement("div");
-	root.className = "gadget-root";
-	root.setAttribute("data-gadget-widget", "menu");
+	root.className = "gomu-root";
+	root.setAttribute("data-gomu-widget", "menu");
 	root.innerHTML = `
-    <div class="gadget-toolbar"><h2 class="gadget-title">Demo app</h2></div>
-    <div data-gadget-status="" hidden></div>
-    <div class="gadget-menu" data-gadget-menu="">
-      <button type="button" class="gadget-menu-item" data-gadget-menu-item="0">
-        <span class="gadget-menu-label">Users</span>
-        <span class="gadget-menu-desc">Browse the directory.</span>
+    <div class="gomu-toolbar"><h2 class="gomu-title">Demo app</h2></div>
+    <div data-gomu-status="" hidden></div>
+    <div class="gomu-menu" data-gomu-menu="">
+      <button type="button" class="gomu-menu-item" data-gomu-menu-item="0">
+        <span class="gomu-menu-label">Users</span>
+        <span class="gomu-menu-desc">Browse the directory.</span>
       </button>
-      <button type="button" class="gadget-menu-item" data-gadget-menu-item="1">
-        <span class="gadget-menu-label">Edit Ada</span>
+      <button type="button" class="gomu-menu-item" data-gomu-menu-item="1">
+        <span class="gomu-menu-label">Edit Ada</span>
       </button>
-      <button type="button" class="gadget-menu-item" data-gadget-menu-item="2">
-        <span class="gadget-menu-label">Invite</span>
+      <button type="button" class="gomu-menu-item" data-gomu-menu-item="2">
+        <span class="gomu-menu-label">Invite</span>
       </button>
     </div>`;
 	document.body.append(root);
@@ -43,11 +43,11 @@ function menuConfig(over: Record<string, unknown> = {}): Record<string, unknown>
 }
 
 function tiles(root: HTMLElement): HTMLButtonElement[] {
-	return [...root.querySelectorAll<HTMLButtonElement>("[data-gadget-menu-item]")];
+	return [...root.querySelectorAll<HTMLButtonElement>("[data-gomu-menu-item]")];
 }
 
 function status(root: HTMLElement): HTMLElement {
-	return root.querySelector<HTMLElement>("[data-gadget-status]")!;
+	return root.querySelector<HTMLElement>("[data-gomu-status]")!;
 }
 
 describe("menu behavior", () => {
@@ -104,7 +104,7 @@ describe("menu behavior", () => {
 		expect(tiles(root).every((t) => t.disabled)).toBe(true);
 		expect(status(root).hidden).toBe(false);
 		expect(status(root).textContent).toBe("Opening Users…");
-		expect(status(root).className).toContain("gadget-status--loading");
+		expect(status(root).className).toContain("gomu-status--loading");
 
 		release!();
 		await flush();
@@ -135,7 +135,7 @@ describe("menu behavior", () => {
 		tiles(root)[0]!.click();
 		await flush();
 		expect(status(root).textContent).toBe("Tool unavailable.");
-		expect(status(root).className).toContain("gadget-status--error");
+		expect(status(root).className).toContain("gomu-status--error");
 		expect(tiles(root).some((t) => t.disabled)).toBe(false);
 	});
 
@@ -188,7 +188,7 @@ describe("menu behavior", () => {
 		tiles(root)[2]!.click();
 		await new Promise((r) => setTimeout(r, 600)); // past the 500ms bridge timeout
 		expect(status(root).textContent).toContain("timed out");
-		expect(status(root).className).toContain("gadget-status--error");
+		expect(status(root).className).toContain("gomu-status--error");
 		expect(tiles(root).some((t) => t.disabled)).toBe(false);
 	});
 

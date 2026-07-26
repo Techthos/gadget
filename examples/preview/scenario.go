@@ -9,8 +9,8 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/techthos/gadget"
-	"github.com/techthos/gadget/gosdk"
+	"github.com/techthos/gomukit"
+	"github.com/techthos/gomukit/gosdk"
 )
 
 // The scenario is one small application, Acme Dispatch, wired to real state:
@@ -18,58 +18,58 @@ import (
 // registers reads and writes the same store, so an action taken in a table
 // shows up in the card list, the form and the confirmation.
 //
-// It is the half of this server that answers "what does gadget look like in
-// an app"; the gallery half answers "what can gadget render".
+// It is the half of this server that answers "what does gomukit look like in
+// an app"; the gallery half answers "what can gomukit render".
 
 // --- widgets ---
 
-func scenarioMenu(withGallery bool) *gadget.Menu {
-	items := []gadget.MenuItem{
+func scenarioMenu(withGallery bool) *gomukit.Menu {
+	items := []gomukit.MenuItem{
 		{Tool: "list_customers", Label: "Customers", IconSVG: iconTable,
 			Prompt:      "Show me the customer directory",
 			Description: "Sortable, filterable directory with row and bulk actions.",
-			Badge:       "read", BadgeVariant: gadget.BadgeInfo},
+			Badge:       "read", BadgeVariant: gomukit.BadgeInfo},
 		{Tool: "browse_customers", Label: "Customer cards", IconSVG: iconCards,
 			Prompt:      "Browse the customers as cards",
 			Description: "The same accounts as a swipeable card strip.",
-			Badge:       "read", BadgeVariant: gadget.BadgeInfo},
+			Badge:       "read", BadgeVariant: gomukit.BadgeInfo},
 		{Tool: "list_orders", Label: "Orders", IconSVG: iconBox,
 			Prompt:      "Show me the orders waiting on a dispatch decision",
 			Description: "Parcels waiting on a dispatch decision.",
-			Badge:       "read", BadgeVariant: gadget.BadgeInfo},
+			Badge:       "read", BadgeVariant: gomukit.BadgeInfo},
 		{Tool: "show_customer", Label: "Account detail", IconSVG: iconCard,
 			Prompt:      "Show me Ada Lovelace's account in detail",
 			Description: "One record as a card, with the full detail list.",
-			Badge:       "read", BadgeVariant: gadget.BadgeInfo},
+			Badge:       "read", BadgeVariant: gomukit.BadgeInfo},
 		{Tool: "new_customer", Label: "New customer", IconSVG: iconPlus,
 			Prompt:      "Start a new customer record",
 			Description: "A form with every field type and server-side validation.",
-			Badge:       "write", BadgeVariant: gadget.BadgeWarning},
+			Badge:       "write", BadgeVariant: gomukit.BadgeWarning},
 		{Tool: "edit_customer", Label: "Edit Ada", IconSVG: iconPencil,
 			Prompt:      "Open the edit form for Ada Lovelace",
 			Description: "Open the edit form prefilled from the store.",
-			Badge:       "write", BadgeVariant: gadget.BadgeWarning},
+			Badge:       "write", BadgeVariant: gomukit.BadgeWarning},
 		{Tool: "choose_shipping", Label: "Ship ORD-4471", IconSVG: iconTruck,
 			Prompt:      "How should order ORD-4471 ship?",
 			Description: "Pick a carrier from options priced at call time.",
-			Badge:       "write", BadgeVariant: gadget.BadgeWarning},
+			Badge:       "write", BadgeVariant: gomukit.BadgeWarning},
 		{Tool: "confirm_delete_customer", Label: "Delete Alan", IconSVG: iconTrash,
 			Prompt:      "Delete Alan Turing",
 			Description: "A confirmation that spells out what the deletion costs.",
-			Badge:       "danger", BadgeVariant: gadget.BadgeDanger},
+			Badge:       "danger", BadgeVariant: gomukit.BadgeDanger},
 		{Tool: "reset_demo", Label: "Reset data", IconSVG: iconList,
 			Prompt:      "Reset the demo data",
 			Description: "Restore the seed customers and orders."},
 	}
 	if withGallery {
-		items = append(items, gadget.MenuItem{
+		items = append(items, gomukit.MenuItem{
 			Tool: "preview_index", Label: "Widget gallery", IconSVG: iconPalette,
 			Prompt:      "Show me the widget gallery",
 			Description: "Every widget variant this library renders, one tool each.",
-			Badge:       "preview", BadgeVariant: gadget.BadgeNeutral,
+			Badge:       "preview", BadgeVariant: gomukit.BadgeNeutral,
 		})
 	}
-	return &gadget.Menu{
+	return &gomukit.Menu{
 		URI:   "ui://preview/menu",
 		Title: "Acme Dispatch",
 		Intro: "Pick where to start. Each tile posts its request to the chat, and the model opens the widget that answers it.",
@@ -81,96 +81,96 @@ func scenarioMenu(withGallery bool) *gadget.Menu {
 
 // customerRowActions is the per-row menu: a link out, two tools that mutate,
 // and one that opens another widget.
-func customerRowActions() gadget.Column {
-	return gadget.ActionsColumn(
-		gadget.Action{Label: "Open console", Kind: gadget.ActionLink, HrefKey: "website"},
-		gadget.Action{Label: "Edit", Tool: "edit_customer",
-			Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")}},
-		gadget.Action{Label: "Send invite", Tool: "invite_customer",
-			Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")}},
-		gadget.Action{Label: "Delete", Tool: "delete_customer", Variant: gadget.VariantDanger,
+func customerRowActions() gomukit.Column {
+	return gomukit.ActionsColumn(
+		gomukit.Action{Label: "Open console", Kind: gomukit.ActionLink, HrefKey: "website"},
+		gomukit.Action{Label: "Edit", Tool: "edit_customer",
+			Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")}},
+		gomukit.Action{Label: "Send invite", Tool: "invite_customer",
+			Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")}},
+		gomukit.Action{Label: "Delete", Tool: "delete_customer", Variant: gomukit.VariantDanger,
 			Confirm: "Delete this customer?",
-			Args:    map[string]gadget.ArgSource{"id": gadget.FromRow("id")}},
+			Args:    map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")}},
 	)
 }
 
-func customerBulk() *gadget.SelectionConfig {
-	return &gadget.SelectionConfig{Bulk: []gadget.Action{
+func customerBulk() *gomukit.SelectionConfig {
+	return &gomukit.SelectionConfig{Bulk: []gomukit.Action{
 		{Label: "Archive", Tool: "archive_customers",
-			Args: map[string]gadget.ArgSource{"ids": gadget.FromSelection("id")}},
+			Args: map[string]gomukit.ArgSource{"ids": gomukit.FromSelection("id")}},
 		{Label: "Reactivate", Tool: "activate_customers",
-			Args: map[string]gadget.ArgSource{"ids": gadget.FromSelection("id")}},
-		{Label: "Delete", Tool: "delete_customers", Variant: gadget.VariantDanger,
+			Args: map[string]gomukit.ArgSource{"ids": gomukit.FromSelection("id")}},
+		{Label: "Delete", Tool: "delete_customers", Variant: gomukit.VariantDanger,
 			Confirm: "Delete the selected customers?",
-			Args:    map[string]gadget.ArgSource{"ids": gadget.FromSelection("id")}},
+			Args:    map[string]gomukit.ArgSource{"ids": gomukit.FromSelection("id")}},
 	}}
 }
 
 // customersTable hydrates itself through LoadTool: a widget the host reopens
 // from cache asks the server for current rows rather than showing the
 // snapshot frozen when the document was rendered.
-func customersTable() *gadget.Table {
-	return &gadget.Table{
+func customersTable() *gomukit.Table {
+	return &gomukit.Table{
 		URI:   "ui://preview/customers",
 		Title: "Customers",
-		Columns: []gadget.Column{
-			gadget.Text("name", "Name"),
-			gadget.Text("company", "Company"),
-			gadget.Number("balance", "Balance", "currency:EUR"),
-			gadget.Number("seats", "Seats", "int"),
-			gadget.Number("utilization", "Usage", "percent"),
-			gadget.Date("createdAt", "Customer since", "date"),
+		Columns: []gomukit.Column{
+			gomukit.Text("name", "Name"),
+			gomukit.Text("company", "Company"),
+			gomukit.Number("balance", "Balance", "currency:EUR"),
+			gomukit.Number("seats", "Seats", "int"),
+			gomukit.Number("utilization", "Usage", "percent"),
+			gomukit.Date("createdAt", "Customer since", "date"),
 			customerStatusBadge(),
 			customerRowActions(),
 		},
 		PageSize:    5,
 		PageSizes:   []int{5, 10, 25},
-		DefaultSort: &gadget.SortSpec{Key: "name"},
+		DefaultSort: &gomukit.SortSpec{Key: "name"},
 		Filterable:  true,
 		Selection:   customerBulk(),
-		Empty:       gadget.EmptyState{Title: "No customers", Body: "Create one from the menu, or call reset_demo."},
+		Empty:       gomukit.EmptyState{Title: "No customers", Body: "Create one from the menu, or call reset_demo."},
 		LoadTool:    "list_customers",
 		Brand:       appBrand(),
 		Theme:       appTheme(),
 	}
 }
 
-func customerCardTemplate() gadget.CardTemplate {
-	return gadget.CardTemplate{
-		Header: gadget.CardHeader{
+func customerCardTemplate() gomukit.CardTemplate {
+	return gomukit.CardTemplate{
+		Header: gomukit.CardHeader{
 			TitleKey:       "name",
 			DescriptionKey: "company",
 			Badge:          customerStatusBadge(),
 		},
-		Content: gadget.CardContent{
-			Items: gadget.Descriptions{Items: []gadget.DescriptionItem{
-				{Label: "Balance", Key: "balance", Type: gadget.ColNumber, Format: "currency:EUR"},
-				{Label: "Seats", Key: "seats", Type: gadget.ColNumber, Format: "int"},
-				{Label: "Renews", Key: "renewsAt", Type: gadget.ColDate, Format: "relative"},
-				{Label: "Console", Type: gadget.ColLink, Link: &gadget.LinkSpec{HrefKey: "website", Text: "Open console"}},
+		Content: gomukit.CardContent{
+			Items: gomukit.Descriptions{Items: []gomukit.DescriptionItem{
+				{Label: "Balance", Key: "balance", Type: gomukit.ColNumber, Format: "currency:EUR"},
+				{Label: "Seats", Key: "seats", Type: gomukit.ColNumber, Format: "int"},
+				{Label: "Renews", Key: "renewsAt", Type: gomukit.ColDate, Format: "relative"},
+				{Label: "Console", Type: gomukit.ColLink, Link: &gomukit.LinkSpec{HrefKey: "website", Text: "Open console"}},
 			}},
 		},
-		Footer: gadget.CardFooter{Actions: []gadget.Action{
+		Footer: gomukit.CardFooter{Actions: []gomukit.Action{
 			{Label: "Edit", Tool: "edit_customer",
-				Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")}},
-			{Label: "Delete", Tool: "delete_customer", Variant: gadget.VariantDanger,
+				Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")}},
+			{Label: "Delete", Tool: "delete_customer", Variant: gomukit.VariantDanger,
 				Confirm: "Delete this customer?",
-				Args:    map[string]gadget.ArgSource{"id": gadget.FromRow("id")}},
+				Args:    map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")}},
 		}},
 	}
 }
 
-func customersCards() *gadget.CardList {
-	return &gadget.CardList{
+func customersCards() *gomukit.CardList {
+	return &gomukit.CardList{
 		URI:         "ui://preview/customer-cards",
 		Title:       "Customers",
 		Template:    customerCardTemplate(),
 		PageSize:    3,
 		PageSizes:   []int{3, 6, 12},
-		DefaultSort: &gadget.SortSpec{Key: "balance", Desc: true},
+		DefaultSort: &gomukit.SortSpec{Key: "balance", Desc: true},
 		Filterable:  true,
 		Selection:   customerBulk(),
-		Empty:       gadget.EmptyState{Title: "No customers", Body: "Create one from the menu, or call reset_demo."},
+		Empty:       gomukit.EmptyState{Title: "No customers", Body: "Create one from the menu, or call reset_demo."},
 		LoadTool:    "list_customers",
 		Brand:       appBrand(),
 		Theme:       appTheme(),
@@ -179,60 +179,60 @@ func customersCards() *gadget.CardList {
 
 // customerCard is the account view: the header carries prose and a link
 // button instead of a badge, and the body is the full typed detail list.
-func customerCard() *gadget.Card {
-	return &gadget.Card{
+func customerCard() *gomukit.Card {
+	return &gomukit.Card{
 		URI:   "ui://preview/customer",
 		Title: "Account",
-		Template: gadget.CardTemplate{
-			Header: gadget.CardHeader{
+		Template: gomukit.CardTemplate{
+			Header: gomukit.CardHeader{
 				TitleKey:       "name",
 				DescriptionKey: "company",
-				Action: &gadget.Action{
-					Label: "Open console", Kind: gadget.ActionLink, HrefKey: "website",
+				Action: &gomukit.Action{
+					Label: "Open console", Kind: gomukit.ActionLink, HrefKey: "website",
 				},
 			},
-			Content: gadget.CardContent{
+			Content: gomukit.CardContent{
 				TextKey: "notes",
 				Items:   customerDetails(),
 			},
-			Footer: gadget.CardFooter{
+			Footer: gomukit.CardFooter{
 				Text: "Usage figures update hourly.",
-				Actions: []gadget.Action{
+				Actions: []gomukit.Action{
 					{Label: "Edit", Tool: "edit_customer",
-						Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")}},
-					{Label: "Delete", Tool: "confirm_delete_customer", Variant: gadget.VariantDanger,
-						Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")}},
+						Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")}},
+					{Label: "Delete", Tool: "confirm_delete_customer", Variant: gomukit.VariantDanger,
+						Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")}},
 				},
 			},
 		},
-		Empty: gadget.EmptyState{Title: "No account", Body: "Call show_customer with an id."},
+		Empty: gomukit.EmptyState{Title: "No account", Body: "Call show_customer with an id."},
 		Brand: appBrand(),
 		Theme: appTheme(),
 	}
 }
 
-func customerForm() *gadget.Form {
-	return &gadget.Form{
+func customerForm() *gomukit.Form {
+	return &gomukit.Form{
 		URI:   "ui://preview/customer-form",
 		Title: "Edit customer",
-		Fields: []gadget.Field{
-			{Name: "id", Type: gadget.FHidden},
+		Fields: []gomukit.Field{
+			{Name: "id", Type: gomukit.FHidden},
 			{Name: "name", Label: "Name", Required: true, Description: "Shown everywhere the account appears."},
 			{Name: "email", Label: "Email", Required: true,
-				Validation: &gadget.Validation{Pattern: `[^@\s]+@[^@\s]+`, Message: "Enter a valid email address."}},
+				Validation: &gomukit.Validation{Pattern: `[^@\s]+@[^@\s]+`, Message: "Enter a valid email address."}},
 			{Name: "company", Label: "Company"},
-			{Name: "plan", Label: "Plan", Type: gadget.FSelect, Required: true,
-				Options: []gadget.Option{gadget.Opt("starter"), gadget.Opt("team"), gadget.Opt("enterprise")}},
-			{Name: "status", Label: "Status", Type: gadget.FSelect, Required: true,
-				Options: []gadget.Option{gadget.Opt("active"), gadget.Opt("invited"), gadget.Opt("archived")}},
-			{Name: "seats", Label: "Seats", Type: gadget.FNumber,
-				Validation: &gadget.Validation{Min: ptr(1.0), Max: ptr(500.0), Step: ptr(1.0)}},
-			{Name: "renewsAt", Label: "Renews on", Type: gadget.FDate},
-			{Name: "notes", Label: "Notes", Type: gadget.FTextarea, Rows: 3},
-			{Name: "notify", Label: "Send product notifications", Type: gadget.FCheckbox},
+			{Name: "plan", Label: "Plan", Type: gomukit.FSelect, Required: true,
+				Options: []gomukit.Option{gomukit.Opt("starter"), gomukit.Opt("team"), gomukit.Opt("enterprise")}},
+			{Name: "status", Label: "Status", Type: gomukit.FSelect, Required: true,
+				Options: []gomukit.Option{gomukit.Opt("active"), gomukit.Opt("invited"), gomukit.Opt("archived")}},
+			{Name: "seats", Label: "Seats", Type: gomukit.FNumber,
+				Validation: &gomukit.Validation{Min: ptr(1.0), Max: ptr(500.0), Step: ptr(1.0)}},
+			{Name: "renewsAt", Label: "Renews on", Type: gomukit.FDate},
+			{Name: "notes", Label: "Notes", Type: gomukit.FTextarea, Rows: 3},
+			{Name: "notify", Label: "Send product notifications", Type: gomukit.FCheckbox},
 		},
-		Submit: gadget.SubmitSpec{Tool: "save_customer", Label: "Save", SuccessMessage: "Customer saved."},
-		Cancel: &gadget.CancelSpec{},
+		Submit: gomukit.SubmitSpec{Tool: "save_customer", Label: "Save", SuccessMessage: "Customer saved."},
+		Cancel: &gomukit.CancelSpec{},
 		Brand:  appBrand(),
 		Theme:  appTheme(),
 	}
@@ -240,32 +240,32 @@ func customerForm() *gadget.Form {
 
 // newCustomerForm exercises every field type the library renders, including
 // the ones the edit form has no use for.
-func newCustomerForm() *gadget.Form {
-	return &gadget.Form{
+func newCustomerForm() *gomukit.Form {
+	return &gomukit.Form{
 		URI:   "ui://preview/customer-new",
 		Title: "New customer",
-		Fields: []gadget.Field{
-			{Name: "account", Label: "Workspace", Type: gadget.FReadonly, Default: "acme-eu"},
+		Fields: []gomukit.Field{
+			{Name: "account", Label: "Workspace", Type: gomukit.FReadonly, Default: "acme-eu"},
 			{Name: "name", Label: "Name", Required: true, Placeholder: "Ada Lovelace"},
 			{Name: "email", Label: "Email", Required: true, Placeholder: "ada@example.com",
-				Validation: &gadget.Validation{Pattern: `[^@\s]+@[^@\s]+`, Message: "Enter a valid email address."}},
+				Validation: &gomukit.Validation{Pattern: `[^@\s]+@[^@\s]+`, Message: "Enter a valid email address."}},
 			{Name: "company", Label: "Company", Placeholder: "Analytical Engines"},
 			{Name: "website", Label: "Console URL", Placeholder: "https://example.com/ada"},
-			{Name: "plan", Label: "Plan", Type: gadget.FSelect, Default: "team",
-				Options: []gadget.Option{gadget.Opt("starter"), gadget.Opt("team"), gadget.Opt("enterprise")}},
-			{Name: "scopes", Label: "Scopes", Type: gadget.FMultiSelect, Default: []string{"read"},
-				Options: []gadget.Option{gadget.Opt("read"), gadget.Opt("write"), gadget.Opt("billing")}},
-			{Name: "seats", Label: "Seats", Type: gadget.FNumber, Default: "3",
-				Validation: &gadget.Validation{Min: ptr(1.0), Max: ptr(500.0), Step: ptr(1.0)}},
-			{Name: "renewsAt", Label: "Renews on", Type: gadget.FDate, Default: "2027-08-01"},
-			{Name: "digestAt", Label: "Daily digest", Type: gadget.FTime, Default: "09:00"},
-			{Name: "notes", Label: "Notes", Type: gadget.FTextarea, Rows: 3,
+			{Name: "plan", Label: "Plan", Type: gomukit.FSelect, Default: "team",
+				Options: []gomukit.Option{gomukit.Opt("starter"), gomukit.Opt("team"), gomukit.Opt("enterprise")}},
+			{Name: "scopes", Label: "Scopes", Type: gomukit.FMultiSelect, Default: []string{"read"},
+				Options: []gomukit.Option{gomukit.Opt("read"), gomukit.Opt("write"), gomukit.Opt("billing")}},
+			{Name: "seats", Label: "Seats", Type: gomukit.FNumber, Default: "3",
+				Validation: &gomukit.Validation{Min: ptr(1.0), Max: ptr(500.0), Step: ptr(1.0)}},
+			{Name: "renewsAt", Label: "Renews on", Type: gomukit.FDate, Default: "2027-08-01"},
+			{Name: "digestAt", Label: "Daily digest", Type: gomukit.FTime, Default: "09:00"},
+			{Name: "notes", Label: "Notes", Type: gomukit.FTextarea, Rows: 3,
 				Placeholder: "Anything the team should know"},
-			{Name: "notify", Label: "Send product notifications", Type: gadget.FCheckbox, Default: true},
+			{Name: "notify", Label: "Send product notifications", Type: gomukit.FCheckbox, Default: true},
 		},
-		Submit: gadget.SubmitSpec{Tool: "create_customer", Label: "Create customer",
+		Submit: gomukit.SubmitSpec{Tool: "create_customer", Label: "Create customer",
 			StaticArgs: map[string]any{"source": "preview-menu"}, SuccessMessage: "Customer created."},
-		Cancel: &gadget.CancelSpec{},
+		Cancel: &gomukit.CancelSpec{},
 		Brand:  appBrand(),
 		Theme:  appTheme(),
 	}
@@ -273,25 +273,25 @@ func newCustomerForm() *gadget.Form {
 
 // deleteConfirm authors the question; the record and what removing it costs
 // arrive from confirm_delete_customer, computed from the store at call time.
-func deleteConfirm() *gadget.Confirm {
-	return &gadget.Confirm{
+func deleteConfirm() *gomukit.Confirm {
+	return &gomukit.Confirm{
 		URI:         "ui://preview/confirm-delete",
 		Title:       "Delete customer",
 		Prompt:      "Delete this customer?",
 		Body:        "The account and everything attached to it is removed for good.",
-		Severity:    gadget.BadgeDanger,
+		Severity:    gomukit.BadgeDanger,
 		Details:     customerDetails(),
 		Acknowledge: "I understand this cannot be undone.",
-		Accept: gadget.AcceptSpec{
+		Accept: gomukit.AcceptSpec{
 			Tool:           "apply_delete_customer",
 			Label:          "Delete customer",
-			Args:           map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+			Args:           map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")},
 			SuccessMessage: "Customer deleted.",
 		},
-		Reject: &gadget.RejectSpec{
+		Reject: &gomukit.RejectSpec{
 			Label:   "Keep customer",
 			Tool:    "keep_customer",
-			Args:    map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+			Args:    map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")},
 			Message: "Nothing was deleted.",
 		},
 		Brand: appBrand(),
@@ -299,32 +299,32 @@ func deleteConfirm() *gadget.Confirm {
 	}
 }
 
-func ordersTable() *gadget.Table {
-	return &gadget.Table{
+func ordersTable() *gomukit.Table {
+	return &gomukit.Table{
 		URI:   "ui://preview/orders",
 		Title: "Orders",
-		Columns: []gadget.Column{
-			gadget.Text("reference", "Reference"),
-			gadget.Text("customer", "Customer"),
-			gadget.Number("items", "Items", "int"),
-			gadget.Number("weightKg", "Weight (kg)", "decimal:1"),
-			gadget.Number("total", "Total", "currency:EUR"),
-			gadget.Date("placedAt", "Placed", "relative"),
+		Columns: []gomukit.Column{
+			gomukit.Text("reference", "Reference"),
+			gomukit.Text("customer", "Customer"),
+			gomukit.Number("items", "Items", "int"),
+			gomukit.Number("weightKg", "Weight (kg)", "decimal:1"),
+			gomukit.Number("total", "Total", "currency:EUR"),
+			gomukit.Date("placedAt", "Placed", "relative"),
 			orderStatusBadge(),
-			gadget.Link("tracking", "Tracking"),
-			gadget.ActionsColumn(
-				gadget.Action{Label: "Choose shipping", Tool: "choose_shipping", Variant: gadget.VariantPrimary,
-					Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")}},
-				gadget.Action{Label: "Add extras", Tool: "choose_extras",
-					Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")}},
-				gadget.Action{Label: "Set delivery date", Tool: "schedule_delivery",
-					Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")}},
+			gomukit.Link("tracking", "Tracking"),
+			gomukit.ActionsColumn(
+				gomukit.Action{Label: "Choose shipping", Tool: "choose_shipping", Variant: gomukit.VariantPrimary,
+					Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")}},
+				gomukit.Action{Label: "Add extras", Tool: "choose_extras",
+					Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")}},
+				gomukit.Action{Label: "Set delivery date", Tool: "schedule_delivery",
+					Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")}},
 			),
 		},
 		PageSize:    5,
-		DefaultSort: &gadget.SortSpec{Key: "placedAt", Desc: true},
+		DefaultSort: &gomukit.SortSpec{Key: "placedAt", Desc: true},
 		Filterable:  true,
-		Empty:       gadget.EmptyState{Title: "No orders", Body: "Call reset_demo to restore the seed data."},
+		Empty:       gomukit.EmptyState{Title: "No orders", Body: "Call reset_demo to restore the seed data."},
 		LoadTool:    "list_orders",
 		Brand:       appBrand(),
 		Theme:       appTheme(),
@@ -333,27 +333,27 @@ func ordersTable() *gadget.Table {
 
 // shippingChoice authors the question and nothing else: what is on offer, and
 // what it costs, comes from choose_shipping.
-func shippingChoice() *gadget.Choice {
-	return &gadget.Choice{
+func shippingChoice() *gomukit.Choice {
+	return &gomukit.Choice{
 		URI:    "ui://preview/shipping",
 		Title:  "Shipping",
 		Prompt: "How should this order ship?",
 		Body:   "The parcel is packed and leaves the warehouse today either way.",
-		Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
+		Details: gomukit.Descriptions{Items: []gomukit.DescriptionItem{
 			{Label: "Order", Key: "reference"},
 			{Label: "Customer", Key: "customer"},
-			{Label: "Weight", Key: "weightKg", Type: gadget.ColNumber, Format: "decimal:1"},
-			{Label: "Value", Key: "total", Type: gadget.ColNumber, Format: "currency:EUR"},
+			{Label: "Weight", Key: "weightKg", Type: gomukit.ColNumber, Format: "decimal:1"},
+			{Label: "Value", Key: "total", Type: gomukit.ColNumber, Format: "currency:EUR"},
 			{Label: "Destination", Text: "Berlin, DE"},
 		}},
-		Submit: gadget.ChoiceSubmit{
+		Submit: gomukit.ChoiceSubmit{
 			Tool:           "ship_order",
 			Label:          "Ship it",
 			ValueArg:       "method",
-			Args:           map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+			Args:           map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")},
 			SuccessMessage: "On its way.",
 		},
-		Cancel: &gadget.RejectSpec{Label: "Decide later", Message: "Nothing was shipped."},
+		Cancel: &gomukit.RejectSpec{Label: "Decide later", Message: "Nothing was shipped."},
 		Brand:  appBrand(),
 		Theme:  appTheme(),
 	}
@@ -361,30 +361,30 @@ func shippingChoice() *gadget.Choice {
 
 // deliveryPicker authors the question; the window it may be answered in comes
 // from schedule_delivery, computed against the day the tool runs.
-func deliveryPicker() *gadget.DatePicker {
-	return &gadget.DatePicker{
+func deliveryPicker() *gomukit.DatePicker {
+	return &gomukit.DatePicker{
 		URI:    "ui://preview/delivery",
 		Title:  "Delivery",
 		Prompt: "When should this order arrive?",
 		Body:   "The depot needs one working day's notice, and dispatches nothing on stocktaking days.",
-		Calendar: &gadget.Calendar{
-			Presets: []gadget.DatePreset{
-				{Label: "Tomorrow", Span: gadget.SpanTomorrow},
-				{Label: "In a week", Span: gadget.SpanNext7Days},
+		Calendar: &gomukit.Calendar{
+			Presets: []gomukit.DatePreset{
+				{Label: "Tomorrow", Span: gomukit.SpanTomorrow},
+				{Label: "In a week", Span: gomukit.SpanNext7Days},
 			},
 		},
-		Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
+		Details: gomukit.Descriptions{Items: []gomukit.DescriptionItem{
 			{Label: "Order", Key: "reference"},
 			{Label: "Customer", Key: "customer"},
-			{Label: "Items", Key: "items", Type: gadget.ColNumber, Format: "int"},
+			{Label: "Items", Key: "items", Type: gomukit.ColNumber, Format: "int"},
 		}},
-		Submit: gadget.DateSubmit{
+		Submit: gomukit.DateSubmit{
 			Tool:           "set_delivery_date",
 			Label:          "Book it",
-			Args:           map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+			Args:           map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")},
 			SuccessMessage: "Delivery booked.",
 		},
-		Cancel: &gadget.RejectSpec{Label: "Decide later", Message: "Nothing was booked."},
+		Cancel: &gomukit.RejectSpec{Label: "Decide later", Message: "Nothing was booked."},
 		Brand:  appBrand(),
 		Theme:  appTheme(),
 	}
@@ -392,21 +392,21 @@ func deliveryPicker() *gadget.DatePicker {
 
 // extrasChoice is the authored counterpart: a fixed catalog, several picks,
 // bounded above and below.
-func extrasChoice() *gadget.Choice {
-	return &gadget.Choice{
+func extrasChoice() *gomukit.Choice {
+	return &gomukit.Choice{
 		URI:      "ui://preview/extras",
 		Title:    "Add-ons",
 		Prompt:   "Which extras should this shipment carry?",
 		Body:     "Choose one to three; they are billed with the shipping cost.",
-		Layout:   gadget.ChoiceSplit,
+		Layout:   gomukit.ChoiceSplit,
 		Multiple: true,
 		Min:      1,
 		Max:      3,
-		Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
+		Details: gomukit.Descriptions{Items: []gomukit.DescriptionItem{
 			{Label: "Order", Key: "reference"},
 			{Label: "Customer", Key: "customer"},
 		}},
-		Options: []gadget.ChoiceOption{
+		Options: []gomukit.ChoiceOption{
 			{Value: "insurance", Label: "Extra insurance", Summary: "up to EUR 5,000",
 				Body:    "Covers the declared value against loss and damage in transit.",
 				Bullets: []string{"Claims within 30 days", "Proof of value required"},
@@ -416,18 +416,18 @@ func extrasChoice() *gadget.Choice {
 			{Value: "saturday", Label: "Saturday delivery", Summary: "weekend slot",
 				Body:         "Delivered on Saturday morning instead of the next business day.",
 				Badge:        "surcharge",
-				BadgeVariant: gadget.BadgeWarning},
+				BadgeVariant: gomukit.BadgeWarning},
 			{Value: "carbon", Label: "Carbon offset", Summary: "adds EUR 0.40",
 				Body: "Buys certified offsets for the leg between the depot and the door."},
 		},
-		Submit: gadget.ChoiceSubmit{
+		Submit: gomukit.ChoiceSubmit{
 			Tool:           "add_order_extras",
 			Label:          "Add extras",
 			ValueArg:       "extras",
-			Args:           map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+			Args:           map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")},
 			SuccessMessage: "Extras added.",
 		},
-		Cancel: &gadget.RejectSpec{},
+		Cancel: &gomukit.RejectSpec{},
 		Brand:  appBrand(),
 		Theme:  appTheme(),
 	}
@@ -556,8 +556,8 @@ func registerScenario(s *mcp.Server, data *store, withGallery bool) {
 // registerScenarioActions installs the app-only half: the tools widgets call
 // and the model does not.
 func registerScenarioActions(s *mcp.Server, data *store,
-	table *gadget.Table, cards *gadget.CardList, form, create *gadget.Form,
-	confirm *gadget.Confirm, shipping, extras *gadget.Choice, delivery *gadget.DatePicker,
+	table *gomukit.Table, cards *gomukit.CardList, form, create *gomukit.Form,
+	confirm *gomukit.Confirm, shipping, extras *gomukit.Choice, delivery *gomukit.DatePicker,
 ) {
 	// Row action: delete, answering with the rows that remain so the table
 	// repaints from the server's truth rather than guessing locally.

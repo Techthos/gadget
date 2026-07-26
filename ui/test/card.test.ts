@@ -47,15 +47,15 @@ function listShell({
 } = {}): HTMLElement {
 	document.body.innerHTML = "";
 	const root = document.createElement("div");
-	root.className = "gadget-root";
-	root.setAttribute("data-gadget-widget", "cardlist");
+	root.className = "gomu-root";
+	root.setAttribute("data-gomu-widget", "cardlist");
 	root.innerHTML = `
-    <div class="gadget-toolbar">
-      ${selection ? `<label><input type="checkbox" data-gadget-select-all=""></label>` : ""}
-      <input type="search" data-gadget-filter="">
+    <div class="gomu-toolbar">
+      ${selection ? `<label><input type="checkbox" data-gomu-select-all=""></label>` : ""}
+      <input type="search" data-gomu-filter="">
       ${
 			sort
-				? `<select data-gadget-sort-select="">
+				? `<select data-gomu-sort-select="">
              <option value="">Sort…</option>
              <option value="balance|asc">Balance ↑</option>
              <option value="balance|desc">Balance ↓</option>
@@ -64,30 +64,30 @@ function listShell({
 		}
       ${
 			bulk > 0
-				? `<div data-gadget-bulk="" hidden><span data-gadget-bulk-count=""></span>` +
-					Array.from({ length: bulk }, (_, i) => `<button type="button" data-gadget-bulk-action="${i}">Bulk${i}</button>`).join("") +
+				? `<div data-gomu-bulk="" hidden><span data-gomu-bulk-count=""></span>` +
+					Array.from({ length: bulk }, (_, i) => `<button type="button" data-gomu-bulk-action="${i}">Bulk${i}</button>`).join("") +
 					`</div>`
 				: ""
 		}
     </div>
-    <div data-gadget-status="" hidden></div>
-    <div class="gadget-carousel">
-      <button type="button" data-gadget-scroll="prev" hidden>‹</button>
-      <div class="gadget-card-strip" data-gadget-cards=""></div>
-      <button type="button" data-gadget-scroll="next" hidden>›</button>
+    <div data-gomu-status="" hidden></div>
+    <div class="gomu-carousel">
+      <button type="button" data-gomu-scroll="prev" hidden>‹</button>
+      <div class="gomu-card-strip" data-gomu-cards=""></div>
+      <button type="button" data-gomu-scroll="next" hidden>›</button>
     </div>
-    <div data-gadget-empty="" hidden><h3>No records yet</h3></div>
-    <div data-gadget-pagination="" hidden>
+    <div data-gomu-empty="" hidden><h3>No records yet</h3></div>
+    <div data-gomu-pagination="" hidden>
       ${
 				pageSizes.length > 0
-					? `<div class="gadget-page-size"><span>Per page</span><select data-gadget-page-size="">` +
+					? `<div class="gomu-page-size"><span>Per page</span><select data-gomu-page-size="">` +
 						pageSizes.map((n) => `<option value="${n}">${n}</option>`).join("") +
 						`</select></div>`
 					: ""
 			}
-      <button type="button" data-gadget-page="prev">Prev</button>
-      <span data-gadget-page-info=""></span>
-      <button type="button" data-gadget-page="next">Next</button>
+      <button type="button" data-gomu-page="prev">Prev</button>
+      <span data-gomu-page-info=""></span>
+      <button type="button" data-gomu-page="next">Next</button>
     </div>`;
 	document.body.append(root);
 	return root;
@@ -107,7 +107,7 @@ function listConfig(over: Record<string, unknown> = {}): Record<string, unknown>
 }
 
 function titles(root: HTMLElement): string[] {
-	return [...root.querySelectorAll(".gadget-card-title")].map((e) => e.textContent ?? "");
+	return [...root.querySelectorAll(".gomu-card-title")].map((e) => e.textContent ?? "");
 }
 
 describe("cardlist behavior", () => {
@@ -136,12 +136,12 @@ describe("cardlist behavior", () => {
 			bridge,
 		});
 		const more = (): HTMLButtonElement | null =>
-			root.querySelector<HTMLButtonElement>("[data-gadget-reveal]");
+			root.querySelector<HTMLButtonElement>("[data-gomu-reveal]");
 
 		expect(titles(root)).toEqual(["Carol", "Alice"]);
 		expect(more()?.textContent).toContain("2 of 3");
 		// LoadMore replaces the pager rather than sitting alongside it.
-		expect(root.querySelector<HTMLElement>("[data-gadget-pagination]")?.hidden).toBe(true);
+		expect(root.querySelector<HTMLElement>("[data-gomu-pagination]")?.hidden).toBe(true);
 
 		more()?.click();
 		await flush();
@@ -158,11 +158,11 @@ describe("cardlist behavior", () => {
 			initialData: { rows: ROWS },
 			bridge,
 		});
-		root.querySelector<HTMLButtonElement>("[data-gadget-reveal]")?.click();
+		root.querySelector<HTMLButtonElement>("[data-gomu-reveal]")?.click();
 		await flush();
 		expect(titles(root)).toHaveLength(3);
 
-		const filter = root.querySelector<HTMLInputElement>("[data-gadget-filter]") as HTMLInputElement;
+		const filter = root.querySelector<HTMLInputElement>("[data-gomu-filter]") as HTMLInputElement;
 		filter.value = "";
 		filter.dispatchEvent(new Event("input", { bubbles: true }));
 		await new Promise((r) => setTimeout(r, 200));
@@ -171,7 +171,7 @@ describe("cardlist behavior", () => {
 
 	it("keeps the reader's place in the strip when a card is selected", async () => {
 		const root = listShell({ selection: true });
-		const strip = root.querySelector<HTMLElement>("[data-gadget-cards]") as HTMLElement;
+		const strip = root.querySelector<HTMLElement>("[data-gomu-cards]") as HTMLElement;
 		// jsdom does not scroll; the behavior only reads and writes scrollLeft.
 		let scrollLeft = 0;
 		Object.defineProperty(strip, "scrollWidth", { configurable: true, get: () => 1200 });
@@ -191,7 +191,7 @@ describe("cardlist behavior", () => {
 		});
 
 		scrollLeft = 640;
-		const box = root.querySelectorAll<HTMLInputElement>("[data-gadget-select-card]")[2] as HTMLInputElement;
+		const box = root.querySelectorAll<HTMLInputElement>("[data-gomu-select-card]")[2] as HTMLInputElement;
 		box.click();
 		await flush();
 
@@ -202,9 +202,9 @@ describe("cardlist behavior", () => {
 	it("renders cards from the data island", () => {
 		const root = listShell();
 		mountCardList({ root, config: listConfig(), initialData: { rows: ROWS }, bridge });
-		expect(root.querySelectorAll(".gadget-card-item")).toHaveLength(3);
+		expect(root.querySelectorAll(".gomu-card-item")).toHaveLength(3);
 		expect(titles(root)).toEqual(["Carol", "Alice", "Bob"]);
-		expect(root.querySelector(".gadget-card-description")?.textContent).toBe("carol@x.io");
+		expect(root.querySelector(".gomu-card-description")?.textContent).toBe("carol@x.io");
 	});
 
 	it("renders the three sections and leaves out the ones with nothing to show", () => {
@@ -215,10 +215,10 @@ describe("cardlist behavior", () => {
 			initialData: { rows: [ROWS[0]] },
 			bridge,
 		});
-		const card = root.querySelector(".gadget-card-item")!;
-		expect(card.querySelector(".gadget-card-item-header")).not.toBeNull();
-		expect(card.querySelector(".gadget-card-content")).toBeNull();
-		expect(card.querySelector(".gadget-card-item-footer")).toBeNull();
+		const card = root.querySelector(".gomu-card-item")!;
+		expect(card.querySelector(".gomu-card-item-header")).not.toBeNull();
+		expect(card.querySelector(".gomu-card-content")).toBeNull();
+		expect(card.querySelector(".gomu-card-item-footer")).toBeNull();
 	});
 
 	it("renders content prose and a footer note from the template", () => {
@@ -235,8 +235,8 @@ describe("cardlist behavior", () => {
 			initialData: { rows: [{ ...ROWS[0], bio: "Runs the billing team." }] },
 			bridge,
 		});
-		expect(root.querySelector(".gadget-card-text")?.textContent).toBe("Runs the billing team.");
-		expect(root.querySelector(".gadget-card-note")?.textContent).toBe("Updated hourly");
+		expect(root.querySelector(".gomu-card-text")?.textContent).toBe("Runs the billing team.");
+		expect(root.querySelector(".gomu-card-note")?.textContent).toBe("Updated hourly");
 	});
 
 	it("indexes the header action ahead of the footer actions", async () => {
@@ -253,10 +253,10 @@ describe("cardlist behavior", () => {
 			initialData: { rows: [ROWS[0]] },
 			bridge,
 		});
-		const card = root.querySelector(".gadget-card-item")!;
-		expect(card.querySelector('.gadget-card-action [data-gadget-action="0"]')?.textContent).toBe("Open");
+		const card = root.querySelector(".gomu-card-item")!;
+		expect(card.querySelector('.gomu-card-action [data-gomu-action="0"]')?.textContent).toBe("Open");
 
-		card.querySelector<HTMLElement>('[data-gadget-action="1"]')!.click();
+		card.querySelector<HTMLElement>('[data-gomu-action="1"]')!.click();
 		await flush();
 		expect(host.received(M.toolsCall)[0]!.params).toMatchObject({
 			name: "edit_user",
@@ -268,7 +268,7 @@ describe("cardlist behavior", () => {
 	// only reads scrollLeft/scrollWidth/clientWidth.
 	it("offers the carousel controls only when the strip overflows", () => {
 		const root = listShell();
-		const strip = root.querySelector<HTMLElement>("[data-gadget-cards]") as HTMLElement;
+		const strip = root.querySelector<HTMLElement>("[data-gomu-cards]") as HTMLElement;
 		let scrollLeft = 0;
 		Object.defineProperty(strip, "scrollWidth", { configurable: true, get: () => 1200 });
 		Object.defineProperty(strip, "clientWidth", { configurable: true, get: () => 400 });
@@ -281,8 +281,8 @@ describe("cardlist behavior", () => {
 		});
 		mountCardList({ root, config: listConfig(), initialData: { rows: ROWS }, bridge });
 
-		const prev = root.querySelector<HTMLButtonElement>('[data-gadget-scroll="prev"]');
-		const next = root.querySelector<HTMLButtonElement>('[data-gadget-scroll="next"]');
+		const prev = root.querySelector<HTMLButtonElement>('[data-gomu-scroll="prev"]');
+		const next = root.querySelector<HTMLButtonElement>('[data-gomu-scroll="next"]');
 		expect(prev?.hidden).toBe(false);
 		expect(prev?.disabled).toBe(true); // resting at the start
 		expect(next?.disabled).toBe(false);
@@ -291,7 +291,7 @@ describe("cardlist behavior", () => {
 	it("hides the carousel controls when everything fits", () => {
 		const root = listShell();
 		mountCardList({ root, config: listConfig(), initialData: { rows: ROWS }, bridge });
-		for (const btn of root.querySelectorAll<HTMLButtonElement>("[data-gadget-scroll]")) {
+		for (const btn of root.querySelectorAll<HTMLButtonElement>("[data-gomu-scroll]")) {
 			expect(btn.hidden).toBe(true);
 		}
 	});
@@ -299,24 +299,24 @@ describe("cardlist behavior", () => {
 	it("shows the empty state when there are no rows", () => {
 		const root = listShell();
 		mountCardList({ root, config: listConfig(), initialData: null, bridge });
-		expect(root.querySelectorAll(".gadget-card-item")).toHaveLength(0);
-		expect(root.querySelector<HTMLElement>("[data-gadget-empty]")?.hidden).toBe(false);
+		expect(root.querySelectorAll(".gomu-card-item")).toHaveLength(0);
+		expect(root.querySelector<HTMLElement>("[data-gomu-empty]")?.hidden).toBe(false);
 	});
 
 	it("renders badge and link fields", () => {
 		const root = listShell();
 		mountCardList({ root, config: listConfig(), initialData: { rows: [ROWS[0]] }, bridge });
-		const badge = root.querySelector(".gadget-card-action .gadget-badge")!;
+		const badge = root.querySelector(".gomu-card-action .gomu-badge")!;
 		expect(badge.textContent).toBe("active");
-		expect(badge.className).toContain("gadget-badge--success");
-		const link = root.querySelector<HTMLElement>("[data-gadget-link]")!;
-		expect(link.getAttribute("data-gadget-link")).toBe("https://c.io");
+		expect(badge.className).toContain("gomu-badge--success");
+		const link = root.querySelector<HTMLElement>("[data-gomu-link]")!;
+		expect(link.getAttribute("data-gomu-link")).toBe("https://c.io");
 	});
 
 	it("sorts via the sort select", () => {
 		const root = listShell();
 		mountCardList({ root, config: listConfig(), initialData: { rows: ROWS }, bridge });
-		const sel = root.querySelector<HTMLSelectElement>("[data-gadget-sort-select]")!;
+		const sel = root.querySelector<HTMLSelectElement>("[data-gomu-sort-select]")!;
 		sel.value = "balance|asc";
 		sel.dispatchEvent(new Event("change", { bubbles: true }));
 		expect(titles(root)).toEqual(["Alice", "Carol", "Bob"]);
@@ -333,15 +333,15 @@ describe("cardlist behavior", () => {
 			initialData: { rows: ROWS },
 			bridge,
 		});
-		const pagination = root.querySelector<HTMLElement>("[data-gadget-pagination]")!;
-		const sizeEl = root.querySelector<HTMLSelectElement>("[data-gadget-page-size]")!;
+		const pagination = root.querySelector<HTMLElement>("[data-gomu-pagination]")!;
+		const sizeEl = root.querySelector<HTMLSelectElement>("[data-gomu-page-size]")!;
 		expect(sizeEl.value).toBe("2");
 		expect(titles(root)).toHaveLength(2);
 
 		sizeEl.value = "10";
 		sizeEl.dispatchEvent(new Event("change", { bubbles: true }));
 		expect(titles(root)).toHaveLength(3);
-		expect(root.querySelector("[data-gadget-page-info]")?.textContent).toBe("1–3 of 3");
+		expect(root.querySelector("[data-gomu-page-info]")?.textContent).toBe("1–3 of 3");
 		// One page now, but the bar stays: it is the way back to a smaller page.
 		expect(pagination.hidden).toBe(false);
 	});
@@ -355,13 +355,13 @@ describe("cardlist behavior", () => {
 			bridge,
 		});
 		expect(titles(root)).toEqual(["Bob", "Carol", "Alice"]);
-		expect(root.querySelector<HTMLSelectElement>("[data-gadget-sort-select]")?.value).toBe("balance|desc");
+		expect(root.querySelector<HTMLSelectElement>("[data-gomu-sort-select]")?.value).toBe("balance|desc");
 	});
 
 	it("filters across title, description, and content items after the debounce", async () => {
 		const root = listShell();
 		mountCardList({ root, config: listConfig(), initialData: { rows: ROWS }, bridge });
-		const input = root.querySelector<HTMLInputElement>("[data-gadget-filter]")!;
+		const input = root.querySelector<HTMLInputElement>("[data-gomu-filter]")!;
 		input.value = "ali";
 		input.dispatchEvent(new Event("input", { bubbles: true }));
 		await new Promise((r) => setTimeout(r, 250));
@@ -371,11 +371,11 @@ describe("cardlist behavior", () => {
 	it("paginates and updates the page info", () => {
 		const root = listShell();
 		mountCardList({ root, config: listConfig({ pageSize: 2 }), initialData: { rows: ROWS }, bridge });
-		expect(root.querySelectorAll(".gadget-card-item")).toHaveLength(2);
-		const info = root.querySelector("[data-gadget-page-info]")!;
+		expect(root.querySelectorAll(".gomu-card-item")).toHaveLength(2);
+		const info = root.querySelector("[data-gomu-page-info]")!;
 		expect(info.textContent).toBe("1–2 of 3");
-		root.querySelector<HTMLElement>('[data-gadget-page="next"]')!.click();
-		expect(root.querySelectorAll(".gadget-card-item")).toHaveLength(1);
+		root.querySelector<HTMLElement>('[data-gomu-page="next"]')!.click();
+		expect(root.querySelectorAll(".gomu-card-item")).toHaveLength(1);
 		expect(info.textContent).toBe("3–3 of 3");
 	});
 
@@ -389,8 +389,8 @@ describe("cardlist behavior", () => {
 
 		// First card (Carol, id 1), action index 1 = Delete (has confirm).
 		const delBtn = root
-			.querySelector(".gadget-card-item")!
-			.querySelector<HTMLElement>('[data-gadget-action="1"]')!;
+			.querySelector(".gomu-card-item")!
+			.querySelector<HTMLElement>('[data-gomu-action="1"]')!;
 		delBtn.click(); // arms
 		await flush();
 		expect(host.received(M.toolsCall)).toHaveLength(0);
@@ -400,8 +400,8 @@ describe("cardlist behavior", () => {
 		const calls = host.received(M.toolsCall);
 		expect(calls).toHaveLength(1);
 		expect(calls[0]!.params).toMatchObject({ name: "delete_user", arguments: { id: 1 } });
-		expect(root.querySelectorAll(".gadget-card-item")).toHaveLength(2);
-		expect(root.querySelector<HTMLElement>("[data-gadget-status]")?.textContent).toBe("Deleted.");
+		expect(root.querySelectorAll(".gomu-card-item")).toHaveLength(2);
+		expect(root.querySelector<HTMLElement>("[data-gomu-status]")?.textContent).toBe("Deleted.");
 	});
 
 	it("selects cards, shows bulk actions, and resolves FromSelection args", async () => {
@@ -412,21 +412,21 @@ describe("cardlist behavior", () => {
 		host.onToolCall = () => ({ structuredContent: { rows: [] } });
 		mountCardList({ root, config: cfg, initialData: { rows: ROWS }, bridge });
 
-		const bulkBar = root.querySelector<HTMLElement>("[data-gadget-bulk]")!;
+		const bulkBar = root.querySelector<HTMLElement>("[data-gomu-bulk]")!;
 		expect(bulkBar.hidden).toBe(true);
 
-		const selectAll = root.querySelector<HTMLInputElement>("[data-gadget-select-all]")!;
+		const selectAll = root.querySelector<HTMLInputElement>("[data-gomu-select-all]")!;
 		selectAll.checked = true;
 		selectAll.dispatchEvent(new Event("change", { bubbles: true }));
 		expect(bulkBar.hidden).toBe(false);
-		expect(root.querySelector("[data-gadget-bulk-count]")?.textContent).toBe("3 selected");
+		expect(root.querySelector("[data-gomu-bulk-count]")?.textContent).toBe("3 selected");
 
-		root.querySelector<HTMLElement>('[data-gadget-bulk-action="0"]')!.click();
+		root.querySelector<HTMLElement>('[data-gomu-bulk-action="0"]')!.click();
 		await flush();
 		const calls = host.received(M.toolsCall);
 		expect(calls).toHaveLength(1);
 		expect(calls[0]!.params).toMatchObject({ name: "archive_users", arguments: { ids: [1, 2, 3] } });
-		expect(root.querySelectorAll(".gadget-card-item")).toHaveLength(0);
+		expect(root.querySelectorAll(".gomu-card-item")).toHaveLength(0);
 		expect(bulkBar.hidden).toBe(true);
 	});
 
@@ -465,12 +465,12 @@ describe("cardlist behavior", () => {
 function cardShell(): HTMLElement {
 	document.body.innerHTML = "";
 	const root = document.createElement("div");
-	root.className = "gadget-root";
-	root.setAttribute("data-gadget-widget", "card");
+	root.className = "gomu-root";
+	root.setAttribute("data-gomu-widget", "card");
 	root.innerHTML = `
-    <div data-gadget-status="" hidden></div>
-    <div class="gadget-card-host" data-gadget-card=""></div>
-    <div data-gadget-empty="" hidden><h3>Nothing</h3></div>`;
+    <div data-gomu-status="" hidden></div>
+    <div class="gomu-card-host" data-gomu-card=""></div>
+    <div data-gomu-empty="" hidden><h3>Nothing</h3></div>`;
 	document.body.append(root);
 	return root;
 }
@@ -499,16 +499,16 @@ describe("card behavior", () => {
 	it("renders the first row as a card", () => {
 		const root = cardShell();
 		mountCard({ root, config: cardConfig(), initialData: { rows: ROWS }, bridge });
-		expect(root.querySelectorAll(".gadget-card-item")).toHaveLength(1);
-		expect(root.querySelector(".gadget-card-title")?.textContent).toBe("Carol");
-		expect(root.querySelector<HTMLElement>("[data-gadget-empty]")?.hidden).toBe(true);
+		expect(root.querySelectorAll(".gomu-card-item")).toHaveLength(1);
+		expect(root.querySelector(".gomu-card-title")?.textContent).toBe("Carol");
+		expect(root.querySelector<HTMLElement>("[data-gomu-empty]")?.hidden).toBe(true);
 	});
 
 	it("shows the empty state with no record", () => {
 		const root = cardShell();
 		mountCard({ root, config: cardConfig(), initialData: null, bridge });
-		expect(root.querySelectorAll(".gadget-card-item")).toHaveLength(0);
-		expect(root.querySelector<HTMLElement>("[data-gadget-empty]")?.hidden).toBe(false);
+		expect(root.querySelectorAll(".gomu-card-item")).toHaveLength(0);
+		expect(root.querySelector<HTMLElement>("[data-gomu-empty]")?.hidden).toBe(false);
 	});
 
 	it("posts a card action's prompt as a chat message instead of calling the tool", async () => {
@@ -534,7 +534,7 @@ describe("card behavior", () => {
 			bridge,
 		});
 
-		root.querySelector<HTMLElement>('[data-gadget-action="0"]')!.click();
+		root.querySelector<HTMLElement>('[data-gomu-action="0"]')!.click();
 		await flush();
 
 		expect(host.received(M.toolsCall)).toHaveLength(0);
@@ -543,8 +543,8 @@ describe("card behavior", () => {
 			content: [{ type: "text", text: "Open the edit form for this user" }],
 		});
 		// Nothing came back to apply, so the record and status are left alone.
-		expect(root.querySelector(".gadget-card-title")?.textContent).toBe(ROWS[0]!.name);
-		expect(root.querySelector<HTMLElement>("[data-gadget-status]")?.hidden).toBe(true);
+		expect(root.querySelector(".gomu-card-title")?.textContent).toBe(ROWS[0]!.name);
+		expect(root.querySelector<HTMLElement>("[data-gomu-status]")?.hidden).toBe(true);
 	});
 
 	it("fires a card action with FromRow args and applies the result", async () => {
@@ -555,13 +555,13 @@ describe("card behavior", () => {
 		});
 		mountCard({ root, config: cardConfig(), initialData: { rows: ROWS }, bridge });
 
-		root.querySelector<HTMLElement>('[data-gadget-action="0"]')!.click(); // Edit (no confirm)
+		root.querySelector<HTMLElement>('[data-gomu-action="0"]')!.click(); // Edit (no confirm)
 		await flush();
 		const calls = host.received(M.toolsCall);
 		expect(calls).toHaveLength(1);
 		expect(calls[0]!.params).toMatchObject({ name: "edit_user", arguments: { id: 1 } });
-		expect(root.querySelector(".gadget-card-title")?.textContent).toBe("Caroline");
-		expect(root.querySelector<HTMLElement>("[data-gadget-status]")?.textContent).toBe("Saved.");
+		expect(root.querySelector(".gomu-card-title")?.textContent).toBe("Caroline");
+		expect(root.querySelector<HTMLElement>("[data-gomu-status]")?.textContent).toBe("Saved.");
 	});
 
 	it("updates from tool-result notifications", async () => {
@@ -569,7 +569,7 @@ describe("card behavior", () => {
 		mountCard({ root, config: cardConfig(), initialData: { rows: ROWS }, bridge });
 		host.pushToolResult({ structuredContent: { rows: [{ id: 5, name: "Dave", email: "d@x.io", status: "active", balance: 9, website: "" }] } });
 		await flush();
-		expect(root.querySelector(".gadget-card-title")?.textContent).toBe("Dave");
+		expect(root.querySelector(".gomu-card-title")?.textContent).toBe("Dave");
 	});
 
 	it("hydrates from loadTool on mount", async () => {
@@ -582,9 +582,9 @@ describe("card behavior", () => {
 			bridge,
 			ready: Promise.resolve(true),
 		});
-		expect(root.querySelector(".gadget-card-title")?.textContent).toBe("Carol");
+		expect(root.querySelector(".gomu-card-title")?.textContent).toBe("Carol");
 		await flush();
 		expect(host.received(M.toolsCall)).toHaveLength(1);
-		expect(root.querySelector(".gadget-card-title")?.textContent).toBe("Fetched");
+		expect(root.querySelector(".gomu-card-title")?.textContent).toBe("Fetched");
 	});
 });

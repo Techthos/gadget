@@ -4,6 +4,7 @@ import type { MountContext } from "../index";
 import { enhanceDateFields, refreshDateFields, type CalendarCfg } from "../calendar";
 import { refreshDropdowns } from "../dropdown";
 import { CallToolResult, M } from "../protocol";
+import { errorText, textOf } from "../status";
 
 interface FieldCfg {
 	name: string;
@@ -36,12 +37,12 @@ export function mountForm(ctx: MountContext): void {
 	const cfg = ctx.config as unknown as FormCfg;
 	const { root, bridge } = ctx;
 
-	const formMaybe = root.querySelector<HTMLFormElement>("form[data-gadget-form]");
+	const formMaybe = root.querySelector<HTMLFormElement>("form[data-gomu-form]");
 	if (!formMaybe || !Array.isArray(cfg.fields)) return;
 	const form: HTMLFormElement = formMaybe;
-	const statusEl = root.querySelector<HTMLElement>("[data-gadget-status]");
+	const statusEl = root.querySelector<HTMLElement>("[data-gomu-status]");
 
-	// Every date field becomes a gadget calendar before anything reads the form.
+	// Every date field becomes a gomukit calendar before anything reads the form.
 	// The native inputs survive the upgrade and stay the value holders, so
 	// everything below goes on driving them (see ui/src/calendar.ts).
 	const byName = new Map(cfg.fields.map((f) => [f.name, f]));
@@ -60,7 +61,7 @@ export function mountForm(ctx: MountContext): void {
 		if (!statusEl) return;
 		statusEl.hidden = msg === "";
 		statusEl.textContent = msg;
-		statusEl.className = "gadget-status" + (kind ? ` gadget-status--${kind}` : "");
+		statusEl.className = "gomu-status" + (kind ? ` gomu-status--${kind}` : "");
 	}
 
 	function setBusy(busy: boolean): void {
@@ -70,7 +71,7 @@ export function mountForm(ctx: MountContext): void {
 	}
 
 	function clearErrors(): void {
-		for (const slot of root.querySelectorAll<HTMLElement>("[data-gadget-error-for]")) {
+		for (const slot of root.querySelectorAll<HTMLElement>("[data-gomu-error-for]")) {
 			slot.hidden = true;
 			slot.textContent = "";
 		}
@@ -80,8 +81,8 @@ export function mountForm(ctx: MountContext): void {
 	}
 
 	function showFieldError(name: string, message: string): void {
-		for (const slot of root.querySelectorAll<HTMLElement>("[data-gadget-error-for]")) {
-			if (slot.getAttribute("data-gadget-error-for") === name) {
+		for (const slot of root.querySelectorAll<HTMLElement>("[data-gomu-error-for]")) {
+			if (slot.getAttribute("data-gomu-error-for") === name) {
 				slot.hidden = false;
 				slot.textContent = message;
 			}
@@ -211,13 +212,6 @@ export function mountForm(ctx: MountContext): void {
 		}
 	}
 
-	function textOf(res: CallToolResult): string | undefined {
-		for (const block of res.content ?? []) {
-			if (block.type === "text" && typeof block.text === "string") return block.text;
-		}
-		return undefined;
-	}
-
 	function doSubmit(): void {
 		clearErrors();
 		if (!validate()) return;
@@ -231,7 +225,7 @@ export function mountForm(ctx: MountContext): void {
 			},
 			(e: unknown) => {
 				setBusy(false);
-				showStatus("error", e instanceof Error ? e.message : String(e));
+				showStatus("error", errorText(e, "The request failed."));
 			},
 		);
 	}
@@ -240,7 +234,7 @@ export function mountForm(ctx: MountContext): void {
 	// is blocked before its event ever fires: the button click is the real
 	// entry point. The submit listener stays for hosts that do allow forms,
 	// and Enter in a single-line field is wired by hand for the same reason.
-	root.querySelector<HTMLElement>("[data-gadget-submit]")?.addEventListener("click", doSubmit);
+	root.querySelector<HTMLElement>("[data-gomu-submit]")?.addEventListener("click", doSubmit);
 
 	form.addEventListener("submit", (ev) => {
 		ev.preventDefault();
@@ -255,7 +249,7 @@ export function mountForm(ctx: MountContext): void {
 		doSubmit();
 	});
 
-	root.querySelector<HTMLElement>("[data-gadget-cancel]")?.addEventListener("click", () => {
+	root.querySelector<HTMLElement>("[data-gomu-cancel]")?.addEventListener("click", () => {
 		form.reset();
 		refreshDropdowns(form);
 		refreshDateFields(form);

@@ -1,7 +1,7 @@
-// Package theme provides global styling overrides for gadget widgets.
+// Package theme provides global styling overrides for gomukit widgets.
 //
 // Widgets ship a two-layer design-token system as CSS custom properties
-// (--gadget-*). Semantic tokens default to host-injected variables (MCP Apps
+// (--gomu-*). Semantic tokens default to host-injected variables (MCP Apps
 // hosts deliver theme variables via hostContext.styles.variables) with
 // built-in fallbacks. A Theme overrides those defaults: its CSS() block is
 // emitted after the base stylesheet, so non-empty fields win the cascade.
@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-// Theme overrides gadget design tokens. The zero value overrides nothing.
+// Theme overrides gomukit design tokens. The zero value overrides nothing.
 // All fields hold raw CSS values (e.g. "#0f62fe", "0.5rem", "ui-sans-serif,
 // system-ui"). Empty fields keep the host-aware defaults.
 type Theme struct {
@@ -58,7 +58,7 @@ type Theme struct {
 	PagePad string
 
 	// Extra adds or overrides raw custom properties. Keys must start with
-	// "--gadget-". Use it for tokens without a dedicated field.
+	// "--gomu-". Use it for tokens without a dedicated field.
 	Extra map[string]string
 }
 
@@ -67,28 +67,28 @@ var tokenFields = []struct {
 	name  string
 	value func(*Theme) string
 }{
-	{"--gadget-color-bg", func(t *Theme) string { return t.ColorBackground }},
-	{"--gadget-color-page", func(t *Theme) string {
+	{"--gomu-color-bg", func(t *Theme) string { return t.ColorBackground }},
+	{"--gomu-color-page", func(t *Theme) string {
 		if t.Transparent {
 			return "transparent"
 		}
 		return t.ColorPage
 	}},
-	{"--gadget-color-surface", func(t *Theme) string { return t.ColorSurface }},
-	{"--gadget-color-text", func(t *Theme) string { return t.ColorText }},
-	{"--gadget-color-text-muted", func(t *Theme) string { return t.ColorTextMuted }},
-	{"--gadget-color-border", func(t *Theme) string { return t.ColorBorder }},
-	{"--gadget-color-primary", func(t *Theme) string { return t.ColorPrimary }},
-	{"--gadget-color-primary-text", func(t *Theme) string { return t.ColorPrimaryText }},
-	{"--gadget-color-danger", func(t *Theme) string { return t.ColorDanger }},
-	{"--gadget-color-success", func(t *Theme) string { return t.ColorSuccess }},
-	{"--gadget-color-warning", func(t *Theme) string { return t.ColorWarning }},
-	{"--gadget-font", func(t *Theme) string { return t.FontFamily }},
-	{"--gadget-font-mono", func(t *Theme) string { return t.FontFamilyMono }},
-	{"--gadget-radius-s", func(t *Theme) string { return t.RadiusS }},
-	{"--gadget-radius-m", func(t *Theme) string { return t.RadiusM }},
-	{"--gadget-radius-l", func(t *Theme) string { return t.RadiusL }},
-	{"--gadget-space-unit", func(t *Theme) string { return t.SpaceUnit }},
+	{"--gomu-color-surface", func(t *Theme) string { return t.ColorSurface }},
+	{"--gomu-color-text", func(t *Theme) string { return t.ColorText }},
+	{"--gomu-color-text-muted", func(t *Theme) string { return t.ColorTextMuted }},
+	{"--gomu-color-border", func(t *Theme) string { return t.ColorBorder }},
+	{"--gomu-color-primary", func(t *Theme) string { return t.ColorPrimary }},
+	{"--gomu-color-primary-text", func(t *Theme) string { return t.ColorPrimaryText }},
+	{"--gomu-color-danger", func(t *Theme) string { return t.ColorDanger }},
+	{"--gomu-color-success", func(t *Theme) string { return t.ColorSuccess }},
+	{"--gomu-color-warning", func(t *Theme) string { return t.ColorWarning }},
+	{"--gomu-font", func(t *Theme) string { return t.FontFamily }},
+	{"--gomu-font-mono", func(t *Theme) string { return t.FontFamilyMono }},
+	{"--gomu-radius-s", func(t *Theme) string { return t.RadiusS }},
+	{"--gomu-radius-m", func(t *Theme) string { return t.RadiusM }},
+	{"--gomu-radius-l", func(t *Theme) string { return t.RadiusL }},
+	{"--gomu-space-unit", func(t *Theme) string { return t.SpaceUnit }},
 }
 
 // rootFields are document-level tokens: they must land on :root because the
@@ -97,7 +97,7 @@ var rootFields = []struct {
 	name  string
 	value func(*Theme) string
 }{
-	{"--gadget-page-pad", func(t *Theme) string {
+	{"--gomu-page-pad", func(t *Theme) string {
 		if t.Transparent {
 			return "0"
 		}
@@ -106,7 +106,7 @@ var rootFields = []struct {
 }
 
 // CSS renders the theme as declaration blocks (":root { … }" for
-// document-level tokens, ".gadget-root { … }" for widget tokens), or "" when
+// document-level tokens, ".gomu-root { … }" for widget tokens), or "" when
 // nothing is set. Entries that fail Validate are skipped; call Validate to
 // surface them as errors.
 func (t *Theme) CSS() string {
@@ -120,12 +120,12 @@ func (t *Theme) CSS() string {
 	decls := collect(t, tokenFields)
 	for _, k := range sortedKeys(t.Extra) {
 		v := t.Extra[k]
-		if strings.HasPrefix(k, "--gadget-") && safeKey(k) && v != "" && safeValue(v) {
+		if strings.HasPrefix(k, "--gomu-") && safeKey(k) && v != "" && safeValue(v) {
 			decls = append(decls, k+":"+v)
 		}
 	}
 	if len(decls) > 0 {
-		out.WriteString(".gadget-root{" + strings.Join(decls, ";") + "}")
+		out.WriteString(".gomu-root{" + strings.Join(decls, ";") + "}")
 	}
 	return out.String()
 }
@@ -160,8 +160,8 @@ func (t *Theme) Validate() error {
 		}
 	}
 	for _, k := range sortedKeys(t.Extra) {
-		if !strings.HasPrefix(k, "--gadget-") {
-			return fmt.Errorf("theme: Extra key %q must start with --gadget-", k)
+		if !strings.HasPrefix(k, "--gomu-") {
+			return fmt.Errorf("theme: Extra key %q must start with --gomu-", k)
 		}
 		if !safeKey(k) {
 			return fmt.Errorf("theme: unsafe Extra key %q", k)

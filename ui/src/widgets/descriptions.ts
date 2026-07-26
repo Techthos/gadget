@@ -31,16 +31,16 @@ export function fillDescriptions(
 	clear(host);
 	host.hidden = items.length === 0;
 	for (const item of items) {
-		const cell = h("div", { class: "gadget-desc-item" });
-		cell.append(h("dt", { class: "gadget-desc-label" }, item.label || item.key));
+		const cell = h("div", { class: "gomu-desc-item" });
+		cell.append(h("dt", { class: "gomu-desc-label" }, item.label || item.key));
 
 		const value = item.text !== undefined ? item.text : valueNode(item, row ?? {});
 		const dd = h("dd", {
-			class: "gadget-desc-value" + (item.align ? ` gadget-align-${item.align}` : ""),
+			class: "gomu-desc-value" + (item.align ? ` gomu-align-${item.align}` : ""),
 		});
 		if (value === "") {
 			dd.append(document.createTextNode(MISSING));
-			dd.classList.add("gadget-desc-value--missing");
+			dd.classList.add("gomu-desc-value--missing");
 		} else {
 			dd.append(typeof value === "string" ? document.createTextNode(value) : value);
 		}

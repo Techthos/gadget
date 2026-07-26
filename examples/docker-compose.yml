@@ -1,7 +1,7 @@
-# Runs the gadget widget harness and the preview MCP server, both from one
+# Runs the gomukit widget harness and the preview MCP server, both from one
 # image.
 #
-#   docker compose -f examples/harness/docker-compose.yml up -d --build
+#   docker compose -f examples/docker-compose.yml up -d --build
 #
 # Then open http://localhost:8090 for the harness, and point an MCP Apps
 # capable chat client at http://localhost:8081/mcp (or the public URL a proxy
@@ -10,7 +10,7 @@
 # Like the Dockerfile, this needs no checkout: the build context is the remote
 # repository, so the file works on its own on any host with Docker.
 #
-#   curl -O https://raw.githubusercontent.com/Techthos/gadget/main/examples/harness/docker-compose.yml
+#   curl -O https://raw.githubusercontent.com/Techthos/gomukit/main/examples/docker-compose.yml
 #   docker compose up -d
 #
 # Both services declare the same build and image, so the image is built once
@@ -20,7 +20,7 @@
 #   docker compose build --no-cache && docker compose up -d
 
 x-build: &build
-  context: https://github.com/Techthos/gadget.git#main:examples/harness
+  context: https://github.com/Techthos/gomukit.git#main:examples
   args:
     # Branch, tag or commit to serve.
     GIT_REF: main
@@ -36,7 +36,7 @@ x-hardening: &hardening
 services:
   harness:
     build: *build
-    image: gadget:local
+    image: gomukit:local
     # Publish on the host. Bind to 127.0.0.1 instead (127.0.0.1:8090:8090) when
     # a reverse proxy in front terminates TLS.
     ports:
@@ -47,7 +47,7 @@ services:
 
   preview:
     build: *build
-    image: gadget:local
+    image: gomukit:local
     entrypoint: ["/preview"]
     command:
       - -addr

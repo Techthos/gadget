@@ -6,8 +6,8 @@ import { enhanceSelects, refreshDropdown } from "../src/dropdown";
 function shell(inner: string): HTMLElement {
 	document.body.innerHTML = "";
 	const root = document.createElement("div");
-	root.className = "gadget-root";
-	root.setAttribute("data-gadget-widget", "form");
+	root.className = "gomu-root";
+	root.setAttribute("data-gomu-widget", "form");
 	root.innerHTML = inner;
 	document.body.append(root);
 	enhanceSelects(root);
@@ -15,22 +15,22 @@ function shell(inner: string): HTMLElement {
 }
 
 const SINGLE = `
-  <label for="gadget-f-role">Role</label>
-  <select id="gadget-f-role" name="role" class="gadget-input gadget-sort-select" aria-label="Role">
+  <label for="gomu-f-role">Role</label>
+  <select id="gomu-f-role" name="role" class="gomu-input gomu-sort-select" aria-label="Role">
     <option value="user">User</option>
     <option value="admin">Admin</option>
     <option value="owner" disabled>Owner</option>
   </select>`;
 
 const MULTI = `
-  <select id="gadget-f-tags" name="tags" class="gadget-input" multiple placeholder="Pick tags">
+  <select id="gomu-f-tags" name="tags" class="gomu-input" multiple placeholder="Pick tags">
     <option value="a">Alpha</option>
     <option value="b">Beta</option>
     <option value="c">Gamma</option>
   </select>`;
 
 const PLACEHOLDER = `
-  <select data-gadget-sort-select="" class="gadget-input">
+  <select data-gomu-sort-select="" class="gomu-input">
     <option value="">Sort…</option>
     <option value="name|asc">Name ↑</option>
   </select>`;
@@ -38,10 +38,10 @@ const PLACEHOLDER = `
 function parts(root: HTMLElement) {
 	return {
 		select: root.querySelector<HTMLSelectElement>("select")!,
-		trigger: root.querySelector<HTMLButtonElement>(".gadget-dd-trigger")!,
-		panel: root.querySelector<HTMLElement>(".gadget-dd-panel")!,
-		value: root.querySelector<HTMLElement>(".gadget-dd-value")!,
-		options: [...root.querySelectorAll<HTMLElement>(".gadget-dd-option")],
+		trigger: root.querySelector<HTMLButtonElement>(".gomu-dd-trigger")!,
+		panel: root.querySelector<HTMLElement>(".gomu-dd-panel")!,
+		value: root.querySelector<HTMLElement>(".gomu-dd-value")!,
+		options: [...root.querySelectorAll<HTMLElement>(".gomu-dd-option")],
 	};
 }
 
@@ -61,16 +61,16 @@ describe("dropdown", () => {
 		expect(select.isConnected).toBe(true);
 		expect(select.name).toBe("role");
 		expect(select.tabIndex).toBe(-1);
-		expect(select.classList.contains("gadget-dd-native")).toBe(true);
+		expect(select.classList.contains("gomu-dd-native")).toBe(true);
 
 		// The field label addresses the control by id, so the trigger takes it.
-		expect(trigger.id).toBe("gadget-f-role");
+		expect(trigger.id).toBe("gomu-f-role");
 		expect(select.id).toBe("");
 		expect(trigger.getAttribute("role")).toBe("combobox");
 		expect(trigger.getAttribute("aria-expanded")).toBe("false");
 		expect(trigger.getAttribute("aria-label")).toBe("Role");
 		// Author classes style what the user sees.
-		expect(trigger.classList.contains("gadget-sort-select")).toBe(true);
+		expect(trigger.classList.contains("gomu-sort-select")).toBe(true);
 
 		// The panel escapes the card chrome that would clip it.
 		expect(panel.parentElement).toBe(root);
@@ -136,7 +136,7 @@ describe("dropdown", () => {
 		const { select, trigger, panel } = parts(root);
 
 		expect(parts(root).value.textContent).toBe("Pick tags");
-		expect(parts(root).value.classList.contains("gadget-dd-value--placeholder")).toBe(true);
+		expect(parts(root).value.classList.contains("gomu-dd-value--placeholder")).toBe(true);
 
 		trigger.click();
 		parts(root).options[0]!.click();
@@ -155,12 +155,12 @@ describe("dropdown", () => {
 	it("shows an empty value as a placeholder", () => {
 		const root = shell(PLACEHOLDER);
 		expect(parts(root).value.textContent).toBe("Sort…");
-		expect(parts(root).value.classList.contains("gadget-dd-value--placeholder")).toBe(true);
+		expect(parts(root).value.classList.contains("gomu-dd-value--placeholder")).toBe(true);
 
 		parts(root).select.value = "name|asc";
 		refreshDropdown(parts(root).select);
 		expect(parts(root).value.textContent).toBe("Name ↑");
-		expect(parts(root).value.classList.contains("gadget-dd-value--placeholder")).toBe(false);
+		expect(parts(root).value.classList.contains("gomu-dd-value--placeholder")).toBe(false);
 	});
 
 	it("closes on a press outside", () => {
@@ -193,7 +193,7 @@ describe("dropdown", () => {
 	it("enhances a select only once", () => {
 		const root = shell(SINGLE);
 		enhanceSelects(root);
-		expect(root.querySelectorAll(".gadget-dd-trigger").length).toBe(1);
-		expect(root.querySelectorAll(".gadget-dd-panel").length).toBe(1);
+		expect(root.querySelectorAll(".gomu-dd-trigger").length).toBe(1);
+		expect(root.querySelectorAll(".gomu-dd-panel").length).toBe(1);
 	});
 });

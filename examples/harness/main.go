@@ -1,5 +1,5 @@
 // Command harness serves a fake MCP Apps host for manually smoke-testing
-// gadget widgets without a real host. It renders a catalog of widget stories
+// gomukit widgets without a real host. It renders a catalog of widget stories
 // (one route per story, baked data) and embeds them in an iframe behind a
 // JSON-RPC postMessage host that answers the handshake, replies to tool
 // calls and logs all traffic.
@@ -15,14 +15,14 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/techthos/gadget"
-	"github.com/techthos/gadget/theme"
+	"github.com/techthos/gomukit"
+	"github.com/techthos/gomukit/theme"
 )
 
 //go:embed host.html
 var hostPage []byte
 
-func widgetHandler(w gadget.Widget) http.HandlerFunc {
+func widgetHandler(w gomukit.Widget) http.HandlerFunc {
 	return func(rw http.ResponseWriter, _ *http.Request) {
 		doc, err := w.Document()
 		if err != nil {
@@ -38,7 +38,7 @@ func widgetHandler(w gadget.Widget) http.HandlerFunc {
 // setTransparent flips theme.Transparent on a freshly built widget, so every
 // story can be viewed both ways from the host page's "Frameless" toggle
 // instead of shipping a duplicate story per mode.
-func setTransparent(w gadget.Widget, on bool) gadget.Widget {
+func setTransparent(w gomukit.Widget, on bool) gomukit.Widget {
 	apply := func(t **theme.Theme) {
 		if *t == nil {
 			*t = &theme.Theme{}
@@ -46,17 +46,17 @@ func setTransparent(w gadget.Widget, on bool) gadget.Widget {
 		(*t).Transparent = on
 	}
 	switch v := w.(type) {
-	case *gadget.Table:
+	case *gomukit.Table:
 		apply(&v.Theme)
-	case *gadget.Form:
+	case *gomukit.Form:
 		apply(&v.Theme)
-	case *gadget.Card:
+	case *gomukit.Card:
 		apply(&v.Theme)
-	case *gadget.CardList:
+	case *gomukit.CardList:
 		apply(&v.Theme)
-	case *gadget.Menu:
+	case *gomukit.Menu:
 		apply(&v.Theme)
-	case *gadget.Confirm:
+	case *gomukit.Confirm:
 		apply(&v.Theme)
 	}
 	return w
@@ -93,6 +93,6 @@ func main() {
 		widgetHandler(setTransparent(s.build(), r.URL.Query().Get("transparent") != "0"))(rw, r)
 	})
 
-	log.Printf("gadget harness on http://localhost%s (%d stories)", *addr, len(list))
+	log.Printf("gomukit harness on http://localhost%s (%d stories)", *addr, len(list))
 	log.Fatal(http.ListenAndServe(*addr, mux))
 }

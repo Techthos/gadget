@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/techthos/gadget"
+	"github.com/techthos/gomukit"
 )
 
 // customer is one account in the scenario app. The json tags are the row
@@ -137,7 +137,7 @@ func (s *store) customerRows() []map[string]any {
 		list = append(list, c)
 	}
 	sort.Slice(list, func(i, j int) bool { return list[i].ID < list[j].ID })
-	rows, _ := gadget.RowsOf(list)
+	rows, _ := gomukit.RowsOf(list)
 	return rows
 }
 
@@ -159,7 +159,7 @@ func (s *store) orderRows() []map[string]any {
 		list = append(list, o)
 	}
 	sort.Slice(list, func(i, j int) bool { return list[i].ID < list[j].ID })
-	rows, _ := gadget.RowsOf(list)
+	rows, _ := gomukit.RowsOf(list)
 	return rows
 }
 
@@ -359,8 +359,8 @@ func (s *store) addExtras(id int, extras []string) (*order, bool) {
 // offer, which is why the options are computed per call rather than authored
 // once into the widget.
 func shippingOptions(o *order) []map[string]any {
-	price := gadget.DescriptionItem{Label: "Price", Key: "price", Type: gadget.ColNumber, Format: "currency:EUR"}
-	arrives := gadget.DescriptionItem{Label: "Arrives", Key: "eta", Type: gadget.ColDate, Format: "date"}
+	price := gomukit.DescriptionItem{Label: "Price", Key: "price", Type: gomukit.ColNumber, Format: "currency:EUR"}
+	arrives := gomukit.DescriptionItem{Label: "Arrives", Key: "eta", Type: gomukit.ColDate, Format: "date"}
 	details := []map[string]any{itemConfig(price), itemConfig(arrives)}
 
 	standard := 4.90 + o.WeightKg*0.80
@@ -383,7 +383,7 @@ func shippingOptions(o *order) []map[string]any {
 			"details":      details,
 			"data":         map[string]any{"price": round2(express), "eta": "2026-07-27T12:00:00Z"},
 			"badge":        "fastest",
-			"badgeVariant": string(gadget.BadgeSuccess),
+			"badgeVariant": string(gomukit.BadgeSuccess),
 		},
 	}
 
@@ -407,7 +407,7 @@ func shippingOptions(o *order) []map[string]any {
 // --- helpers ---
 
 func rowOf(v any) map[string]any {
-	rows, err := gadget.RowsOf([]any{v})
+	rows, err := gomukit.RowsOf([]any{v})
 	if err != nil || len(rows) == 0 {
 		return map[string]any{}
 	}
@@ -417,7 +417,7 @@ func rowOf(v any) map[string]any {
 // itemConfig renders a DescriptionItem as the JSON shape the runtime reads
 // for options delivered at call time. Authored items go through the widget
 // config; these travel in structuredContent, so they are built by hand.
-func itemConfig(i gadget.DescriptionItem) map[string]any {
+func itemConfig(i gomukit.DescriptionItem) map[string]any {
 	m := map[string]any{"label": i.Label, "key": i.Key}
 	if i.Type != "" {
 		m["type"] = string(i.Type)

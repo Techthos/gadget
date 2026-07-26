@@ -1,4 +1,4 @@
-package gadget
+package gomukit
 
 import (
 	"fmt"

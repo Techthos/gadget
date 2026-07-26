@@ -309,7 +309,7 @@ function monthName(index: number): string {
 // --- The grid -----------------------------------------------------------
 
 export function createCalendar(cfg: CalendarCfg, opts: CalendarOptions = {}): CalendarView {
-  const el = opts.host ?? h("div", { class: "gadget-cal" });
+  const el = opts.host ?? h("div", { class: "gomu-cal" });
   const mode: "single" | "range" = cfg.mode === "range" ? "range" : "single";
 
   let conf: CalendarCfg = { ...cfg };
@@ -333,20 +333,20 @@ export function createCalendar(cfg: CalendarCfg, opts: CalendarOptions = {}): Ca
   // Built once. A rebuild would orphan the popup panels of the caption
   // dropdowns, which hang off the widget root rather than the header.
   const nav = { prev: navButton("prev"), next: navButton("next") };
-  const caption = h("div", { class: "gadget-cal-caption" });
+  const caption = h("div", { class: "gomu-cal-caption" });
   const monthSelect = h("select", {
-    class: "gadget-input gadget-cal-select gadget-cal-select--month",
+    class: "gomu-input gomu-cal-select gomu-cal-select--month",
     "aria-label": "Month",
   }) as HTMLSelectElement;
   const yearSelect = h("select", {
-    class: "gadget-input gadget-cal-select gadget-cal-select--year",
+    class: "gomu-input gomu-cal-select gomu-cal-select--year",
     "aria-label": "Year",
   }) as HTMLSelectElement;
-  const monthsEl = h("div", { class: "gadget-cal-months" });
+  const monthsEl = h("div", { class: "gomu-cal-months" });
 
-  el.classList.add("gadget-cal");
-  el.classList.add(`gadget-cal--${mode}`);
-  el.classList.add(`gadget-cal--months-${months}`);
+  el.classList.add("gomu-cal");
+  el.classList.add(`gomu-cal--${mode}`);
+  el.classList.add(`gomu-cal--months-${months}`);
 
   if (conf.monthDropdowns) {
     for (let m = 0; m < 12; m++) {
@@ -360,18 +360,18 @@ export function createCalendar(cfg: CalendarCfg, opts: CalendarOptions = {}): Ca
     caption.append(monthSelect, yearSelect);
   }
 
-  const header = h("div", { class: "gadget-cal-header" }, nav.prev, caption, nav.next);
-  const main = h("div", { class: "gadget-cal-main" }, header, monthsEl);
+  const header = h("div", { class: "gomu-cal-header" }, nav.prev, caption, nav.next);
+  const main = h("div", { class: "gomu-cal-main" }, header, monthsEl);
   if (conf.presets?.length) el.append(presetsNode(conf.presets));
   el.append(main);
   if (opts.clearable) {
     main.append(
       h(
         "div",
-        { class: "gadget-cal-foot" },
+        { class: "gomu-cal-foot" },
         h(
           "button",
-          { type: "button", class: "gadget-btn gadget-cal-clear", "data-gadget-cal-clear": "" },
+          { type: "button", class: "gomu-btn gomu-cal-clear", "data-gomu-cal-clear": "" },
           "Clear",
         ),
       ),
@@ -381,24 +381,24 @@ export function createCalendar(cfg: CalendarCfg, opts: CalendarOptions = {}): Ca
   function navButton(dir: "prev" | "next"): HTMLButtonElement {
     const b = h("button", {
       type: "button",
-      class: `gadget-cal-nav gadget-cal-nav--${dir}`,
+      class: `gomu-cal-nav gomu-cal-nav--${dir}`,
       "aria-label": dir === "prev" ? "Previous month" : "Next month",
-      "data-gadget-cal-nav": dir,
+      "data-gomu-cal-nav": dir,
     }) as HTMLButtonElement;
-    b.append(icon("gadget-cal-nav-icon", dir === "prev" ? CHEVRON_LEFT : CHEVRON_RIGHT));
+    b.append(icon("gomu-cal-nav-icon", dir === "prev" ? CHEVRON_LEFT : CHEVRON_RIGHT));
     return b;
   }
 
   function presetsNode(presets: PresetCfg[]): HTMLElement {
-    const wrap = h("div", { class: "gadget-cal-presets" });
+    const wrap = h("div", { class: "gomu-cal-presets" });
     presets.forEach((p, i) => {
       wrap.append(
         h(
           "button",
           {
             type: "button",
-            class: "gadget-btn gadget-cal-preset",
-            "data-gadget-cal-preset": String(i),
+            class: "gomu-btn gomu-cal-preset",
+            "data-gomu-cal-preset": String(i),
           },
           p.label,
         ),
@@ -517,25 +517,69 @@ export function createCalendar(cfg: CalendarCfg, opts: CalendarOptions = {}): Ca
     report(true);
   }
 
+  /**
+   * The selection a shortcut would make, or null where it would make none.
+   *
+   * A span that runs past the ends of what may be picked is trimmed to them
+   * rather than refused: against a calendar that opens on the 1st, "last 30
+   * days" is the days of it there are. Refusing it left a shortcut that looked
+   * live and did nothing at all, which is how a calendar whose Min is a day
+   * after today ends up with a rail of dead buttons.
+   *
+   * Two things are never trimmed. A span that straddles a blocked day is not a
+   * span the reader could have drawn by hand, and handing back a shorter one
+   * names a window nobody asked for. And a shortcut that picks a single day
+   * picks that day or nothing: a "Today" that quietly picks the 1st because
+   * today is before Min is not the day it says it is.
+   */
+  function presetWindow(p: PresetCfg): DateValue | null {
+    const window = resolvePreset(p, mode);
+    if (!window) return null;
+    const lo = minMs();
+    const hi = maxMs();
+    const clamp = (ms: number): number => {
+      if (lo !== null && ms < lo) return lo;
+      if (hi !== null && ms > hi) return hi;
+      return ms;
+    };
+    let start = parseISO(window.start);
+    if (start === null) return null;
+    let end = mode === "range" ? parseISO(window.end) : null;
+    if (end === null) {
+      return isDisabled(start) ? null : { start: toISO(start), end: "" };
+    }
+    // A window wholly outside the bounds collapses onto one end of them, which
+    // is a day the reader never asked for; only an overlap survives.
+    if ((lo !== null && end < lo) || (hi !== null && start > hi)) return null;
+    start = clamp(start);
+    end = clamp(end);
+    if (!spanFree(start, end)) return null;
+    return { start: toISO(start), end: toISO(end) };
+  }
+
   function usePreset(index: number): void {
     const p = conf.presets?.[index];
     if (!p) return;
-    const window = resolvePreset(p, mode);
+    const window = presetWindow(p);
     if (!window) return;
-    const start = parseISO(window.start);
-    if (start === null || isDisabled(start)) return;
-    const end = parseISO(window.end);
-    if (mode === "range" && end !== null && spanFree(start, end)) {
-      sel = { start: window.start, end: window.end };
-    } else {
-      sel = { start: window.start, end: "" };
-    }
+    sel = window;
     anchor = "";
     hover = "";
-    focus = start;
-    setView(start);
+    focus = parseISO(window.start) as number;
+    setView(focus);
     render();
     report(mode === "single" || sel.end !== "");
+  }
+
+  /** Lights the shortcuts that have something to offer against the bounds and
+   * blocked days as they now stand — which a tool result can change. */
+  function syncPresets(): void {
+    const presets = conf.presets;
+    if (!presets?.length) return;
+    for (const btn of el.querySelectorAll<HTMLButtonElement>("[data-gomu-cal-preset]")) {
+      const p = presets[Number(btn.getAttribute("data-gomu-cal-preset"))];
+      btn.disabled = !p || presetWindow(p) === null;
+    }
   }
 
   function clearSelection(): void {
@@ -580,17 +624,17 @@ export function createCalendar(cfg: CalendarCfg, opts: CalendarOptions = {}): Ca
     const m = new Date(first).getUTCMonth();
     const today = todayISO();
 
-    const table = h("table", { class: "gadget-cal-grid", role: "grid" });
+    const table = h("table", { class: "gomu-cal-grid", role: "grid" });
     // The month names itself over its own grid, except where the header
     // already does (one month, one name) — there the caption stays as the
     // grid's accessible name and out of view.
-    const cap = h("caption", { class: "gadget-cal-month-name" }, fmtMonth.format(new Date(first)));
-    if (months === 1) cap.classList.add("gadget-sr-only");
+    const cap = h("caption", { class: "gomu-cal-month-name" }, fmtMonth.format(new Date(first)));
+    if (months === 1) cap.classList.add("gomu-sr-only");
     table.append(cap);
 
     const headRow = h("tr");
     if (conf.weekNumbers) {
-      headRow.append(h("th", { scope: "col", class: "gadget-cal-weeknum" }, "#"));
+      headRow.append(h("th", { scope: "col", class: "gomu-cal-weeknum" }, "#"));
     }
     const start = firstDayOfWeek();
     for (let i = 0; i < 7; i++) {
@@ -598,7 +642,7 @@ export function createCalendar(cfg: CalendarCfg, opts: CalendarOptions = {}): Ca
       headRow.append(
         h(
           "th",
-          { scope: "col", class: "gadget-cal-weekday", "aria-label": fmtWeekdayLong.format(day) },
+          { scope: "col", class: "gomu-cal-weekday", "aria-label": fmtWeekdayLong.format(day) },
           fmtWeekday.format(day),
         ),
       );
@@ -614,7 +658,7 @@ export function createCalendar(cfg: CalendarCfg, opts: CalendarOptions = {}): Ca
       const row = h("tr");
       if (conf.weekNumbers) {
         row.append(
-          h("th", { scope: "row", class: "gadget-cal-weeknum" }, String(isoWeek(cursor))),
+          h("th", { scope: "row", class: "gomu-cal-weeknum" }, String(isoWeek(cursor))),
         );
       }
       for (let i = 0; i < 7; i++, cursor = addDays(cursor, 1)) {
@@ -623,31 +667,31 @@ export function createCalendar(cfg: CalendarCfg, opts: CalendarOptions = {}): Ca
       body.append(row);
     }
     table.append(body);
-    return h("div", { class: "gadget-cal-month" }, table);
+    return h("div", { class: "gomu-cal-month" }, table);
   }
 
   function dayCell(ms: number, month: number, year: number, today: string): HTMLElement {
     const iso = toISO(ms);
     const d = new Date(ms);
     const outside = d.getUTCMonth() !== month || d.getUTCFullYear() !== year;
-    const cell = h("td", { class: "gadget-cal-cell", role: "gridcell" });
+    const cell = h("td", { class: "gomu-cal-cell", role: "gridcell" });
 
     // Days from the neighbouring month keep the week whole but are not offered
     // twice: the month they belong to shows them.
     if (outside) {
-      cell.classList.add("gadget-cal-cell--outside");
-      // A span, not a button, and deliberately not a .gadget-cal-day: it takes
+      cell.classList.add("gomu-cal-cell--outside");
+      // A span, not a button, and deliberately not a .gomu-cal-day: it takes
       // none of a day's states, including the hover that would suggest it could
       // be picked here.
-      cell.append(h("span", { class: "gadget-cal-outside" }, String(d.getUTCDate())));
+      cell.append(h("span", { class: "gomu-cal-outside" }, String(d.getUTCDate())));
       return cell;
     }
 
     const disabled = isDisabled(ms);
     const btn = h("button", {
       type: "button",
-      class: "gadget-cal-day",
-      "data-gadget-cal-day": iso,
+      class: "gomu-cal-day",
+      "data-gomu-cal-day": iso,
       // One tab stop for the whole grid; the arrows move within it.
       tabindex: iso === toISO(focus) ? "0" : "-1",
       "aria-label": fmtFull.format(d),
@@ -657,8 +701,8 @@ export function createCalendar(cfg: CalendarCfg, opts: CalendarOptions = {}): Ca
       "aria-disabled": disabled ? "true" : null,
       "aria-current": iso === today ? "date" : null,
     }) as HTMLButtonElement;
-    if (disabled) btn.classList.add("gadget-cal-day--disabled");
-    if (iso === today) btn.classList.add("gadget-cal-day--today");
+    if (disabled) btn.classList.add("gomu-cal-day--disabled");
+    if (iso === today) btn.classList.add("gomu-cal-day--today");
     btn.append(document.createTextNode(String(d.getUTCDate())));
     cell.append(btn);
     paintDay(btn, ms);
@@ -671,22 +715,22 @@ export function createCalendar(cfg: CalendarCfg, opts: CalendarOptions = {}): Ca
    * one shadow is a lot of work for a shadow. */
   function paintDay(btn: HTMLElement, ms: number): void {
     const { start, end, inside } = selectionOf(ms);
-    btn.classList.toggle("gadget-cal-day--in-range", inside);
-    btn.classList.toggle("gadget-cal-day--start", start);
-    btn.classList.toggle("gadget-cal-day--end", end);
-    btn.classList.toggle("gadget-cal-day--only", start && end);
+    btn.classList.toggle("gomu-cal-day--in-range", inside);
+    btn.classList.toggle("gomu-cal-day--start", start);
+    btn.classList.toggle("gomu-cal-day--end", end);
+    btn.classList.toggle("gomu-cal-day--only", start && end);
     btn.setAttribute("aria-selected", inside ? "true" : "false");
     const cell = btn.parentElement;
     if (!cell) return;
-    cell.classList.toggle("gadget-cal-cell--in-range", inside);
-    cell.classList.toggle("gadget-cal-cell--start", start);
-    cell.classList.toggle("gadget-cal-cell--end", end);
+    cell.classList.toggle("gomu-cal-cell--in-range", inside);
+    cell.classList.toggle("gomu-cal-cell--start", start);
+    cell.classList.toggle("gomu-cal-cell--end", end);
   }
 
   /** Repaints the selection over the grid already on screen. */
   function paint(): void {
-    for (const btn of monthsEl.querySelectorAll<HTMLElement>("[data-gadget-cal-day]")) {
-      const ms = parseISO(btn.getAttribute("data-gadget-cal-day"));
+    for (const btn of monthsEl.querySelectorAll<HTMLElement>("[data-gomu-cal-day]")) {
+      const ms = parseISO(btn.getAttribute("data-gomu-cal-day"));
       if (ms !== null) paintDay(btn, ms);
     }
   }
@@ -732,17 +776,17 @@ export function createCalendar(cfg: CalendarCfg, opts: CalendarOptions = {}): Ca
       yearSelect.value = String(d.getUTCFullYear());
       refreshDropdown(monthSelect);
       refreshDropdown(yearSelect);
-      caption.classList.remove("gadget-cal-caption--text");
+      caption.classList.remove("gomu-cal-caption--text");
       return;
     }
     formatters();
     clear(caption);
-    caption.classList.add("gadget-cal-caption--text");
+    caption.classList.add("gomu-cal-caption--text");
     // One month is named in the header, between the two arrows. Several name
     // themselves over their own grid — a header spanning them would say what
     // the columns already say.
     if (months === 1) {
-      caption.append(h("span", { class: "gadget-cal-caption-text" }, fmtMonth.format(new Date(view))));
+      caption.append(h("span", { class: "gomu-cal-caption-text" }, fmtMonth.format(new Date(view))));
     }
   }
 
@@ -750,10 +794,11 @@ export function createCalendar(cfg: CalendarCfg, opts: CalendarOptions = {}): Ca
     const hadFocus = el.contains(document.activeElement);
     formatters();
     syncHeader();
+    syncPresets();
     clear(monthsEl);
     for (let i = 0; i < months; i++) monthsEl.append(monthNode(i));
     if (hadFocus) focusDay();
-    // The caption dropdowns become gadget dropdowns once the grid is in the
+    // The caption dropdowns become gomukit dropdowns once the grid is in the
     // document: their panels hang off the widget root, which a detached
     // element has none of.
     if (conf.monthDropdowns && !dropdownsEnhanced && el.isConnected) {
@@ -765,7 +810,7 @@ export function createCalendar(cfg: CalendarCfg, opts: CalendarOptions = {}): Ca
 
   function focusDay(): void {
     const btn = monthsEl.querySelector<HTMLButtonElement>(
-      `[data-gadget-cal-day="${toISO(focus)}"]`,
+      `[data-gomu-cal-day="${toISO(focus)}"]`,
     );
     btn?.focus({ preventScroll: true });
   }
@@ -798,32 +843,32 @@ export function createCalendar(cfg: CalendarCfg, opts: CalendarOptions = {}): Ca
     const target = ev.target;
     if (!(target instanceof Element)) return;
 
-    const day = target.closest<HTMLElement>("[data-gadget-cal-day]");
+    const day = target.closest<HTMLElement>("[data-gomu-cal-day]");
     if (day) {
       if (day.getAttribute("aria-disabled") === "true") return;
-      pick(day.getAttribute("data-gadget-cal-day") ?? "");
+      pick(day.getAttribute("data-gomu-cal-day") ?? "");
       return;
     }
-    const nav0 = target.closest<HTMLElement>("[data-gadget-cal-nav]");
+    const nav0 = target.closest<HTMLElement>("[data-gomu-cal-nav]");
     if (nav0) {
-      setView(addMonths(view, nav0.getAttribute("data-gadget-cal-nav") === "prev" ? -1 : 1));
+      setView(addMonths(view, nav0.getAttribute("data-gomu-cal-nav") === "prev" ? -1 : 1));
       render();
       return;
     }
-    const preset = target.closest<HTMLElement>("[data-gadget-cal-preset]");
+    const preset = target.closest<HTMLElement>("[data-gomu-cal-preset]");
     if (preset) {
-      usePreset(Number(preset.getAttribute("data-gadget-cal-preset")));
+      usePreset(Number(preset.getAttribute("data-gomu-cal-preset")));
       return;
     }
-    if (target.closest("[data-gadget-cal-clear]")) clearSelection();
+    if (target.closest("[data-gomu-cal-clear]")) clearSelection();
   });
 
   el.addEventListener("pointerover", (ev) => {
     if (mode !== "range" || sel.start === "" || sel.end !== "") return;
     const target = ev.target;
     if (!(target instanceof Element)) return;
-    const day = target.closest<HTMLElement>("[data-gadget-cal-day]");
-    const iso = day?.getAttribute("data-gadget-cal-day") ?? "";
+    const day = target.closest<HTMLElement>("[data-gomu-cal-day]");
+    const iso = day?.getAttribute("data-gomu-cal-day") ?? "";
     if (iso === hover) return;
     hover = iso;
     paint();
@@ -837,7 +882,7 @@ export function createCalendar(cfg: CalendarCfg, opts: CalendarOptions = {}): Ca
 
   el.addEventListener("keydown", (ev) => {
     const target = ev.target;
-    if (!(target instanceof Element) || !target.closest("[data-gadget-cal-day]")) return;
+    if (!(target instanceof Element) || !target.closest("[data-gomu-cal-day]")) return;
     let next: number | null = null;
     switch (ev.key) {
       case "ArrowLeft":
@@ -933,7 +978,7 @@ const fields = new WeakMap<HTMLInputElement, DateField>();
 let seq = 0;
 
 /**
- * Upgrades a form's date fields into gadget calendars: a trigger showing the
+ * Upgrades a form's date fields into gomukit calendars: a trigger showing the
  * picked date (or window) in the host's locale, and the grid in a popover.
  *
  * The native inputs stay in the DOM as the single source of truth — value,
@@ -949,16 +994,16 @@ export function enhanceDateFields(
   scope: ParentNode,
   cfgFor: (name: string) => { calendar?: CalendarCfg; endName?: string; required?: boolean } | null,
 ): void {
-  for (const wrap of scope.querySelectorAll<HTMLElement>("[data-gadget-daterange]")) {
-    const name = wrap.getAttribute("data-gadget-daterange") ?? "";
-    const startEl = wrap.querySelector<HTMLInputElement>(".gadget-daterange-start");
-    const endEl = wrap.querySelector<HTMLInputElement>(".gadget-daterange-end");
+  for (const wrap of scope.querySelectorAll<HTMLElement>("[data-gomu-daterange]")) {
+    const name = wrap.getAttribute("data-gomu-daterange") ?? "";
+    const startEl = wrap.querySelector<HTMLInputElement>(".gomu-daterange-start");
+    const endEl = wrap.querySelector<HTMLInputElement>(".gomu-daterange-end");
     if (!startEl || !endEl) continue;
     const field = cfgFor(name);
     enhanceDateInput(startEl, endEl, wrap, field?.calendar ?? { mode: "range" }, !field?.required);
   }
   for (const input of scope.querySelectorAll<HTMLInputElement>("input[type=date]")) {
-    if (input.closest("[data-gadget-daterange]")) continue;
+    if (input.closest("[data-gomu-daterange]")) continue;
     const field = cfgFor(input.name);
     if (!field) continue;
     enhanceDateInput(input, null, null, field.calendar ?? {}, !field.required);
@@ -990,25 +1035,25 @@ function enhanceDateInput(
   const parent = wrapEl ?? startEl.parentNode;
   if (!parent) return;
   const range = endEl !== null;
-  const id = `gadget-cal-${++seq}`;
+  const id = `gomu-cal-${++seq}`;
 
   // A range field is already wrapped (Go renders its two inputs in one block);
   // a single date input gets a wrapper here, the way the dropdown wraps a
   // <select>, so the trigger has something to be positioned inside.
-  const wrap = wrapEl ?? h("div", { class: "gadget-dt" });
+  const wrap = wrapEl ?? h("div", { class: "gomu-dt" });
   if (!wrapEl) {
     (parent as Node & ParentNode).insertBefore(wrap, startEl);
     wrap.append(startEl);
   }
-  wrap.classList.add("gadget-dt");
-  startEl.classList.add("gadget-dt-native");
+  wrap.classList.add("gomu-dt");
+  startEl.classList.add("gomu-dt-native");
   startEl.tabIndex = -1;
-  endEl?.classList.add("gadget-dt-native");
+  endEl?.classList.add("gomu-dt-native");
   if (endEl) endEl.tabIndex = -1;
 
   const trigger = h("button", {
     type: "button",
-    class: "gadget-input gadget-dt-trigger",
+    class: "gomu-input gomu-dt-trigger",
     "aria-haspopup": "dialog",
     "aria-expanded": "false",
     "aria-controls": id,
@@ -1022,13 +1067,13 @@ function enhanceDateInput(
   const label = startEl.getAttribute("aria-label");
   if (label !== null && !range) trigger.setAttribute("aria-label", label);
 
-  trigger.append(icon("gadget-dt-icon", ...CALENDAR_ICON));
-  const valueEl = h("span", { class: "gadget-dt-value" });
+  trigger.append(icon("gomu-dt-icon", ...CALENDAR_ICON));
+  const valueEl = h("span", { class: "gomu-dt-value" });
   trigger.append(valueEl);
   wrap.append(trigger);
 
   const panel = h("div", {
-    class: "gadget-pop-panel gadget-cal-panel",
+    class: "gomu-pop-panel gomu-cal-panel",
     id,
     role: "dialog",
     "aria-modal": "false",
@@ -1084,7 +1129,7 @@ function enhanceDateInput(
         : formatDateRange(start, end)
       : formatDate(start);
     valueEl.textContent = text === "" ? placeholder() : text;
-    valueEl.classList.toggle("gadget-dt-value--placeholder", text === "");
+    valueEl.classList.toggle("gomu-dt-value--placeholder", text === "");
 
     trigger.disabled = startEl.disabled;
     const invalid = startEl.getAttribute("aria-invalid");

@@ -3,93 +3,93 @@
  * its own via auto-fill, so the same document works in a narrow chat pane and
  * a wide panel without a breakpoint. */
 
-.gadget-menu {
+.gomu-menu {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(var(--gadget-menu-tile-min), 1fr));
-  gap: calc(var(--gadget-space-unit) * 3);
-  padding: calc(var(--gadget-space-unit) * 4);
+  grid-template-columns: repeat(auto-fill, minmax(var(--gomu-menu-tile-min), 1fr));
+  gap: calc(var(--gomu-space-unit) * 3);
+  padding: calc(var(--gomu-space-unit) * 4);
 }
 
-.gadget-menu-intro {
+.gomu-menu-intro {
   margin: 0;
-  padding: calc(var(--gadget-space-unit) * 4) calc(var(--gadget-space-unit) * 4) 0;
-  color: var(--gadget-color-text-muted);
+  padding: calc(var(--gomu-space-unit) * 4) calc(var(--gomu-space-unit) * 4) 0;
+  color: var(--gomu-color-text-muted);
 }
 
-.gadget-menu-item {
+.gomu-menu-item {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: calc(var(--gadget-space-unit) * 1.5);
+  gap: calc(var(--gomu-space-unit) * 1.5);
   height: 100%;
   font: inherit;
   text-align: start;
-  color: var(--gadget-color-text);
-  background: var(--gadget-color-bg);
-  border: 1px solid var(--gadget-color-border);
-  border-radius: var(--gadget-radius-m);
-  padding: calc(var(--gadget-space-unit) * 3.5);
+  color: var(--gomu-color-text);
+  background: var(--gomu-color-bg);
+  border: 1px solid var(--gomu-color-border);
+  border-radius: var(--gomu-radius-m);
+  padding: calc(var(--gomu-space-unit) * 3.5);
   cursor: pointer;
 }
 
-.gadget-menu-item:hover:not(:disabled) {
-  background: var(--gadget-color-surface);
-  border-color: var(--gadget-color-primary);
+.gomu-menu-item:hover:not(:disabled) {
+  background: var(--gomu-color-surface);
+  border-color: var(--gomu-color-primary);
 }
 
 /* Tiles are disabled together while a menu tool call is in flight. */
-.gadget-menu-item:disabled {
+.gomu-menu-item:disabled {
   opacity: 0.5;
   cursor: default;
 }
 
 /* Present on every tile of a menu that uses icons or badges anywhere, empty
  * or not, so labels share one baseline across the grid. */
-.gadget-menu-top {
+.gomu-menu-top {
   display: flex;
   align-items: center;
-  gap: calc(var(--gadget-space-unit) * 2);
+  gap: calc(var(--gomu-space-unit) * 2);
   width: 100%;
   min-height: 1.5rem;
-  margin-bottom: calc(var(--gadget-space-unit) * 0.5);
+  margin-bottom: calc(var(--gomu-space-unit) * 0.5);
 }
 
-.gadget-menu-icon {
+.gomu-menu-icon {
   display: inline-flex;
   flex: none;
-  color: var(--gadget-color-primary);
+  color: var(--gomu-color-primary);
 }
 
-.gadget-menu-icon > svg {
+.gomu-menu-icon > svg {
   width: 1.5rem;
   height: 1.5rem;
 }
 
-.gadget-menu-badge {
+.gomu-menu-badge {
   margin-inline-start: auto;
 }
 
-.gadget-menu-label {
+.gomu-menu-label {
   font-weight: 600;
   font-size: 0.9375rem;
   overflow-wrap: anywhere;
 }
 
-.gadget-menu-desc {
-  color: var(--gadget-color-text-muted);
+.gomu-menu-desc {
+  color: var(--gomu-color-text-muted);
   font-size: 0.8125rem;
   overflow-wrap: anywhere;
 }
 
 /* The grid already reflows to one column here; this only stops the chrome
  * from eating a tenth of the width on each side. */
-@container gadget (max-width: 34rem) {
-  .gadget-menu {
-    padding: calc(var(--gadget-space-unit) * 3);
-    gap: calc(var(--gadget-space-unit) * 2);
+@container gomu (max-width: 34rem) {
+  .gomu-menu {
+    padding: calc(var(--gomu-space-unit) * 3);
+    gap: calc(var(--gomu-space-unit) * 2);
   }
 
-  .gadget-menu-intro {
-    padding: calc(var(--gadget-space-unit) * 3) calc(var(--gadget-space-unit) * 3) 0;
+  .gomu-menu-intro {
+    padding: calc(var(--gomu-space-unit) * 3) calc(var(--gomu-space-unit) * 3) 0;
   }
 }

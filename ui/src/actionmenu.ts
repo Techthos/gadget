@@ -41,7 +41,7 @@ export interface MenuBinding {
 
 export interface ActionMenu {
   /**
-   * Wires every `data-gadget-<attr>` trigger under root, now and in the
+   * Wires every `data-gomu-<attr>` trigger under root, now and in the
    * future: resolve is asked what the pressed one stands for, and returning
    * null (or no actions) leaves the press unanswered.
    */
@@ -63,22 +63,22 @@ export function actionMenuTrigger(
 ): HTMLButtonElement {
   const btn = h("button", {
     type: "button",
-    class: "gadget-btn gadget-action-trigger",
+    class: "gomu-btn gomu-action-trigger",
     "aria-haspopup": "menu",
     "aria-expanded": "false",
     "aria-label": label,
     ...attrs,
   }) as HTMLButtonElement;
-  btn.append(icon("gadget-action-dots", ...DOTS_PATHS));
+  btn.append(icon("gomu-action-dots", ...DOTS_PATHS));
   return btn;
 }
 
 /** Creates the widget's single action-menu popup. */
 export function createActionMenu(root: HTMLElement): ActionMenu {
   const host = popupHost(root);
-  const id = `gadget-menu-${++seq}`;
+  const id = `gomu-menu-${++seq}`;
   const panel = h("div", {
-    class: "gadget-pop-panel gadget-action-panel",
+    class: "gomu-pop-panel gomu-action-panel",
     id,
     role: "menu",
     hidden: true,
@@ -112,8 +112,8 @@ export function createActionMenu(root: HTMLElement): ActionMenu {
   function build(items: MenuAction[]): void {
     clear(panel);
     itemEls = items.map((action, i) => {
-      let cls = "gadget-action-item";
-      if (action.variant) cls += ` gadget-action-item--${action.variant}`;
+      let cls = "gomu-action-item";
+      if (action.variant) cls += ` gomu-action-item--${action.variant}`;
       const el = h(
         "div",
         {
@@ -121,7 +121,7 @@ export function createActionMenu(root: HTMLElement): ActionMenu {
           role: "menuitem",
           tabindex: "-1",
           id: `${id}-i${i}`,
-          "data-gadget-action-index": String(i),
+          "data-gomu-action-index": String(i),
         },
         action.label,
       );
@@ -183,7 +183,7 @@ export function createActionMenu(root: HTMLElement): ActionMenu {
     const el = itemEls[armed];
     const action = binding?.items[armed];
     if (el && action) {
-      el.removeAttribute("data-gadget-armed");
+      el.removeAttribute("data-gomu-armed");
       el.textContent = action.label;
     }
     armed = -1;
@@ -202,7 +202,7 @@ export function createActionMenu(root: HTMLElement): ActionMenu {
       armed = i;
       const el = itemEls[i];
       if (el) {
-        el.setAttribute("data-gadget-armed", "");
+        el.setAttribute("data-gomu-armed", "");
         el.textContent = action.confirm;
       }
       setActive(i);
@@ -216,8 +216,8 @@ export function createActionMenu(root: HTMLElement): ActionMenu {
 
   function indexOf(target: EventTarget | null): number {
     if (!(target instanceof Element)) return -1;
-    const el = target.closest<HTMLElement>("[data-gadget-action-index]");
-    return el ? Number(el.getAttribute("data-gadget-action-index")) : -1;
+    const el = target.closest<HTMLElement>("[data-gomu-action-index]");
+    return el ? Number(el.getAttribute("data-gomu-action-index")) : -1;
   }
 
   panel.addEventListener("click", (ev) => {

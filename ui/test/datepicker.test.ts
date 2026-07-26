@@ -12,21 +12,21 @@ const TODAY = "2026-07-16";
 function pickerShell({ cancel = true, details = true } = {}): HTMLElement {
 	document.body.innerHTML = "";
 	const root = document.createElement("div");
-	root.className = "gadget-root";
-	root.setAttribute("data-gadget-widget", "datepicker");
+	root.className = "gomu-root";
+	root.setAttribute("data-gomu-widget", "datepicker");
 	root.innerHTML = `
-    <div class="gadget-datepicker-prompt"><h3 id="gadget-datepicker-question">Which nights?</h3></div>
-    ${details ? `<dl class="gadget-descriptions" data-gadget-descriptions="" hidden></dl>` : ""}
-    <div class="gadget-datepicker-body">
-      <div class="gadget-cal" data-gadget-calendar=""></div>
+    <div class="gomu-datepicker-prompt"><h3 id="gomu-datepicker-question">Which nights?</h3></div>
+    ${details ? `<dl class="gomu-descriptions" data-gomu-descriptions="" hidden></dl>` : ""}
+    <div class="gomu-datepicker-body">
+      <div class="gomu-cal" data-gomu-calendar=""></div>
     </div>
-    <p class="gadget-datepicker-summary" data-gadget-summary="" hidden></p>
-    <div class="gadget-datepicker-actions" data-gadget-decision="">
-      ${cancel ? `<button type="button" data-gadget-cancel="">Cancel</button>` : ""}
-      <button type="button" data-gadget-submit="" disabled>Continue</button>
+    <p class="gomu-datepicker-summary" data-gomu-summary="" hidden></p>
+    <div class="gomu-datepicker-actions" data-gomu-decision="">
+      ${cancel ? `<button type="button" data-gomu-cancel="">Cancel</button>` : ""}
+      <button type="button" data-gomu-submit="" disabled>Continue</button>
     </div>
-    <p class="gadget-datepicker-outcome" data-gadget-outcome="" hidden></p>
-    <div class="gadget-statusbar"><div class="gadget-status" data-gadget-status="" hidden></div></div>`;
+    <p class="gomu-datepicker-outcome" data-gomu-outcome="" hidden></p>
+    <div class="gomu-statusbar"><div class="gomu-status" data-gomu-status="" hidden></div></div>`;
 	document.body.append(root);
 	return root;
 }
@@ -55,15 +55,15 @@ const DATA = { rows: [{ id: 7, reference: "BKG-7" }] };
 
 const el = <T extends HTMLElement>(root: HTMLElement, sel: string): T =>
 	root.querySelector<T>(sel)!;
-const submit = (root: HTMLElement) => el<HTMLButtonElement>(root, "[data-gadget-submit]");
-const cancel = (root: HTMLElement) => el<HTMLButtonElement>(root, "[data-gadget-cancel]");
-const summary = (root: HTMLElement) => el(root, "[data-gadget-summary]");
-const outcome = (root: HTMLElement) => el(root, "[data-gadget-outcome]");
-const decision = (root: HTMLElement) => el(root, "[data-gadget-decision]");
-const status = (root: HTMLElement) => el(root, "[data-gadget-status]");
+const submit = (root: HTMLElement) => el<HTMLButtonElement>(root, "[data-gomu-submit]");
+const cancel = (root: HTMLElement) => el<HTMLButtonElement>(root, "[data-gomu-cancel]");
+const summary = (root: HTMLElement) => el(root, "[data-gomu-summary]");
+const outcome = (root: HTMLElement) => el(root, "[data-gomu-outcome]");
+const decision = (root: HTMLElement) => el(root, "[data-gomu-decision]");
+const status = (root: HTMLElement) => el(root, "[data-gomu-status]");
 
 function day(root: HTMLElement, iso: string): HTMLButtonElement {
-	const found = root.querySelector<HTMLButtonElement>(`[data-gadget-cal-day="${iso}"]`);
+	const found = root.querySelector<HTMLButtonElement>(`[data-gomu-cal-day="${iso}"]`);
 	if (!found) throw new Error(`no cell for ${iso}`);
 	return found;
 }
@@ -94,11 +94,11 @@ describe("datepicker behavior", () => {
 		const root = pickerShell();
 		mountDatePicker({ root, config: config(), initialData: DATA, bridge });
 
-		expect(root.querySelectorAll("[data-gadget-cal-day]")).toHaveLength(31);
+		expect(root.querySelectorAll("[data-gomu-cal-day]")).toHaveLength(31);
 		expect(submit(root).disabled).toBe(true);
 		expect(summary(root).textContent).toBe("Pick the first day.");
 		// The record the question is about.
-		expect(el(root, "[data-gadget-descriptions] dd").textContent).toBe("BKG-7");
+		expect(el(root, "[data-gomu-descriptions] dd").textContent).toBe("BKG-7");
 	});
 
 	it("arms the submit only once the range is finished", () => {
@@ -176,7 +176,7 @@ describe("datepicker behavior", () => {
 		});
 		expect(decision(root).hidden).toBe(true);
 		expect(outcome(root).textContent).toBe("Held.");
-		expect(outcome(root).className).toContain("gadget-datepicker-outcome--accepted");
+		expect(outcome(root).className).toContain("gomu-datepicker-outcome--accepted");
 		expect(status(root).hidden).toBe(true);
 	});
 
@@ -228,7 +228,7 @@ describe("datepicker behavior", () => {
 
 		expect(host.received(M.toolsCall)).toHaveLength(0);
 		expect(outcome(root).textContent).toBe("Cancelled.");
-		expect(outcome(root).className).toContain("gadget-datepicker-outcome--declined");
+		expect(outcome(root).className).toContain("gomu-datepicker-outcome--declined");
 		expect(submit(root).disabled).toBe(true);
 	});
 
@@ -242,8 +242,8 @@ describe("datepicker behavior", () => {
 		});
 
 		expect(submit(root).disabled).toBe(false);
-		expect(day(root, "2026-07-20").classList.contains("gadget-cal-day--start")).toBe(true);
-		expect(day(root, "2026-07-24").classList.contains("gadget-cal-day--end")).toBe(true);
+		expect(day(root, "2026-07-20").classList.contains("gomu-cal-day--start")).toBe(true);
+		expect(day(root, "2026-07-24").classList.contains("gomu-cal-day--end")).toBe(true);
 	});
 
 	it("takes the selection and the free days from a pushed result", async () => {
@@ -264,7 +264,7 @@ describe("datepicker behavior", () => {
 		});
 		await flush();
 
-		expect(el(root, "[data-gadget-descriptions] dd").textContent).toBe("BKG-9");
+		expect(el(root, "[data-gomu-descriptions] dd").textContent).toBe("BKG-9");
 		expect(submit(root).disabled).toBe(false);
 		expect(day(root, "2026-07-18").getAttribute("aria-disabled")).toBe("true");
 		expect(day(root, "2026-07-09").getAttribute("aria-disabled")).toBe("true");
@@ -319,6 +319,6 @@ describe("datepicker behavior", () => {
 
 		expect(outcome(root).textContent).toBe("Held.");
 		expect(decision(root).hidden).toBe(true);
-		expect(day(root, "2026-07-20").classList.contains("gadget-cal-day--start")).toBe(true);
+		expect(day(root, "2026-07-20").classList.contains("gomu-cal-day--start")).toBe(true);
 	});
 });

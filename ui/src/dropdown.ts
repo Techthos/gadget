@@ -53,23 +53,23 @@ export function enhanceSelect(select: HTMLSelectElement): void {
   const parent = select.parentNode;
   if (!parent || registry.has(select)) return;
 
-  const id = `gadget-dd-${++seq}`;
+  const id = `gomu-dd-${++seq}`;
   const multiple = select.multiple;
 
-  const wrap = h("div", { class: "gadget-dd", "data-gadget-dd": "" });
+  const wrap = h("div", { class: "gomu-dd", "data-gomu-dd": "" });
   parent.insertBefore(wrap, select);
   wrap.append(select);
-  select.classList.add("gadget-dd-native");
+  select.classList.add("gomu-dd-native");
   select.tabIndex = -1;
 
-  // Author classes (e.g. gadget-sort-select) style what the user sees, which
+  // Author classes (e.g. gomu-sort-select) style what the user sees, which
   // is now the trigger; the select itself is only a value holder.
   const extra = [...select.classList].filter(
-    (c) => c !== "gadget-input" && c !== "gadget-dd-native",
+    (c) => c !== "gomu-input" && c !== "gomu-dd-native",
   );
   const trigger = h("button", {
     type: "button",
-    class: ["gadget-input", "gadget-dd-trigger", ...extra].join(" "),
+    class: ["gomu-input", "gomu-dd-trigger", ...extra].join(" "),
     // Select-only combobox: the trigger keeps focus while open and points at
     // the active option with aria-activedescendant, so the panel itself never
     // has to be focusable.
@@ -87,12 +87,12 @@ export function enhanceSelect(select: HTMLSelectElement): void {
   const ariaLabel = select.getAttribute("aria-label");
   if (ariaLabel !== null) trigger.setAttribute("aria-label", ariaLabel);
 
-  const valueEl = h("span", { class: "gadget-dd-value" });
-  trigger.append(valueEl, icon("gadget-dd-chevron", CHEVRON_PATH));
+  const valueEl = h("span", { class: "gomu-dd-value" });
+  trigger.append(valueEl, icon("gomu-dd-chevron", CHEVRON_PATH));
   wrap.append(trigger);
 
   const panel = h("div", {
-    class: "gadget-pop-panel gadget-dd-panel",
+    class: "gomu-pop-panel gomu-dd-panel",
     id,
     role: "listbox",
     hidden: true,
@@ -113,15 +113,15 @@ export function enhanceSelect(select: HTMLSelectElement): void {
     clear(panel);
     optionEls = [...select.options].map((opt, i) => {
       const el = h("div", {
-        class: "gadget-dd-option",
+        class: "gomu-dd-option",
         role: "option",
         id: `${id}-o${i}`,
-        "data-gadget-dd-index": String(i),
+        "data-gomu-dd-index": String(i),
         "aria-disabled": opt.disabled ? "true" : null,
       });
       el.append(
-        icon("gadget-dd-check", CHECK_PATH),
-        h("span", { class: "gadget-dd-option-label" }, opt.text),
+        icon("gomu-dd-check", CHECK_PATH),
+        h("span", { class: "gomu-dd-option-label" }, opt.text),
       );
       panel.append(el);
       return el;
@@ -155,7 +155,7 @@ export function enhanceSelect(select: HTMLSelectElement): void {
       text = one ? one.text : placeholder();
     }
     valueEl.textContent = text;
-    valueEl.classList.toggle("gadget-dd-value--placeholder", isPlaceholder);
+    valueEl.classList.toggle("gomu-dd-value--placeholder", isPlaceholder);
 
     // Widget behaviors disable and flag the select (busy forms, field errors);
     // the trigger is what the user sees, so it carries both.
@@ -194,14 +194,14 @@ export function enhanceSelect(select: HTMLSelectElement): void {
   }
 
   function setActive(i: number): void {
-    optionEls[active]?.classList.remove("gadget-dd-option--active");
+    optionEls[active]?.classList.remove("gomu-dd-option--active");
     active = i;
     const el = optionEls[i];
     if (!el) {
       trigger.removeAttribute("aria-activedescendant");
       return;
     }
-    el.classList.add("gadget-dd-option--active");
+    el.classList.add("gomu-dd-option--active");
     trigger.setAttribute("aria-activedescendant", el.id);
     // Absent in some non-browser DOM implementations.
     if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "nearest" });
@@ -296,15 +296,15 @@ export function enhanceSelect(select: HTMLSelectElement): void {
   panel.addEventListener("click", (ev) => {
     const target = ev.target;
     if (!(target instanceof Element)) return;
-    const el = target.closest<HTMLElement>("[data-gadget-dd-index]");
-    if (el) choose(Number(el.getAttribute("data-gadget-dd-index")));
+    const el = target.closest<HTMLElement>("[data-gomu-dd-index]");
+    if (el) choose(Number(el.getAttribute("data-gomu-dd-index")));
   });
 
   panel.addEventListener("mousemove", (ev) => {
     const target = ev.target;
     if (!(target instanceof Element)) return;
-    const el = target.closest<HTMLElement>("[data-gadget-dd-index]");
-    if (el) setActive(Number(el.getAttribute("data-gadget-dd-index")));
+    const el = target.closest<HTMLElement>("[data-gomu-dd-index]");
+    if (el) setActive(Number(el.getAttribute("data-gomu-dd-index")));
   });
 
   // Anything that focuses the control itself (a label click, a behavior

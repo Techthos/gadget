@@ -32,7 +32,7 @@ describe("Bridge", () => {
     expect(init).toHaveLength(1);
     const params = init[0]!.params as Record<string, unknown>;
     expect(params.protocolVersion).toBe(SPEC_VERSION);
-    expect(params.appInfo).toMatchObject({ name: "gadget" });
+    expect(params.appInfo).toMatchObject({ name: "gomukit" });
     expect(params.appCapabilities).toEqual({});
     expect(host.received(M.initialized)).toHaveLength(1);
   });

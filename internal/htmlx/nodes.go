@@ -101,8 +101,8 @@ func checkRaw(s, closer string) error {
 	return nil
 }
 
-// Data returns a data-gadget-* attribute, the hook the runtime's event
+// Data returns a data-gomu-* attribute, the hook the runtime's event
 // delegation dispatches on.
 func Data(name, value string) g.Node {
-	return g.Attr("data-gadget-"+name, value)
+	return g.Attr("data-gomu-"+name, value)
 }

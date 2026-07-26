@@ -1,34 +1,34 @@
 /* Anchored popup panels: the dropdown's listbox and the action menu (see
- * ui/src/popup.ts). Both hang off .gadget-root rather than their trigger — the
+ * ui/src/popup.ts). Both hang off .gomu-root rather than their trigger — the
  * card chrome clips its overflow, and a panel inside it would be cut off at
  * the card's edge — so the runtime writes left/top in the root's coordinates
  * and this only describes the surface. */
 
-.gadget-pop-panel {
+.gomu-pop-panel {
   position: absolute;
   z-index: 20;
   max-height: 15rem;
   overflow-y: auto;
-  padding: calc(var(--gadget-space-unit) * 1);
-  background: var(--gadget-color-bg);
-  border: 1px solid var(--gadget-color-border);
-  border-radius: var(--gadget-radius-m);
+  padding: calc(var(--gomu-space-unit) * 1);
+  background: var(--gomu-color-bg);
+  border: 1px solid var(--gomu-color-border);
+  border-radius: var(--gomu-radius-m);
   box-shadow: 0 6px 20px rgb(0 0 0 / 0.16);
-  animation: gadget-pop-in 0.12s ease-out;
+  animation: gomu-pop-in 0.12s ease-out;
 }
 
-.gadget-pop-panel--above {
-  animation-name: gadget-pop-in-above;
+.gomu-pop-panel--above {
+  animation-name: gomu-pop-in-above;
 }
 
-@keyframes gadget-pop-in {
+@keyframes gomu-pop-in {
   from {
     opacity: 0;
     transform: translateY(-0.25rem);
   }
 }
 
-@keyframes gadget-pop-in-above {
+@keyframes gomu-pop-in-above {
   from {
     opacity: 0;
     transform: translateY(0.25rem);
@@ -36,7 +36,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gadget-pop-panel {
+  .gomu-pop-panel {
     animation: none;
   }
 }

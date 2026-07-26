@@ -20,8 +20,8 @@ const TODAY = "2026-07-16";
 function host(): HTMLElement {
 	document.body.innerHTML = "";
 	const root = document.createElement("div");
-	root.className = "gadget-root";
-	root.setAttribute("data-gadget-widget", "datepicker");
+	root.className = "gomu-root";
+	root.setAttribute("data-gomu-widget", "datepicker");
 	document.body.append(root);
 	return root;
 }
@@ -35,11 +35,11 @@ function build(cfg: CalendarCfg, opts: Parameters<typeof createCalendar>[1] = {}
 }
 
 function days(el: HTMLElement): HTMLButtonElement[] {
-	return [...el.querySelectorAll<HTMLButtonElement>("[data-gadget-cal-day]")];
+	return [...el.querySelectorAll<HTMLButtonElement>("[data-gomu-cal-day]")];
 }
 
 function day(el: HTMLElement, iso: string): HTMLButtonElement {
-	const found = el.querySelector<HTMLButtonElement>(`[data-gadget-cal-day="${iso}"]`);
+	const found = el.querySelector<HTMLButtonElement>(`[data-gomu-cal-day="${iso}"]`);
 	if (!found) throw new Error(`no cell for ${iso}`);
 	return found;
 }
@@ -126,8 +126,8 @@ describe("presets", () => {
 describe("calendar grid", () => {
 	it("builds whole weeks from Monday, marking today and the neighbouring days", () => {
 		const { cal } = build({ startOn: TODAY });
-		const grid = cal.el.querySelector<HTMLElement>(".gadget-cal-grid")!;
-		const heads = [...grid.querySelectorAll(".gadget-cal-weekday")].map((th) =>
+		const grid = cal.el.querySelector<HTMLElement>(".gomu-cal-grid")!;
+		const heads = [...grid.querySelectorAll(".gomu-cal-weekday")].map((th) =>
 			th.getAttribute("aria-label"),
 		);
 		expect(heads).toEqual([
@@ -142,28 +142,28 @@ describe("calendar grid", () => {
 		// July 2026 starts on a Wednesday and has 31 days: five whole weeks.
 		expect(grid.querySelectorAll("tbody tr")).toHaveLength(5);
 		expect(days(cal.el)).toHaveLength(31);
-		expect(cal.el.querySelectorAll(".gadget-cal-outside")).toHaveLength(4);
+		expect(cal.el.querySelectorAll(".gomu-cal-outside")).toHaveLength(4);
 		expect(day(cal.el, TODAY).getAttribute("aria-current")).toBe("date");
 	});
 
 	it("honours an explicit week start", () => {
 		const { cal } = build({ startOn: TODAY, weekStart: "sunday" });
-		const first = cal.el.querySelector(".gadget-cal-weekday")!;
+		const first = cal.el.querySelector(".gomu-cal-weekday")!;
 		expect(first.getAttribute("aria-label")).toBe("Sunday");
 	});
 
 	it("shows two months for a range and travels together", () => {
 		const { cal } = build({ mode: "range", months: 2, startOn: "2026-07-01" });
-		expect(cal.el.querySelectorAll(".gadget-cal-month")).toHaveLength(2);
+		expect(cal.el.querySelectorAll(".gomu-cal-month")).toHaveLength(2);
 		expect(day(cal.el, "2026-08-15")).toBeTruthy();
-		cal.el.querySelector<HTMLElement>('[data-gadget-cal-nav="next"]')!.click();
+		cal.el.querySelector<HTMLElement>('[data-gomu-cal-nav="next"]')!.click();
 		expect(day(cal.el, "2026-09-15")).toBeTruthy();
-		expect(cal.el.querySelector('[data-gadget-cal-day="2026-07-15"]')).toBeNull();
+		expect(cal.el.querySelector('[data-gomu-cal-day="2026-07-15"]')).toBeNull();
 	});
 
 	it("adds the ISO week column", () => {
 		const { cal } = build({ startOn: "2026-01-15", weekNumbers: true });
-		const weeks = [...cal.el.querySelectorAll("tbody .gadget-cal-weeknum")].map(
+		const weeks = [...cal.el.querySelectorAll("tbody .gomu-cal-weeknum")].map(
 			(th) => th.textContent,
 		);
 		// 1 January 2026 is a Thursday, so its week is ISO week 1.
@@ -183,7 +183,7 @@ describe("calendar grid", () => {
 		expect(cal.complete()).toBe(true);
 		expect(changes).toEqual([[{ start: "2026-07-20", end: "" }, true]]);
 		expect(done).toBe(1);
-		expect(day(cal.el, "2026-07-20").classList.contains("gadget-cal-day--start")).toBe(true);
+		expect(day(cal.el, "2026-07-20").classList.contains("gomu-cal-day--start")).toBe(true);
 	});
 
 	it("builds a range from two clicks, in either order", () => {
@@ -197,7 +197,7 @@ describe("calendar grid", () => {
 		day(cal.el, "2026-07-24").click();
 		expect(cal.value()).toEqual({ start: "2026-07-20", end: "2026-07-24" });
 		expect(changes).toEqual([false, true]);
-		expect(day(cal.el, "2026-07-22").classList.contains("gadget-cal-day--in-range")).toBe(true);
+		expect(day(cal.el, "2026-07-22").classList.contains("gomu-cal-day--in-range")).toBe(true);
 
 		// A click before the open end still makes a forwards range.
 		day(cal.el, "2026-07-15").click();
@@ -240,12 +240,12 @@ describe("calendar grid", () => {
 
 	it("stops the month arrows at the window's edge", () => {
 		const { cal } = build({ startOn: TODAY, min: "2026-07-01", max: "2026-08-31" });
-		const prev = cal.el.querySelector<HTMLButtonElement>('[data-gadget-cal-nav="prev"]')!;
-		const next = cal.el.querySelector<HTMLButtonElement>('[data-gadget-cal-nav="next"]')!;
+		const prev = cal.el.querySelector<HTMLButtonElement>('[data-gomu-cal-nav="prev"]')!;
+		const next = cal.el.querySelector<HTMLButtonElement>('[data-gomu-cal-nav="next"]')!;
 		expect(prev.disabled).toBe(true);
 		expect(next.disabled).toBe(false);
 		next.click();
-		expect(cal.el.querySelector<HTMLButtonElement>('[data-gadget-cal-nav="next"]')!.disabled).toBe(
+		expect(cal.el.querySelector<HTMLButtonElement>('[data-gomu-cal-nav="next"]')!.disabled).toBe(
 			true,
 		);
 	});
@@ -256,8 +256,80 @@ describe("calendar grid", () => {
 			months: 1,
 			presets: [{ label: "This month", span: "this-month" }],
 		});
-		cal.el.querySelector<HTMLElement>("[data-gadget-cal-preset]")!.click();
+		cal.el.querySelector<HTMLElement>("[data-gomu-cal-preset]")!.click();
 		expect(cal.value()).toEqual({ start: "2026-07-01", end: "2026-07-31" });
+	});
+
+	it("trims a preset window to the bounds and switches off the ones left with nothing", () => {
+		const { cal } = build({
+			mode: "range",
+			months: 1,
+			min: "2026-07-10",
+			max: "2026-07-20",
+			presets: [
+				// Trimmed at both ends to the window that may be picked.
+				{ label: "This month", span: "this-month" },
+				// Wholly before Min: nothing of it survives.
+				{ label: "Last month", span: "last-month" },
+			],
+		});
+		const shortcuts = [
+			...cal.el.querySelectorAll<HTMLButtonElement>("[data-gomu-cal-preset]"),
+		];
+		expect(shortcuts.map((b) => b.disabled)).toEqual([false, true]);
+
+		shortcuts[0]!.click();
+		expect(cal.value()).toEqual({ start: "2026-07-10", end: "2026-07-20" });
+
+		// A dead one leaves the selection alone.
+		shortcuts[1]!.click();
+		expect(cal.value()).toEqual({ start: "2026-07-10", end: "2026-07-20" });
+	});
+
+	it("switches off a preset whose window straddles a blocked day", () => {
+		const { cal } = build({
+			mode: "range",
+			months: 1,
+			disabled: ["2026-07-14"],
+			presets: [
+				{ label: "Fair", start: "2026-07-13", end: "2026-07-16" },
+				{ label: "Show", start: "2026-07-15", end: "2026-07-16" },
+			],
+		});
+		const shortcuts = [
+			...cal.el.querySelectorAll<HTMLButtonElement>("[data-gomu-cal-preset]"),
+		];
+		expect(shortcuts.map((b) => b.disabled)).toEqual([true, false]);
+	});
+
+	it("re-reads the shortcuts when a tool result moves the bounds", () => {
+		const { cal } = build({
+			mode: "range",
+			months: 1,
+			min: "2026-08-01",
+			presets: [{ label: "This month", span: "this-month" }],
+		});
+		const shortcut = cal.el.querySelector<HTMLButtonElement>("[data-gomu-cal-preset]")!;
+		expect(shortcut.disabled).toBe(true);
+		cal.patch({ min: "2026-07-01" });
+		expect(shortcut.disabled).toBe(false);
+	});
+
+	it("switches off a single-date preset rather than moving the day it names", () => {
+		const { cal } = build({
+			months: 1,
+			min: "2026-07-13",
+			presets: [
+				{ label: "Last 7 days", span: "last-7-days" },
+				{ label: "Today", span: "today" },
+			],
+		});
+		const shortcuts = [
+			...cal.el.querySelectorAll<HTMLButtonElement>("[data-gomu-cal-preset]"),
+		];
+		expect(shortcuts.map((b) => b.disabled)).toEqual([true, false]);
+		shortcuts[1]!.click();
+		expect(cal.value()).toEqual({ start: TODAY, end: "" });
 	});
 
 	it("moves the keyboard over blocked days and travels by month", () => {
@@ -297,9 +369,9 @@ describe("calendar grid", () => {
 		expect(year!.options).toHaveLength(11);
 		expect(month!.value).toBe("6");
 		expect(year!.value).toBe("2026");
-		// The dropdowns are the gadget dropdown, and the calendar is their parent
+		// The dropdowns are the gomukit dropdown, and the calendar is their parent
 		// popup rather than their rival (see popup.ts).
-		expect(cal.el.querySelectorAll(".gadget-dd-trigger")).toHaveLength(2);
+		expect(cal.el.querySelectorAll(".gomu-dd-trigger")).toHaveLength(2);
 
 		year!.value = "2028";
 		year!.dispatchEvent(new Event("change", { bubbles: true }));
@@ -310,17 +382,17 @@ describe("calendar grid", () => {
 // --- The popover over a form's date fields ---
 
 const DATE_FIELD = `
-  <div class="gadget-field gadget-field--date">
-    <label for="gadget-f-when">When</label>
-    <input id="gadget-f-when" name="when" class="gadget-input" type="date" aria-label="When">
+  <div class="gomu-field gomu-field--date">
+    <label for="gomu-f-when">When</label>
+    <input id="gomu-f-when" name="when" class="gomu-input" type="date" aria-label="When">
   </div>`;
 
 const RANGE_FIELD = `
-  <div class="gadget-field gadget-field--daterange">
-    <label for="gadget-f-stay">Stay</label>
-    <div class="gadget-daterange" data-gadget-daterange="stay">
-      <input type="date" name="stay" class="gadget-input gadget-daterange-start" aria-label="Stay start date" id="gadget-f-stay">
-      <input type="date" name="stay_until" class="gadget-input gadget-daterange-end" aria-label="Stay end date">
+  <div class="gomu-field gomu-field--daterange">
+    <label for="gomu-f-stay">Stay</label>
+    <div class="gomu-daterange" data-gomu-daterange="stay">
+      <input type="date" name="stay" class="gomu-input gomu-daterange-start" aria-label="Stay start date" id="gomu-f-stay">
+      <input type="date" name="stay_until" class="gomu-input gomu-daterange-end" aria-label="Stay end date">
     </div>
   </div>`;
 
@@ -336,9 +408,9 @@ function field(
 	return {
 		root,
 		form,
-		trigger: root.querySelector<HTMLButtonElement>(".gadget-dt-trigger")!,
-		panel: root.querySelector<HTMLElement>(".gadget-cal-panel")!,
-		value: root.querySelector<HTMLElement>(".gadget-dt-value")!,
+		trigger: root.querySelector<HTMLButtonElement>(".gomu-dt-trigger")!,
+		panel: root.querySelector<HTMLElement>(".gomu-cal-panel")!,
+		value: root.querySelector<HTMLElement>(".gomu-dt-value")!,
 		start: form.querySelector<HTMLInputElement>('input[name="stay"], input[name="when"]')!,
 		end: form.querySelector<HTMLInputElement>('input[name="stay_until"]'),
 	};
@@ -350,9 +422,9 @@ describe("date fields", () => {
 		expect(f.start.isConnected).toBe(true);
 		expect(f.start.type).toBe("date");
 		expect(f.start.tabIndex).toBe(-1);
-		expect(f.start.classList.contains("gadget-dt-native")).toBe(true);
+		expect(f.start.classList.contains("gomu-dt-native")).toBe(true);
 		// The field label addresses the control by id, so the trigger takes it.
-		expect(f.trigger.id).toBe("gadget-f-when");
+		expect(f.trigger.id).toBe("gomu-f-when");
 		expect(f.start.id).toBe("");
 		expect(f.trigger.getAttribute("aria-expanded")).toBe("false");
 		expect(f.value.textContent).toBe("Pick a date");
@@ -403,19 +475,19 @@ describe("date fields", () => {
 		refreshDateFields(f.form);
 		expect(f.value.textContent).toBe(formatDateRange("2026-09-07", "2026-09-11"));
 		f.trigger.click();
-		expect(day(f.panel, "2026-09-07").classList.contains("gadget-cal-day--start")).toBe(true);
+		expect(day(f.panel, "2026-09-07").classList.contains("gomu-cal-day--start")).toBe(true);
 	});
 
 	it("offers a clear button only where the field is optional", () => {
 		const optional = field(DATE_FIELD, { when: { calendar: { startOn: TODAY } } });
-		expect(optional.panel.querySelector("[data-gadget-cal-clear]")).toBeTruthy();
+		expect(optional.panel.querySelector("[data-gomu-cal-clear]")).toBeTruthy();
 		optional.start.value = "2026-07-20";
 		refreshDateFields(optional.form);
-		optional.panel.querySelector<HTMLElement>("[data-gadget-cal-clear]")!.click();
+		optional.panel.querySelector<HTMLElement>("[data-gomu-cal-clear]")!.click();
 		expect(optional.start.value).toBe("");
 
 		const required = field(DATE_FIELD, { when: { calendar: {}, required: true } });
-		expect(required.panel.querySelector("[data-gadget-cal-clear]")).toBeNull();
+		expect(required.panel.querySelector("[data-gomu-cal-clear]")).toBeNull();
 	});
 
 	it("follows the input's disabled and invalid state", () => {
@@ -446,9 +518,9 @@ describe("date fields", () => {
 		expect(f.panel.hidden).toBe(false);
 
 		// A popup opened from inside another must not close its own parent.
-		const ddTrigger = f.panel.querySelector<HTMLButtonElement>(".gadget-dd-trigger")!;
+		const ddTrigger = f.panel.querySelector<HTMLButtonElement>(".gomu-dd-trigger")!;
 		ddTrigger.click();
-		const ddPanel = f.root.querySelector<HTMLElement>(".gadget-dd-panel")!;
+		const ddPanel = f.root.querySelector<HTMLElement>(".gomu-dd-panel")!;
 		expect(ddPanel.hidden).toBe(false);
 		expect(f.panel.hidden).toBe(false);
 
@@ -464,6 +536,6 @@ describe("date fields", () => {
 	it("leaves a date input the form does not declare alone", () => {
 		const f = field(DATE_FIELD, {});
 		expect(f.trigger).toBeNull();
-		expect(f.start.classList.contains("gadget-dt-native")).toBe(false);
+		expect(f.start.classList.contains("gomu-dt-native")).toBe(false);
 	});
 });

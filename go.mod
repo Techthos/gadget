@@ -1,4 +1,4 @@
-module github.com/techthos/gadget
+module github.com/techthos/gomukit
 
 go 1.25.0
 

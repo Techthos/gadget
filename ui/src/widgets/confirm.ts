@@ -11,7 +11,8 @@ import { HOST_CONTEXT_EVENT } from "../host";
 import { Row, rowsFrom } from "../data";
 import { clear, delegate, h } from "../dom";
 import { CallToolResult, M } from "../protocol";
-import { ActionCfg, resolveArgs, textOf } from "./card-common";
+import { errorText, textOf } from "../status";
+import { ActionCfg, resolveArgs } from "./card-common";
 import { DescriptionItemCfg, fillDescriptions } from "./descriptions";
 
 interface EffectCfg {
@@ -51,15 +52,15 @@ export function mountConfirm(ctx: MountContext): void {
 	const cfg = ctx.config as unknown as ConfirmCfg;
 	const { root, bridge } = ctx;
 
-	const detailsEl = root.querySelector<HTMLElement>("[data-gadget-descriptions]");
-	const effectsEl = root.querySelector<HTMLElement>("[data-gadget-effects]");
-	const decisionEl = root.querySelector<HTMLElement>("[data-gadget-decision]");
-	const outcomeEl = root.querySelector<HTMLElement>("[data-gadget-outcome]");
-	const statusEl = root.querySelector<HTMLElement>("[data-gadget-status]");
-	const acceptEl = root.querySelector<HTMLButtonElement>("[data-gadget-accept]");
-	const rejectEl = root.querySelector<HTMLButtonElement>("[data-gadget-reject]");
-	const ackEl = root.querySelector<HTMLInputElement>("[data-gadget-ack]");
-	const phraseEl = root.querySelector<HTMLInputElement>("[data-gadget-phrase]");
+	const detailsEl = root.querySelector<HTMLElement>("[data-gomu-descriptions]");
+	const effectsEl = root.querySelector<HTMLElement>("[data-gomu-effects]");
+	const decisionEl = root.querySelector<HTMLElement>("[data-gomu-decision]");
+	const outcomeEl = root.querySelector<HTMLElement>("[data-gomu-outcome]");
+	const statusEl = root.querySelector<HTMLElement>("[data-gomu-status]");
+	const acceptEl = root.querySelector<HTMLButtonElement>("[data-gomu-accept]");
+	const rejectEl = root.querySelector<HTMLButtonElement>("[data-gomu-reject]");
+	const ackEl = root.querySelector<HTMLInputElement>("[data-gomu-ack]");
+	const phraseEl = root.querySelector<HTMLInputElement>("[data-gomu-phrase]");
 
 	const items = Array.isArray(cfg.details) ? cfg.details : [];
 	let row: Row | null = rowsFrom(ctx.initialData, cfg.rowsKey)[0] ?? null;
@@ -70,7 +71,7 @@ export function mountConfirm(ctx: MountContext): void {
 		if (!statusEl) return;
 		statusEl.hidden = msg === "";
 		statusEl.textContent = msg;
-		statusEl.className = "gadget-status" + (kind ? ` gadget-status--${kind}` : "");
+		statusEl.className = "gomu-status" + (kind ? ` gomu-status--${kind}` : "");
 	}
 
 	// Every guard the author configured must be satisfied, and a decision
@@ -100,19 +101,19 @@ export function mountConfirm(ctx: MountContext): void {
 		for (const effect of effects) {
 			const severity = effect.severity && SEVERITIES.has(effect.severity) ? effect.severity : "";
 			const li = h("li", {
-				class: "gadget-effect" + (severity ? ` gadget-effect--${severity}` : ""),
+				class: "gomu-effect" + (severity ? ` gomu-effect--${severity}` : ""),
 			});
-			li.append(h("span", { class: "gadget-effect-mark", "aria-hidden": "true" }));
+			li.append(h("span", { class: "gomu-effect-mark", "aria-hidden": "true" }));
 
-			const text = h("span", { class: "gadget-effect-text" });
-			text.append(h("span", { class: "gadget-effect-label" }, effect.text));
+			const text = h("span", { class: "gomu-effect-text" });
+			text.append(h("span", { class: "gomu-effect-label" }, effect.text));
 			if (effect.detail) {
-				text.append(h("span", { class: "gadget-effect-detail" }, effect.detail));
+				text.append(h("span", { class: "gomu-effect-detail" }, effect.detail));
 			}
 			li.append(text);
 
 			if (effect.value) {
-				li.append(h("span", { class: "gadget-effect-value" }, effect.value));
+				li.append(h("span", { class: "gomu-effect-value" }, effect.value));
 			}
 			effectsEl.append(li);
 		}
@@ -132,7 +133,7 @@ export function mountConfirm(ctx: MountContext): void {
 		if (outcomeEl) {
 			outcomeEl.hidden = false;
 			outcomeEl.textContent = message;
-			outcomeEl.className = `gadget-confirm-outcome gadget-confirm-outcome--${kind}`;
+			outcomeEl.className = `gomu-confirm-outcome gomu-confirm-outcome--${kind}`;
 		}
 		showStatus("", "");
 	}
@@ -162,7 +163,7 @@ export function mountConfirm(ctx: MountContext): void {
 			}
 			return res;
 		} catch (e) {
-			fail(e instanceof Error ? e.message : String(e));
+			fail(errorText(e, fallback));
 			return null;
 		}
 	}
@@ -179,7 +180,7 @@ export function mountConfirm(ctx: MountContext): void {
 			await bridge.sendMessage(text);
 			return true;
 		} catch (e) {
-			fail(e instanceof Error ? e.message : String(e));
+			fail(errorText(e, "The request failed."));
 			return false;
 		}
 	}

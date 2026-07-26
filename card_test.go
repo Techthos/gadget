@@ -1,4 +1,4 @@
-package gadget
+package gomukit
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 
 	xhtml "golang.org/x/net/html"
 
-	"github.com/techthos/gadget/theme"
+	"github.com/techthos/gomukit/theme"
 )
 
 // canonicalTemplate exercises every card template slot.
@@ -101,11 +101,11 @@ func TestCardGolden(t *testing.T) {
 		t.Fatalf("document does not parse: %v", err)
 	}
 	for _, want := range []string{
-		`data-gadget-widget="card"`,
-		`id="gadget-config"`,
-		`id="gadget-data"`,
-		`data-gadget-card`,
-		`--gadget-color-primary:#7c3aed`,
+		`data-gomu-widget="card"`,
+		`id="gomu-config"`,
+		`id="gomu-data"`,
+		`data-gomu-card`,
+		`--gomu-color-primary:#7c3aed`,
 	} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("document missing %q", want)
@@ -135,14 +135,14 @@ func TestCardListGolden(t *testing.T) {
 		t.Fatalf("document does not parse: %v", err)
 	}
 	for _, want := range []string{
-		`data-gadget-widget="cardlist"`,
-		`class="gadget-card-strip" data-gadget-cards`,
-		`data-gadget-scroll="prev"`,
-		`data-gadget-scroll="next"`,
-		`data-gadget-sort-select`,
-		`data-gadget-select-all`,
-		`data-gadget-bulk-action="0"`,
-		`data-gadget-page-size`,
+		`data-gomu-widget="cardlist"`,
+		`class="gomu-card-strip" data-gomu-cards`,
+		`data-gomu-scroll="prev"`,
+		`data-gomu-scroll="next"`,
+		`data-gomu-sort-select`,
+		`data-gomu-select-all`,
+		`data-gomu-bulk-action="0"`,
+		`data-gomu-page-size`,
 	} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("document missing %q", want)

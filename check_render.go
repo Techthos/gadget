@@ -1,4 +1,4 @@
-package gadget
+package gomukit
 
 import (
 	g "maragu.dev/gomponents"
@@ -17,7 +17,7 @@ const (
 // native behaviour — the CSS only strips its appearance.
 func checkboxNode(attrs ...g.Node) g.Node {
 	input := append([]g.Node{h.Type("checkbox")}, attrs...)
-	return h.Span(h.Class("gadget-check"),
+	return h.Span(h.Class("gomu-check"),
 		h.Input(input...),
 		checkIconNode(),
 	)
@@ -28,7 +28,7 @@ func checkboxNode(attrs ...g.Node) g.Node {
 // which the MCP Apps CSP does not guarantee.
 func checkIconNode() g.Node {
 	return g.El("svg",
-		g.Attr("class", "gadget-check-icon"),
+		g.Attr("class", "gomu-check-icon"),
 		g.Attr("viewBox", "0 0 16 16"),
 		g.Attr("fill", "none"),
 		g.Attr("stroke", "currentColor"),
@@ -36,7 +36,7 @@ func checkIconNode() g.Node {
 		g.Attr("stroke-linecap", "round"),
 		g.Attr("stroke-linejoin", "round"),
 		g.Attr("aria-hidden", "true"),
-		g.El("path", g.Attr("class", "gadget-check-tick"), g.Attr("d", checkTickPath)),
-		g.El("path", g.Attr("class", "gadget-check-dash"), g.Attr("d", checkDashPath)),
+		g.El("path", g.Attr("class", "gomu-check-tick"), g.Attr("d", checkTickPath)),
+		g.El("path", g.Attr("class", "gomu-check-dash"), g.Attr("d", checkDashPath)),
 	)
 }

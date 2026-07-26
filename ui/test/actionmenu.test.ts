@@ -11,17 +11,17 @@ const ACTIONS: MenuAction[] = [
 function shell(): HTMLElement {
 	document.body.innerHTML = "";
 	const root = document.createElement("div");
-	root.className = "gadget-root";
+	root.className = "gomu-root";
 	document.body.append(root);
-	root.append(actionMenuTrigger({ "data-gadget-action-menu": "0" }));
+	root.append(actionMenuTrigger({ "data-gomu-action-menu": "0" }));
 	return root;
 }
 
 function parts(root: HTMLElement) {
 	return {
-		trigger: root.querySelector<HTMLButtonElement>("[data-gadget-action-menu]")!,
-		panel: root.querySelector<HTMLElement>(".gadget-action-panel")!,
-		items: () => [...root.querySelectorAll<HTMLElement>("[data-gadget-action-index]")],
+		trigger: root.querySelector<HTMLButtonElement>("[data-gomu-action-menu]")!,
+		panel: root.querySelector<HTMLElement>(".gomu-action-panel")!,
+		items: () => [...root.querySelectorAll<HTMLElement>("[data-gomu-action-index]")],
 	};
 }
 
@@ -53,7 +53,7 @@ describe("action menu", () => {
 			"Send invite",
 			"Delete",
 		]);
-		expect(items()[2]!.className).toContain("gadget-action-item--danger");
+		expect(items()[2]!.className).toContain("gomu-action-item--danger");
 
 		items()[1]!.click();
 		expect(onSelect).toHaveBeenCalledWith(1);
@@ -86,7 +86,7 @@ describe("action menu", () => {
 		items()[2]!.click();
 		expect(onSelect).not.toHaveBeenCalled();
 		expect(items()[2]!.textContent).toBe("Really?");
-		expect(items()[2]!.hasAttribute("data-gadget-armed")).toBe(true);
+		expect(items()[2]!.hasAttribute("data-gomu-armed")).toBe(true);
 		expect(panel.hidden).toBe(false);
 
 		items()[2]!.click();
@@ -175,8 +175,8 @@ describe("action menu", () => {
 		select.innerHTML = `<option value="a">A</option><option value="b">B</option>`;
 		root.append(select);
 		enhanceSelects(root);
-		const ddTrigger = root.querySelector<HTMLButtonElement>(".gadget-dd-trigger")!;
-		const ddPanel = root.querySelector<HTMLElement>(".gadget-dd-panel")!;
+		const ddTrigger = root.querySelector<HTMLButtonElement>(".gomu-dd-trigger")!;
+		const ddPanel = root.querySelector<HTMLElement>(".gomu-dd-panel")!;
 
 		const menu = createActionMenu(root);
 		menu.bind(root, "action-menu", () => ({ items: ACTIONS, onSelect: () => {} }));

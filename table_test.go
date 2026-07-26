@@ -1,4 +1,4 @@
-package gadget
+package gomukit
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 
 	xhtml "golang.org/x/net/html"
 
-	"github.com/techthos/gadget/theme"
+	"github.com/techthos/gomukit/theme"
 )
 
 var update = flag.Bool("update", false, "update golden files")
@@ -84,14 +84,14 @@ func TestTableGolden(t *testing.T) {
 		t.Fatalf("document does not parse: %v", err)
 	}
 	for _, want := range []string{
-		`data-gadget-widget="table"`,
-		`id="gadget-config"`,
-		`id="gadget-data"`,
-		`data-gadget-sort="name"`,
-		`data-gadget-select-all`,
-		`data-gadget-bulk-menu`,
-		`data-gadget-page-size`,
-		`--gadget-color-primary:#7c3aed`,
+		`data-gomu-widget="table"`,
+		`id="gomu-config"`,
+		`id="gomu-data"`,
+		`data-gomu-sort="name"`,
+		`data-gomu-select-all`,
+		`data-gomu-bulk-menu`,
+		`data-gomu-page-size`,
+		`--gomu-color-primary:#7c3aed`,
 	} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("document missing %q", want)

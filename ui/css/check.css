@@ -7,7 +7,7 @@
  * docs/widgets.md). The <input> itself is kept in place and only stripped of
  * its appearance — it stays the hit area, the focus target and the form value,
  * so keyboard, label association and :indeterminate remain the browser's. */
-.gadget-check {
+.gomu-check {
   position: relative;
   display: inline-flex;
   flex: none;
@@ -17,16 +17,16 @@
   vertical-align: -0.25em;
 }
 
-.gadget-check input {
+.gomu-check input {
   appearance: none;
   -webkit-appearance: none;
   width: 100%;
   height: 100%;
   margin: 0;
   padding: 0;
-  border: 1.5px solid var(--gadget-color-border);
-  border-radius: calc(var(--gadget-radius-s) * 1.25);
-  background: var(--gadget-color-bg);
+  border: 1.5px solid var(--gomu-color-border);
+  border-radius: calc(var(--gomu-radius-s) * 1.25);
+  background: var(--gomu-color-bg);
   cursor: pointer;
   transition:
     background-color 0.15s ease,
@@ -34,53 +34,53 @@
     box-shadow 0.15s ease;
 }
 
-.gadget-check input:hover:not(:disabled) {
-  border-color: var(--gadget-color-primary);
+.gomu-check input:hover:not(:disabled) {
+  border-color: var(--gomu-color-primary);
 }
 
-.gadget-check input:checked,
-.gadget-check input:indeterminate {
-  background: var(--gadget-color-primary);
-  border-color: var(--gadget-color-primary);
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--gadget-color-primary) 35%, transparent);
+.gomu-check input:checked,
+.gomu-check input:indeterminate {
+  background: var(--gomu-color-primary);
+  border-color: var(--gomu-color-primary);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--gomu-color-primary) 35%, transparent);
 }
 
-.gadget-check input:disabled {
+.gomu-check input:disabled {
   opacity: 0.5;
   cursor: default;
 }
 
 /* Overlays the box; the input underneath takes every pointer event. */
-.gadget-check-icon {
+.gomu-check-icon {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  color: var(--gadget-color-primary-text);
+  color: var(--gomu-color-primary-text);
 }
 
 /* Both marks are drawn in by retracting a dash as long as the whole path, so
  * an unchecked box shows none of either. 16 is the viewBox edge — longer than
  * both paths, which is all the value has to be. */
-.gadget-check-icon path {
+.gomu-check-icon path {
   stroke-dasharray: 16;
   stroke-dashoffset: 16;
   transition: stroke-dashoffset 0.18s ease-out;
 }
 
-.gadget-check input:checked ~ .gadget-check-icon .gadget-check-tick,
-.gadget-check input:indeterminate ~ .gadget-check-icon .gadget-check-dash {
+.gomu-check input:checked ~ .gomu-check-icon .gomu-check-tick,
+.gomu-check input:indeterminate ~ .gomu-check-icon .gomu-check-dash {
   stroke-dashoffset: 0;
 }
 
 /* One mark at a time: a partially selected page shows the dash, as it does
  * natively, even though the input is also :checked. */
-.gadget-check input:indeterminate ~ .gadget-check-icon .gadget-check-tick {
+.gomu-check input:indeterminate ~ .gomu-check-icon .gomu-check-tick {
   stroke-dashoffset: 16;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gadget-check input,
-  .gadget-check-icon path {
+  .gomu-check input,
+  .gomu-check-icon path {
     transition: none;
   }
 }

@@ -1,11 +1,11 @@
-package gadget
+package gomukit
 
 import (
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 
-	"github.com/techthos/gadget/internal/assets"
-	"github.com/techthos/gadget/internal/htmlx"
+	"github.com/techthos/gomukit/internal/assets"
+	"github.com/techthos/gomukit/internal/htmlx"
 )
 
 // Document implements Widget. Everything the author wrote — prompt, body,
@@ -32,7 +32,7 @@ func (c *Confirm) Document() (string, error) {
 }
 
 func (c *Confirm) shell() g.Node {
-	chrome := []g.Node{h.Class("gadget-card gadget-confirm gadget-confirm--" + string(c.severity()))}
+	chrome := []g.Node{h.Class("gomu-card gomu-confirm gomu-confirm--" + string(c.severity()))}
 	if toolbar := c.toolbar(); toolbar != nil {
 		chrome = append(chrome, toolbar)
 	}
@@ -41,14 +41,14 @@ func (c *Confirm) shell() g.Node {
 		// Filled by the runtime from rows[0] and from the effects the tool
 		// result carries; both start empty and stay out of the layout until
 		// there is something to show.
-		g.If(!c.Details.empty(), h.Dl(h.Class("gadget-descriptions"), htmlx.Data("descriptions", ""), g.Attr("hidden"))),
-		h.Ul(h.Class("gadget-effects"), htmlx.Data("effects", ""), g.Attr("hidden")),
+		g.If(!c.Details.empty(), h.Dl(h.Class("gomu-descriptions"), htmlx.Data("descriptions", ""), g.Attr("hidden"))),
+		h.Ul(h.Class("gomu-effects"), htmlx.Data("effects", ""), g.Attr("hidden")),
 		c.guardsNode(),
 		c.decisionNode(),
-		h.P(h.Class("gadget-confirm-outcome"), htmlx.Data("outcome", ""), g.Attr("hidden"), h.Aria("live", "polite")),
+		h.P(h.Class("gomu-confirm-outcome"), htmlx.Data("outcome", ""), g.Attr("hidden"), h.Aria("live", "polite")),
 		statusNode(),
 	)
-	return h.Div(h.Class("gadget-root"), htmlx.Data("widget", "confirm"),
+	return h.Div(h.Class("gomu-root"), htmlx.Data("widget", "confirm"),
 		h.Div(chrome...),
 	)
 }
@@ -59,23 +59,23 @@ func (c *Confirm) toolbar() g.Node {
 		items = append(items, brand)
 	}
 	if c.Title != "" {
-		items = append(items, h.H2(h.Class("gadget-title"), g.Text(c.Title)))
+		items = append(items, h.H2(h.Class("gomu-title"), g.Text(c.Title)))
 	}
 	if len(items) == 0 {
 		return nil
 	}
-	return h.Div(append([]g.Node{h.Class("gadget-toolbar")}, items...)...)
+	return h.Div(append([]g.Node{h.Class("gomu-toolbar")}, items...)...)
 }
 
 // promptNode is the question itself, marked with the severity icon so the
 // weight of the decision is legible before a word is read.
 func (c *Confirm) promptNode() g.Node {
-	text := []g.Node{h.Class("gadget-confirm-text"), h.H3(h.Class("gadget-confirm-question"), g.Text(c.Prompt))}
+	text := []g.Node{h.Class("gomu-confirm-text"), h.H3(h.Class("gomu-confirm-question"), g.Text(c.Prompt))}
 	if c.Body != "" {
-		text = append(text, h.P(h.Class("gadget-confirm-lede"), g.Text(c.Body)))
+		text = append(text, h.P(h.Class("gomu-confirm-lede"), g.Text(c.Body)))
 	}
-	return h.Div(h.Class("gadget-confirm-prompt"),
-		h.Span(h.Class("gadget-confirm-icon"), h.Aria("hidden", "true"), severityIcon(c.severity())),
+	return h.Div(h.Class("gomu-confirm-prompt"),
+		h.Span(h.Class("gomu-confirm-icon"), h.Aria("hidden", "true"), severityIcon(c.severity())),
 		h.Div(text...),
 	)
 }
@@ -113,14 +113,14 @@ func severityIcon(sev BadgeVariant) g.Node {
 func (c *Confirm) guardsNode() g.Node {
 	var guards []g.Node
 	if c.Acknowledge != "" {
-		guards = append(guards, h.Label(h.Class("gadget-confirm-ack"),
+		guards = append(guards, h.Label(h.Class("gomu-confirm-ack"),
 			checkboxNode(htmlx.Data("ack", "")),
 			h.Span(g.Text(c.Acknowledge)),
 		))
 	}
 	if c.TypeToConfirm != "" {
-		const id = "gadget-confirm-phrase"
-		guards = append(guards, h.Div(h.Class("gadget-confirm-type"),
+		const id = "gomu-confirm-phrase"
+		guards = append(guards, h.Div(h.Class("gomu-confirm-type"),
 			h.Label(h.For(id),
 				g.Text("Type "),
 				h.Code(g.Text(c.TypeToConfirm)),
@@ -129,7 +129,7 @@ func (c *Confirm) guardsNode() g.Node {
 			h.Input(
 				h.ID(id),
 				h.Type("text"),
-				h.Class("gadget-input"),
+				h.Class("gomu-input"),
 				htmlx.Data("phrase", ""),
 				h.AutoComplete("off"),
 				g.Attr("spellcheck", "false"),
@@ -140,7 +140,7 @@ func (c *Confirm) guardsNode() g.Node {
 	if len(guards) == 0 {
 		return nil
 	}
-	return h.Div(append([]g.Node{h.Class("gadget-confirm-guards")}, guards...)...)
+	return h.Div(append([]g.Node{h.Class("gomu-confirm-guards")}, guards...)...)
 }
 
 // decisionNode is the two-outcome bar. Accept starts disabled whenever a
@@ -148,18 +148,18 @@ func (c *Confirm) guardsNode() g.Node {
 // and the reject button leads, keeping the destructive one away from where
 // the thumb lands first.
 func (c *Confirm) decisionNode() g.Node {
-	nodes := []g.Node{h.Class("gadget-confirm-actions"), htmlx.Data("decision", "")}
+	nodes := []g.Node{h.Class("gomu-confirm-actions"), htmlx.Data("decision", "")}
 	if c.Reject != nil {
 		nodes = append(nodes, h.Button(
 			h.Type("button"),
-			h.Class("gadget-btn"),
+			h.Class("gomu-btn"),
 			htmlx.Data("reject", ""),
 			g.Text(c.rejectLabel()),
 		))
 	}
 	accept := []g.Node{
 		h.Type("button"),
-		h.Class("gadget-btn gadget-btn--" + string(c.acceptVariant())),
+		h.Class("gomu-btn gomu-btn--" + string(c.acceptVariant())),
 		htmlx.Data("accept", ""),
 		g.Text(c.acceptLabel()),
 	}

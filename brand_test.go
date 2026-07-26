@@ -1,4 +1,4 @@
-package gadget
+package gomukit
 
 import (
 	"os"
@@ -81,8 +81,8 @@ func TestBrandRendersInEveryWidget(t *testing.T) {
 				t.Fatalf("document does not parse: %v", err)
 			}
 			for _, want := range []string{
-				`class="gadget-brand-name">Acme<`,
-				`data-gadget-brand="https://acme.test"`,
+				`class="gomu-brand-name">Acme<`,
+				`data-gomu-brand="https://acme.test"`,
 				`<circle cx="8" cy="8" r="7"/>`,
 			} {
 				if !strings.Contains(doc, want) {
@@ -91,10 +91,10 @@ func TestBrandRendersInEveryWidget(t *testing.T) {
 			}
 			// The brand is the toolbar's first child: top left, before the
 			// title. Matched on the class attribute so the stylesheet's own
-			// ".gadget-brand" rule is not mistaken for the markup.
-			toolbar := strings.Index(doc, `class="gadget-toolbar"`)
-			mark := strings.Index(doc, `class="gadget-brand`)
-			title := strings.Index(doc, `class="gadget-title"`)
+			// ".gomu-brand" rule is not mistaken for the markup.
+			toolbar := strings.Index(doc, `class="gomu-toolbar"`)
+			mark := strings.Index(doc, `class="gomu-brand`)
+			title := strings.Index(doc, `class="gomu-title"`)
 			if toolbar < 0 || mark < toolbar {
 				t.Error("brand is not inside the toolbar")
 			}
@@ -112,7 +112,7 @@ func TestBrandDataURILogoRendersAsImage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(doc, `<img class="gadget-brand-logo" src="`+logoDataURI+`" alt="Acme logo">`) {
+	if !strings.Contains(doc, `<img class="gomu-brand-logo" src="`+logoDataURI+`" alt="Acme logo">`) {
 		t.Error("document missing the data URI logo image")
 	}
 }
@@ -138,10 +138,10 @@ func TestBrandCreatesToolbarWithoutTitle(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !strings.Contains(doc, `class="gadget-toolbar"`) {
+			if !strings.Contains(doc, `class="gomu-toolbar"`) {
 				t.Error("document missing the toolbar")
 			}
-			if !strings.Contains(doc, `class="gadget-brand"`) {
+			if !strings.Contains(doc, `class="gomu-brand"`) {
 				t.Error("document missing the brand")
 			}
 		})
@@ -156,10 +156,10 @@ func TestBrandWithoutURLIsNotClickable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(doc, "data-gadget-brand") {
+	if strings.Contains(doc, "data-gomu-brand") {
 		t.Error("unlinked brand should not carry the openLink hook")
 	}
-	if !strings.Contains(doc, `<div class="gadget-brand">`) {
+	if !strings.Contains(doc, `<div class="gomu-brand">`) {
 		t.Error("unlinked brand should render as a div")
 	}
 }

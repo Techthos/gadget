@@ -1,5 +1,5 @@
-/* gadget stylesheet aggregation point. esbuild bundles all @imports into
- * internal/assets/dist/gadget.css. */
+/* gomukit stylesheet aggregation point. esbuild bundles all @imports into
+ * internal/assets/dist/gomukit.css. */
 @import "./tokens.css";
 @import "./base.css";
 @import "./check.css";

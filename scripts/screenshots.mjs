@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Screenshots every gadget widget preview into docs/assets.
+// Screenshots every gomukit widget preview into docs/assets.
 //
 //   node scripts/screenshots.mjs              # everything, light + dark
 //   node scripts/screenshots.mjs --only table # just the Table stories
@@ -133,7 +133,7 @@ if (opts.help) {
   --width N      force one render width for every story
   --port N       port for the harness this script starts (default: a free one)
   --url URL      shoot an already running harness instead of starting one
-  --chrome PATH  Chrome/Chromium binary (default: \$GADGET_CHROME, then PATH)
+  --chrome PATH  Chrome/Chromium binary (default: \$GOMUKIT_CHROME, then PATH)
   --no-readme    skip rewriting the images the README embeds
 `);
   process.exit(0);
@@ -301,7 +301,7 @@ async function startHarness(workDir, port) {
 // --- chrome ---------------------------------------------------------------
 
 function chromePath() {
-  const explicit = opts.chrome ?? process.env.GADGET_CHROME;
+  const explicit = opts.chrome ?? process.env.GOMUKIT_CHROME;
   if (explicit) return explicit;
   for (const c of ["google-chrome", "google-chrome-stable", "chromium", "chromium-browser"]) {
     const { status, stdout } = spawnSync("which", [c], { encoding: "utf8" });
@@ -367,7 +367,7 @@ const hostShim = (theme) => `(() => {
     window.postMessage({ jsonrpc: "2.0", id: msg.id, result }, "*");
   });
   // Used for the stories that only get their data at runtime.
-  window.__gadgetPush = (structuredContent) => {
+  window.__gomukitPush = (structuredContent) => {
     window.postMessage({
       jsonrpc: "2.0",
       method: "ui/notifications/tool-result",
@@ -420,7 +420,7 @@ async function shoot(cdp, sessionId, { url, theme, width, payload }) {
     await loaded;
 
     if (payload) {
-      await evaluate(cdp, sessionId, `window.__gadgetPush(${payload})`);
+      await evaluate(cdp, sessionId, `window.__gomukitPush(${payload})`);
     }
 
     // Let fonts, the handshake re-render (host locale/timeZone) and any
@@ -474,7 +474,7 @@ const digest = (buf) => createHash("sha256").update(buf).digest("hex").slice(0, 
 // --- main -----------------------------------------------------------------
 
 async function main() {
-  const workDir = await mkdtemp(path.join(tmpdir(), "gadget-shots-"));
+  const workDir = await mkdtemp(path.join(tmpdir(), "gomukit-shots-"));
   let cdp;
   try {
     const base = opts.url ?? (await startHarness(workDir, opts.port ? Number(opts.port) : await freePort()));

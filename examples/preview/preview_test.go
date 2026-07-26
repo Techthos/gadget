@@ -8,7 +8,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/techthos/gadget/uispec"
+	"github.com/techthos/gomukit/uispec"
 )
 
 // connect spins up the preview server against an in-memory client that

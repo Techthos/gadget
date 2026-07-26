@@ -1,9 +1,9 @@
 # Widget reference
 
-Every widget implements `gadget.Widget`: it renders one self-contained HTML
+Every widget implements `gomukit.Widget`: it renders one self-contained HTML
 document (`Document()`), registers as one `ui://` resource
 (`Descriptor()`), and links to tools via `ToolMeta()`. With the go-sdk
-adapter you rarely call these yourself — see `gadget/gosdk`.
+adapter you rarely call these yourself — see `gomukit/gosdk`.
 
 ## Data contract
 
@@ -24,41 +24,41 @@ Widgets read runtime data from the tool result's `structuredContent`:
 | DatePicker | `rows` (`RowsKey`) | `[]object` — the record the question is about (`rows[0]`) |
 | Menu | — | reads nothing; its tiles are authored, not fetched |
 
-`gadget.RowsOf(slice)` converts typed Go slices to row maps (honors json
+`gomukit.RowsOf(slice)` converts typed Go slices to row maps (honors json
 tags).
 
 ## Table
 
 ```go
-table := &gadget.Table{
+table := &gomukit.Table{
     URI:   "ui://myapp/users",
     Title: "Users",
-    Columns: []gadget.Column{
-        gadget.Text("name", "Name"),
-        gadget.Number("balance", "Balance", "currency:EUR"),
-        gadget.Date("createdAt", "Created", "date"),
-        gadget.Badge("status", "Status", map[string]gadget.BadgeVariant{
-            "active": gadget.BadgeSuccess,
-            "banned": gadget.BadgeDanger,
+    Columns: []gomukit.Column{
+        gomukit.Text("name", "Name"),
+        gomukit.Number("balance", "Balance", "currency:EUR"),
+        gomukit.Date("createdAt", "Created", "date"),
+        gomukit.Badge("status", "Status", map[string]gomukit.BadgeVariant{
+            "active": gomukit.BadgeSuccess,
+            "banned": gomukit.BadgeDanger,
         }),
-        gadget.Link("website", "Website"),
-        gadget.ActionsColumn(
-            gadget.Action{
+        gomukit.Link("website", "Website"),
+        gomukit.ActionsColumn(
+            gomukit.Action{
                 Label: "Delete", Tool: "delete_user",
-                Variant: gadget.VariantDanger, Confirm: "Really delete?",
-                Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+                Variant: gomukit.VariantDanger, Confirm: "Really delete?",
+                Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")},
             },
         ),
     },
     PageSize:    10,
     PageSizes:   []int{10, 25, 50}, // page-size dropdown on the pagination bar
-    DefaultSort: &gadget.SortSpec{Key: "name"},
+    DefaultSort: &gomukit.SortSpec{Key: "name"},
     Filterable:  true,
-    Selection: &gadget.SelectionConfig{Bulk: []gadget.Action{{
+    Selection: &gomukit.SelectionConfig{Bulk: []gomukit.Action{{
         Label: "Archive", Tool: "archive_users",
-        Args: map[string]gadget.ArgSource{"ids": gadget.FromSelection("id")},
+        Args: map[string]gomukit.ArgSource{"ids": gomukit.FromSelection("id")},
     }}},
-    Empty: gadget.EmptyState{Title: "No users"},
+    Empty: gomukit.EmptyState{Title: "No users"},
 }
 ```
 
@@ -100,16 +100,16 @@ widget arrives as that call's result.
 
 ```go
 // Table row / card action
-gadget.Action{Label: "Edit", Tool: "edit_user",
+gomukit.Action{Label: "Edit", Tool: "edit_user",
     Prompt: "Open the edit form for this user"}
 
 // Menu tile
-gadget.MenuItem{Tool: "list_customers", Label: "Customers",
+gomukit.MenuItem{Tool: "list_customers", Label: "Customers",
     Prompt: "Show me the customer list"}
 
 // Confirm, Choice, DatePicker — named ChatPrompt, since Prompt is the
 // question already put to the reader
-gadget.AcceptSpec{Tool: "delete_user",
+gomukit.AcceptSpec{Tool: "delete_user",
     ChatPrompt: "Delete the account for Ada"}
 ```
 
@@ -128,33 +128,33 @@ gadget.AcceptSpec{Tool: "delete_user",
 ## Form
 
 ```go
-form := &gadget.Form{
+form := &gomukit.Form{
     URI:   "ui://myapp/user-form",
     Title: "Edit user",
-    Fields: []gadget.Field{
-        {Name: "id", Type: gadget.FHidden},
+    Fields: []gomukit.Field{
+        {Name: "id", Type: gomukit.FHidden},
         {Name: "name", Label: "Name", Required: true},
         {Name: "email", Label: "Email", Required: true,
-            Validation: &gadget.Validation{
+            Validation: &gomukit.Validation{
                 Pattern: `[^@\s]+@[^@\s]+`, Message: "Enter a valid email.",
             }},
-        {Name: "role", Label: "Role", Type: gadget.FSelect, Required: true,
-            Options: []gadget.Option{gadget.Opt("user"), gadget.Opt("admin")}},
-        {Name: "active", Label: "Active", Type: gadget.FCheckbox, Default: true},
+        {Name: "role", Label: "Role", Type: gomukit.FSelect, Required: true,
+            Options: []gomukit.Option{gomukit.Opt("user"), gomukit.Opt("admin")}},
+        {Name: "active", Label: "Active", Type: gomukit.FCheckbox, Default: true},
     },
-    Submit: gadget.SubmitSpec{Tool: "save_user", SuccessMessage: "Saved."},
-    Cancel: &gadget.CancelSpec{},
+    Submit: gomukit.SubmitSpec{Tool: "save_user", SuccessMessage: "Saved."},
+    Cancel: &gomukit.CancelSpec{},
 }
 ```
 
 - **Field types**: `text`, `textarea`, `number`, `checkbox`, `select`,
   `multiselect`, `date`, `daterange`, `time`, `hidden`, `readonly`.
-- **Dropdowns**: `select` and `multiselect` render as the gadget dropdown —
+- **Dropdowns**: `select` and `multiselect` render as the gomukit dropdown —
   the runtime upgrades the `<select>` into a trigger plus popup listbox
   (arrow keys, Home/End, typeahead, Escape, check marks) and keeps the select
   as the value holder, so validation and submitted value types are unchanged.
   `Placeholder` becomes the trigger's empty-state text.
-- **Date fields**: `FDate` and `FDateRange` render the gadget calendar — the
+- **Date fields**: `FDate` and `FDateRange` render the gomukit calendar — the
   runtime upgrades the native date input into a trigger showing the date in the
   host's locale, with the grid in a popover, and keeps the input as the value
   holder (so validation and the submitted value are unchanged, and a document
@@ -191,49 +191,49 @@ table overflows and a card grid turns into a long vertical scroll. Both share a
 list/mutation tools drive either.
 
 ```go
-tmpl := gadget.CardTemplate{
-    Header: gadget.CardHeader{
+tmpl := gomukit.CardTemplate{
+    Header: gomukit.CardHeader{
         TitleKey:       "name",
         DescriptionKey: "email",
-        Badge: gadget.Badge("status", "Status", map[string]gadget.BadgeVariant{
-            "active": gadget.BadgeSuccess,
-            "banned": gadget.BadgeDanger,
+        Badge: gomukit.Badge("status", "Status", map[string]gomukit.BadgeVariant{
+            "active": gomukit.BadgeSuccess,
+            "banned": gomukit.BadgeDanger,
         }),
     },
-    Content: gadget.CardContent{
+    Content: gomukit.CardContent{
         TextKey: "bio",
-        Items: gadget.Descriptions{Items: []gadget.DescriptionItem{
-            {Label: "Balance", Key: "balance", Type: gadget.ColNumber, Format: "currency:EUR"},
-            {Label: "Joined", Key: "createdAt", Type: gadget.ColDate, Format: "relative"},
-            {Label: "Website", Key: "website", Type: gadget.ColLink,
-                Link: &gadget.LinkSpec{HrefKey: "website"}},
+        Items: gomukit.Descriptions{Items: []gomukit.DescriptionItem{
+            {Label: "Balance", Key: "balance", Type: gomukit.ColNumber, Format: "currency:EUR"},
+            {Label: "Joined", Key: "createdAt", Type: gomukit.ColDate, Format: "relative"},
+            {Label: "Website", Key: "website", Type: gomukit.ColLink,
+                Link: &gomukit.LinkSpec{HrefKey: "website"}},
         }},
     },
-    Footer: gadget.CardFooter{
+    Footer: gomukit.CardFooter{
         Text: "Balances update hourly.",
-        Actions: []gadget.Action{
-            {Label: "Edit", Tool: "edit_user", Variant: gadget.VariantPrimary,
-                Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")}},
+        Actions: []gomukit.Action{
+            {Label: "Edit", Tool: "edit_user", Variant: gomukit.VariantPrimary,
+                Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")}},
         },
     },
 }
 
-cards := &gadget.CardList{
+cards := &gomukit.CardList{
     URI:         "ui://myapp/users",
     Title:       "Users",
     Template:    tmpl,
     PageSize:    12,
     PageSizes:   []int{12, 24, 48},
-    DefaultSort: &gadget.SortSpec{Key: "balance", Desc: true},
+    DefaultSort: &gomukit.SortSpec{Key: "balance", Desc: true},
     Filterable:  true,
-    Selection: &gadget.SelectionConfig{Bulk: []gadget.Action{{
+    Selection: &gomukit.SelectionConfig{Bulk: []gomukit.Action{{
         Label: "Archive", Tool: "archive_users",
-        Args: map[string]gadget.ArgSource{"ids": gadget.FromSelection("id")},
+        Args: map[string]gomukit.ArgSource{"ids": gomukit.FromSelection("id")},
     }}},
-    Empty: gadget.EmptyState{Title: "No users"},
+    Empty: gomukit.EmptyState{Title: "No users"},
 }
 
-card := &gadget.Card{URI: "ui://myapp/user", Title: "User", Template: tmpl}
+card := &gomukit.Card{URI: "ui://myapp/user", Title: "User", Template: tmpl}
 ```
 
 - **Template**: three sections, rendered in order.
@@ -255,9 +255,9 @@ card := &gadget.Card{URI: "ui://myapp/user", Title: "User", Template: tmpl}
   available width and disable at each end. The strip drags with the mouse,
   swipes on touch, scrolls with the arrow keys when focused, and hides its
   scrollbar. `PageSize` still applies and bounds how many cards sit in the
-  strip at once. Card width is the `--gadget-card-width`
+  strip at once. Card width is the `--gomu-card-width`
   token (default `17rem`), overridable per widget:
-  `Theme: &theme.Theme{Extra: map[string]string{"--gadget-card-width": "22rem"}}`.
+  `Theme: &theme.Theme{Extra: map[string]string{"--gomu-card-width": "22rem"}}`.
 - **Card** renders `rows[0]`; use it as a detail view. Both support
   `InitialData` and `LoadTool`/`LoadArgs` load-time hydration, and re-render
   when an action or tool result returns `RowsKey`.
@@ -273,18 +273,18 @@ so a menu is the entry point an app hands the user before any record is in
 view.
 
 ```go
-menu := &gadget.Menu{
+menu := &gomukit.Menu{
     URI:   "ui://myapp/menu",
     Title: "Acme users",
     Intro: "Pick where to start.",
-    Items: []gadget.MenuItem{
+    Items: []gomukit.MenuItem{
         {
             Tool:         "list_users",
             Label:        "User table",
             Description:  "Sortable, filterable directory.",
             IconSVG:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/></svg>`,
             Badge:        "read",
-            BadgeVariant: gadget.BadgeInfo,
+            BadgeVariant: gomukit.BadgeInfo,
         },
         {Tool: "edit_user", Args: map[string]any{"id": 1}, Label: "Edit Ada"},
     },
@@ -325,8 +325,8 @@ gosdk.AddWidgetToolFor(server, menu,
   host accepts the turn.
 - **Layout** reflows via CSS `auto-fill`, so one document works in a narrow
   chat pane and a wide panel. Minimum tile width is the
-  `--gadget-menu-tile-min` token (default `11rem`), overridable per widget:
-  `Theme: &theme.Theme{Extra: map[string]string{"--gadget-menu-tile-min": "14rem"}}`.
+  `--gomu-menu-tile-min` token (default `11rem`), overridable per widget:
+  `Theme: &theme.Theme{Extra: map[string]string{"--gomu-menu-tile-min": "14rem"}}`.
 
 ## Confirm
 
@@ -337,35 +337,35 @@ has room for a few words; use `Confirm` when the consequences have to be
 weighed before the reader decides.
 
 ```go
-confirm := &gadget.Confirm{
+confirm := &gomukit.Confirm{
     URI:      "ui://myapp/delete-user",
     Title:    "Delete user",
     Prompt:   "Delete Ada Lovelace?",
     Body:     "The account and everything attached to it is removed for good.",
-    Severity: gadget.BadgeDanger,
+    Severity: gomukit.BadgeDanger,
 
-    Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
+    Details: gomukit.Descriptions{Items: []gomukit.DescriptionItem{
         {Label: "User", Key: "name"},
-        {Label: "Balance", Key: "balance", Type: gadget.ColNumber, Format: "currency:EUR"},
-        {Label: "Status", Key: "status", Type: gadget.ColBadge, Badge: map[string]gadget.BadgeVariant{
-            "active": gadget.BadgeSuccess,
+        {Label: "Balance", Key: "balance", Type: gomukit.ColNumber, Format: "currency:EUR"},
+        {Label: "Status", Key: "status", Type: gomukit.ColBadge, Badge: map[string]gomukit.BadgeVariant{
+            "active": gomukit.BadgeSuccess,
         }},
         {Label: "Region", Text: "eu-central-1"},
     }},
-    Effects: []gadget.Effect{
-        {Text: "Removes the account", Severity: gadget.BadgeDanger},
-        {Text: "Deletes audit records", Value: "128", Severity: gadget.BadgeWarning},
+    Effects: []gomukit.Effect{
+        {Text: "Removes the account", Severity: gomukit.BadgeDanger},
+        {Text: "Deletes audit records", Value: "128", Severity: gomukit.BadgeWarning},
     },
 
     Acknowledge:   "I understand this cannot be undone.",
     TypeToConfirm: "ada@example.com",
 
-    Accept: gadget.AcceptSpec{
+    Accept: gomukit.AcceptSpec{
         Tool: "delete_user", Label: "Delete user",
-        Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+        Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")},
         SuccessMessage: "User deleted.",
     },
-    Reject: &gadget.RejectSpec{Label: "Keep user", Message: "Nothing was deleted."},
+    Reject: &gomukit.RejectSpec{Label: "Keep user", Message: "Nothing was deleted."},
 }
 ```
 
@@ -404,25 +404,25 @@ one. Picking is local — nothing is called until the reader submits. Where
 `Confirm` asks yes/no about one operation, `Choice` asks *which* operation.
 
 ```go
-choice := &gadget.Choice{
+choice := &gomukit.Choice{
     URI:    "ui://myapp/shipping",
     Title:  "Shipping",
     Prompt: "How should we ship order ORD-4471?",
     Body:   "The parcel is packed and leaves the warehouse today either way.",
 
-    Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
+    Details: gomukit.Descriptions{Items: []gomukit.DescriptionItem{
         {Label: "Order", Key: "reference"},
         {Label: "Destination", Text: "Berlin, DE"},
     }},
 
-    Options: []gadget.ChoiceOption{
+    Options: []gomukit.ChoiceOption{
         {
             Value: "standard", Label: "Standard", Summary: "3-5 business days",
             Body:    "Handed to the postal service tonight.",
             Bullets: []string{"Tracked to the depot", "No signature on delivery"},
-            Details: gadget.Descriptions{Items: []gadget.DescriptionItem{
-                {Label: "Price", Key: "price", Type: gadget.ColNumber, Format: "currency:EUR"},
-                {Label: "Arrives", Key: "eta", Type: gadget.ColDate, Format: "date"},
+            Details: gomukit.Descriptions{Items: []gomukit.DescriptionItem{
+                {Label: "Price", Key: "price", Type: gomukit.ColNumber, Format: "currency:EUR"},
+                {Label: "Arrives", Key: "eta", Type: gomukit.ColDate, Format: "date"},
             }},
             Data:    map[string]any{"price": 4.9, "eta": "2026-08-03T10:00:00Z"},
             Default: true,
@@ -431,17 +431,17 @@ choice := &gadget.Choice{
             Value: "express", Label: "Express", Summary: "next business day",
             Body:         "Arrives before 12:00 tomorrow.",
             Badge:        "fastest",
-            BadgeVariant: gadget.BadgeSuccess,
+            BadgeVariant: gomukit.BadgeSuccess,
         },
         {Value: "pickup", Label: "Depot pickup", Summary: "no depot nearby", Disabled: true},
     },
 
-    Submit: gadget.ChoiceSubmit{
+    Submit: gomukit.ChoiceSubmit{
         Tool: "ship_order", Label: "Ship it", ValueArg: "method",
-        Args: map[string]gadget.ArgSource{"id": gadget.FromRow("id")},
+        Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")},
         SuccessMessage: "On its way.",
     },
-    Cancel: &gadget.RejectSpec{Label: "Decide later", Message: "Nothing was shipped."},
+    Cancel: &gomukit.RejectSpec{Label: "Decide later", Message: "Nothing was shipped."},
 }
 ```
 
@@ -486,10 +486,10 @@ Intl-formatted exactly like a table cell) or from fixed
 text authored in Go (`Text`) — one or the other, never both.
 
 ```go
-gadget.Descriptions{Items: []gadget.DescriptionItem{
+gomukit.Descriptions{Items: []gomukit.DescriptionItem{
     {Label: "User", Key: "name"},
-    {Label: "Joined", Key: "createdAt", Type: gadget.ColDate, Format: "relative"},
-    {Label: "Profile", Type: gadget.ColLink, Link: &gadget.LinkSpec{HrefKey: "website"}},
+    {Label: "Joined", Key: "createdAt", Type: gomukit.ColDate, Format: "relative"},
+    {Label: "Profile", Type: gomukit.ColLink, Link: &gomukit.LinkSpec{HrefKey: "website"}},
     {Label: "Region", Text: "eu-central-1"},
 }}
 ```
@@ -498,9 +498,9 @@ gadget.Descriptions{Items: []gadget.DescriptionItem{
   `number`, `date`, `badge`, `link`, with the same `Format` strings.
 - **No layout options.** The list takes as many columns as the widget's own
   width allows and collapses to one in a narrow pane. The smallest an item may
-  get before a column is dropped is the `--gadget-desc-min` token (default
+  get before a column is dropped is the `--gomu-desc-min` token (default
   `12rem`), overridable per widget:
-  `Theme: &theme.Theme{Extra: map[string]string{"--gadget-desc-min": "16rem"}}`.
+  `Theme: &theme.Theme{Extra: map[string]string{"--gomu-desc-min": "16rem"}}`.
 - **A value the record does not carry renders as an em dash** rather than
   disappearing: a reader deciding on these facts should see which are missing.
 
@@ -512,26 +512,26 @@ widget when the date *is* the question ("when should this ship?", "which
 nights?"), and the field when it is one answer among several.
 
 ```go
-picker := &gadget.DatePicker{
+picker := &gomukit.DatePicker{
     URI:    "ui://myapp/booking",
     Title:  "Booking",
     Prompt: "Which nights should we hold the suite?",
-    Mode:   gadget.DateRange,
-    Calendar: &gadget.Calendar{
+    Mode:   gomukit.DateRange,
+    Calendar: &gomukit.Calendar{
         Min:         "2026-08-01",
         Max:         "2026-12-31",
         Disabled:    []string{"2026-08-27", "2026-08-28"},
         WeekNumbers: true,
-        Presets: []gadget.DatePreset{
-            {Label: "This week", Span: gadget.SpanThisWeek},
+        Presets: []gomukit.DatePreset{
+            {Label: "This week", Span: gomukit.SpanThisWeek},
             {Label: "Trade fair", Start: "2026-09-07", End: "2026-09-11"},
         },
     },
-    Submit: gadget.DateSubmit{
+    Submit: gomukit.DateSubmit{
         Tool: "hold_room", Label: "Hold it",
         ValueArg: "from", EndArg: "until", SuccessMessage: "Held.",
     },
-    Cancel: &gadget.RejectSpec{},
+    Cancel: &gomukit.RejectSpec{},
 }
 ```
 
@@ -569,12 +569,12 @@ is what most fields want.
 | `Min`, `Max` | The selectable window, `"YYYY-MM-DD"`. The grid will not travel past the months holding them, and date fields render them as native `min`/`max` too. |
 | `Disabled` | Individual days that cannot be picked — holidays, days already booked. A range may not straddle one. |
 | `DisableWeekends` | Blocks every Saturday and Sunday. |
-| `Months` | Months shown at once; defaults to 1 for a date and 2 for a range, maximum 4. They sit side by side where there is room and wrap under each other where there is not — every month asked for is always on screen, so a span across a boundary is one gesture in a chat pane too. |
+| `Months` | Months shown at once; defaults to 1 for a date and 2 for a range, maximum 4. They sit side by side where there is room and fall onto a second row where there is not — every month asked for is always on screen, so a span across a boundary is one gesture in a chat pane too. |
 | `WeekNumbers` | A leading column of ISO 8601 week numbers. |
 | `MonthDropdowns` | Month and year dropdowns in place of the caption, bounded by `FromYear`/`ToYear` (defaulting to the years of `Min`/`Max`). For dates of birth and anything else far from today. |
 | `WeekStart` | Overrides the first day of the week; defaults to the host locale's own (`WeekStartMonday`, `WeekStartSunday`, `WeekStartSaturday`). |
 | `StartOn` | The month the grid opens on while nothing is selected. |
-| `Presets` | Named shortcuts beside the grid. |
+| `Presets` | Named shortcuts: a rail beside the grid where there is room for one, a row above it otherwise. |
 
 `DatePreset` names a window with either a fixed `Start`/`End` or a `Span`
 resolved at runtime against the reader's today: `SpanToday`, `SpanYesterday`,
@@ -585,6 +585,15 @@ the name of a rule rather than a pair of dates because a server cannot name
 those dates at registration time: "the last 7 days" is a different week by the
 time the widget is read. In a single-date calendar a preset picks the day its
 window opens on.
+
+A preset is measured against `Min`/`Max` and the blocked days as they stand when
+the widget is read, and is shown as unavailable where it has nothing to offer —
+a lit shortcut always does something. A range preset that overlaps the bounds is
+trimmed to them: "last 30 days" against a calendar that opens on the 1st picks
+the days of it there are. One wholly outside the bounds, or straddling a blocked
+day, is switched off, since a shorter window would name something nobody asked
+for. A single-date preset is never moved: it picks the day it names or is
+switched off, so a "Today" before `Min` does not quietly pick another day.
 
 - **Keyboard**: one tab stop for the whole grid, arrows by day and week,
   PageUp/PageDown by month (with Shift, by year), Home/End to the ends of the
@@ -601,13 +610,13 @@ the application the widget belongs to. One `*Brand` is normally shared by all
 of a server's widgets.
 
 ```go
-brand := &gadget.Brand{
+brand := &gomukit.Brand{
     Name:    "Acme",
     URL:     "https://acme.example",  // opened through the host
     LogoSVG: `<svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="7"/></svg>`,
 }
 
-table := &gadget.Table{URI: "ui://myapp/users", Brand: brand /* … */}
+table := &gomukit.Table{URI: "ui://myapp/users", Brand: brand /* … */}
 ```
 
 - **Placement**: always the top left of the widget, as the toolbar's first

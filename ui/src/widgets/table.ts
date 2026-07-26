@@ -8,6 +8,7 @@ import { checkbox, clear, delegate, h } from "../dom";
 import { refreshDropdown } from "../dropdown";
 import { formatCell } from "../format";
 import { CallToolResult, M } from "../protocol";
+import { errorText, textOf } from "../status";
 import {
 	clampPage,
 	filterRows,
@@ -83,27 +84,27 @@ export function mountTable(ctx: MountContext): void {
 	const cfg = ctx.config as unknown as TableCfg;
 	const { root, bridge } = ctx;
 
-	const tbodyEl = root.querySelector<HTMLElement>("[data-gadget-rows]");
+	const tbodyEl = root.querySelector<HTMLElement>("[data-gomu-rows]");
 	if (!tbodyEl || !Array.isArray(cfg.columns)) return;
 	const tbody: HTMLElement = tbodyEl;
-	const statusEl = root.querySelector<HTMLElement>("[data-gadget-status]");
-	const emptyEl = root.querySelector<HTMLElement>("[data-gadget-empty]");
+	const statusEl = root.querySelector<HTMLElement>("[data-gomu-status]");
+	const emptyEl = root.querySelector<HTMLElement>("[data-gomu-empty]");
 	const emptyTitleEl = emptyEl?.querySelector("h3") ?? null;
 	const emptyTitleDefault = emptyTitleEl?.textContent ?? "";
-	const paginationEl = root.querySelector<HTMLElement>("[data-gadget-pagination]");
-	const pageInfoEl = root.querySelector<HTMLElement>("[data-gadget-page-info]");
-	const bulkEl = root.querySelector<HTMLElement>("[data-gadget-bulk]");
-	const bulkCountEl = root.querySelector<HTMLElement>("[data-gadget-bulk-count]");
-	const bulkMenuEl = root.querySelector<HTMLButtonElement>("[data-gadget-bulk-menu]");
-	const selectAllEl = root.querySelector<HTMLInputElement>("[data-gadget-select-all]");
-	const pageSizeEl = root.querySelector<HTMLSelectElement>("[data-gadget-page-size]");
+	const paginationEl = root.querySelector<HTMLElement>("[data-gomu-pagination]");
+	const pageInfoEl = root.querySelector<HTMLElement>("[data-gomu-page-info]");
+	const bulkEl = root.querySelector<HTMLElement>("[data-gomu-bulk]");
+	const bulkCountEl = root.querySelector<HTMLElement>("[data-gomu-bulk-count]");
+	const bulkMenuEl = root.querySelector<HTMLButtonElement>("[data-gomu-bulk-menu]");
+	const selectAllEl = root.querySelector<HTMLInputElement>("[data-gomu-select-all]");
+	const pageSizeEl = root.querySelector<HTMLSelectElement>("[data-gomu-page-size]");
 	// Visible only in the compact tier, where the header row (and its sort
 	// buttons) is hidden. Both drive the same sort state, so either stays right
 	// when the widget crosses the breakpoint.
-	const sortSelectEl = root.querySelector<HTMLSelectElement>("[data-gadget-sort-select]");
+	const sortSelectEl = root.querySelector<HTMLSelectElement>("[data-gomu-sort-select]");
 
-	const wrapEl = root.querySelector<HTMLElement>(".gadget-table-wrap");
-	const tableEl = root.querySelector<HTMLTableElement>(".gadget-table");
+	const wrapEl = root.querySelector<HTMLElement>(".gomu-table-wrap");
+	const tableEl = root.querySelector<HTMLTableElement>(".gomu-table");
 
 	// --- stacked / grid layout ---
 	//
@@ -111,7 +112,7 @@ export function mountTable(ctx: MountContext): void {
 	// five columns of email addresses overflow a 600px pane while three short
 	// ones are comfortable at 320px. No CSS breakpoint can know which it is
 	// looking at, so the runtime measures and CSS renders the verdict
-	// (.gadget-root[data-gadget-stacked] in table.css).
+	// (.gomu-root[data-gomu-stacked] in table.css).
 	//
 	// The measurement is always taken in grid layout, because stacked rows have
 	// no column widths to measure: the attribute comes off, the table's
@@ -122,9 +123,9 @@ export function mountTable(ctx: MountContext): void {
 	// around the crossover point.
 	function updateStacking(): void {
 		if (!wrapEl || !tableEl) return;
-		root.removeAttribute("data-gadget-stacked");
+		root.removeAttribute("data-gomu-stacked");
 		if (tableEl.scrollWidth > wrapEl.clientWidth) {
-			root.setAttribute("data-gadget-stacked", "");
+			root.setAttribute("data-gomu-stacked", "");
 		}
 	}
 
@@ -173,15 +174,6 @@ export function mountTable(ctx: MountContext): void {
 		return out;
 	}
 
-	function textOf(res: CallToolResult): string | undefined {
-		for (const block of res.content ?? []) {
-			if (block.type === "text" && typeof block.text === "string") {
-				return block.text;
-			}
-		}
-		return undefined;
-	}
-
 	function applyResult(res: CallToolResult): void {
 		const patch: Partial<TableState> = { status: "idle" };
 		if (res.structuredContent && cfg.rowsKey in res.structuredContent) {
@@ -225,7 +217,7 @@ export function mountTable(ctx: MountContext): void {
 			store.set({
 				status: "idle",
 				statusKind: "error",
-				statusMsg: e instanceof Error ? e.message : String(e),
+				statusMsg: errorText(e, "The action failed."),
 			});
 		}
 	}
@@ -241,7 +233,7 @@ export function mountTable(ctx: MountContext): void {
 	menu.bind(root, "action-menu", (el, value) => {
 		const actions = cfg.columns[Number(value)]?.actions ?? [];
 		if (actions.length === 0) return null;
-		const id = el.closest("tr")?.getAttribute("data-gadget-row-id");
+		const id = el.closest("tr")?.getAttribute("data-gomu-row-id");
 		const row = store.get().rows.find((r) => rowID(r) === id) ?? null;
 		return { items: actions, onSelect: (i) => void fire(actions[i] as ActionCfg, row) };
 	});
@@ -262,15 +254,15 @@ export function mountTable(ctx: MountContext): void {
 
 	// Cell attributes shared by every column type. The label is what the
 	// compact tier prints in front of the value once the header row is gone
-	// (CSS reads it as attr(data-gadget-label)); the role keeps the cell a
+	// (CSS reads it as attr(data-gomu-label)); the role keeps the cell a
 	// cell there, where `display: block` has stripped the implicit one.
 	function cellAttrs(col: ColumnCfg, extraClass?: string): Record<string, string | null> {
-		const alignCls = col.align ? `gadget-align-${col.align}` : "";
+		const alignCls = col.align ? `gomu-align-${col.align}` : "";
 		const cls = [extraClass, alignCls].filter(Boolean).join(" ");
 		return {
 			role: "cell",
 			class: cls || null,
-			"data-gadget-label": col.label || null,
+			"data-gomu-label": col.label || null,
 		};
 	}
 
@@ -279,7 +271,7 @@ export function mountTable(ctx: MountContext): void {
 			case "badge": {
 				const value = String(row[col.key] ?? "");
 				const variant = col.badge?.[value];
-				const cls = "gadget-badge" + (variant && variant !== "neutral" ? ` gadget-badge--${variant}` : "");
+				const cls = "gomu-badge" + (variant && variant !== "neutral" ? ` gomu-badge--${variant}` : "");
 				return h("td", cellAttrs(col), value === "" ? "" : h("span", { class: cls }, value));
 			}
 			case "link": {
@@ -291,13 +283,13 @@ export function mountTable(ctx: MountContext): void {
 					col.link?.text ||
 					href;
 				return h("td", cellAttrs(col),
-					h("button", { type: "button", class: "gadget-link", "data-gadget-link": href }, text),
+					h("button", { type: "button", class: "gomu-link", "data-gomu-link": href }, text),
 				);
 			}
 			case "actions": {
-				const td = h("td", cellAttrs(col, "gadget-td-actions"));
+				const td = h("td", cellAttrs(col, "gomu-td-actions"));
 				td.append(
-					actionMenuTrigger({ "data-gadget-action-menu": String(colIdx), disabled: busy }),
+					actionMenuTrigger({ "data-gomu-action-menu": String(colIdx), disabled: busy }),
 				);
 				return td;
 			}
@@ -318,22 +310,22 @@ export function mountTable(ctx: MountContext): void {
 		// rows
 		clear(tbody);
 		for (const row of pageRows) {
-			const tr = h("tr", { role: "row", "data-gadget-row-id": rowID(row) });
+			const tr = h("tr", { role: "row", "data-gomu-row-id": rowID(row) });
 			if (cfg.selection) {
 				const cb = checkbox({
-					"data-gadget-select-row": "",
+					"data-gomu-select-row": "",
 					"aria-label": "Select row",
 				});
 				cb.input.checked = selected.has(rowID(row));
-				tr.append(h("td", { role: "cell", class: "gadget-td-select" }, cb.wrap));
+				tr.append(h("td", { role: "cell", class: "gomu-td-select" }, cb.wrap));
 			}
 			cfg.columns.forEach((col, i) => tr.append(cellFor(col, i, row, busy)));
 			tbody.append(tr);
 		}
 
 		// sort indicators
-		for (const th of root.querySelectorAll<HTMLElement>("th[data-gadget-sort]")) {
-			const key = th.getAttribute("data-gadget-sort");
+		for (const th of root.querySelectorAll<HTMLElement>("th[data-gomu-sort]")) {
+			const key = th.getAttribute("data-gomu-sort");
 			th.setAttribute(
 				"aria-sort",
 				s.sort && s.sort.key === key ? (s.sort.desc ? "descending" : "ascending") : "none",
@@ -364,8 +356,8 @@ export function mountTable(ctx: MountContext): void {
 				const to = Math.min((s.page + 1) * s.pageSize, total);
 				pageInfoEl.textContent = `${from}–${to} of ${total}`;
 			}
-			for (const btn of paginationEl.querySelectorAll<HTMLButtonElement>("[data-gadget-page]")) {
-				const dir = btn.getAttribute("data-gadget-page");
+			for (const btn of paginationEl.querySelectorAll<HTMLButtonElement>("[data-gomu-page]")) {
+				const dir = btn.getAttribute("data-gomu-page");
 				btn.disabled = busy || (dir === "prev" ? s.page <= 0 : s.page >= pages - 1);
 			}
 			if (pageSizeEl) {
@@ -394,9 +386,9 @@ export function mountTable(ctx: MountContext): void {
 			const msg = s.statusMsg ?? "";
 			statusEl.hidden = msg === "";
 			statusEl.textContent = msg;
-			statusEl.className = "gadget-status";
-			if (busy) statusEl.className += " gadget-status--loading";
-			else if (s.statusKind) statusEl.className += ` gadget-status--${s.statusKind}`;
+			statusEl.className = "gomu-status";
+			if (busy) statusEl.className += " gomu-status--loading";
+			else if (s.statusKind) statusEl.className += ` gomu-status--${s.statusKind}`;
 		}
 
 		// Last: the rows just written are what the columns have to fit.
@@ -463,7 +455,7 @@ export function mountTable(ctx: MountContext): void {
 	});
 
 	delegate(root, "change", "select-row", (el) => {
-		const id = el.closest("tr")?.getAttribute("data-gadget-row-id");
+		const id = el.closest("tr")?.getAttribute("data-gomu-row-id");
 		if (id === null || id === undefined) return;
 		const selected = new Set(store.get().selected);
 		if ((el as HTMLInputElement).checked) selected.add(id);

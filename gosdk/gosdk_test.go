@@ -7,8 +7,8 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/techthos/gadget"
-	"github.com/techthos/gadget/uispec"
+	"github.com/techthos/gomukit"
+	"github.com/techthos/gomukit/uispec"
 )
 
 type listInput struct{}
@@ -17,11 +17,11 @@ type listOutput struct {
 	Rows []map[string]any `json:"rows"`
 }
 
-func testTable() *gadget.Table {
-	return &gadget.Table{
+func testTable() *gomukit.Table {
+	return &gomukit.Table{
 		URI:     "ui://demo/users",
 		Title:   "Users",
-		Columns: []gadget.Column{gadget.Text("name", "Name")},
+		Columns: []gomukit.Column{gomukit.Text("name", "Name")},
 	}
 }
 
@@ -116,7 +116,7 @@ func TestEndToEnd(t *testing.T) {
 	if c.MIMEType != uispec.MIMEType {
 		t.Errorf("mimeType = %q", c.MIMEType)
 	}
-	for _, want := range []string{"<!doctype html>", `id="gadget-config"`, `data-gadget-widget="table"`} {
+	for _, want := range []string{"<!doctype html>", `id="gomu-config"`, `data-gomu-widget="table"`} {
 		if !strings.Contains(c.Text, want) {
 			t.Errorf("document missing %q", want)
 		}
@@ -185,7 +185,7 @@ func TestWithAppData(t *testing.T) {
 
 func TestAddWidgetInvalidWidget(t *testing.T) {
 	server := mcp.NewServer(&mcp.Implementation{Name: "demo", Version: "0.0.1"}, nil)
-	bad := &gadget.Table{URI: "https://wrong"}
+	bad := &gomukit.Table{URI: "https://wrong"}
 	if err := AddWidget(server, bad); err == nil {
 		t.Error("AddWidget with invalid widget must error")
 	}

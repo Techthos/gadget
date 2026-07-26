@@ -1,4 +1,4 @@
-package gadget
+package gomukit
 
 import (
 	"encoding/json"
@@ -173,6 +173,6 @@ func (s ArgSource) MarshalJSON() ([]byte, error) {
 	case s.selection != "":
 		return json.Marshal(map[string]string{"selection": s.selection})
 	default:
-		return nil, fmt.Errorf("gadget: ArgSource must be built with Static, FromRow, or FromSelection")
+		return nil, fmt.Errorf("gomukit: ArgSource must be built with Static, FromRow, or FromSelection")
 	}
 }

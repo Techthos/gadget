@@ -1,11 +1,11 @@
-package gadget
+package gomukit
 
 import (
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 
-	"github.com/techthos/gadget/internal/assets"
-	"github.com/techthos/gadget/internal/htmlx"
+	"github.com/techthos/gomukit/internal/assets"
+	"github.com/techthos/gomukit/internal/htmlx"
 )
 
 // --- Card (single record) ---
@@ -34,22 +34,22 @@ func (c *Card) Document() (string, error) {
 
 func (c *Card) shell() g.Node {
 	var chrome []g.Node
-	chrome = append(chrome, h.Class("gadget-card"))
+	chrome = append(chrome, h.Class("gomu-card"))
 	brand := brandNode(c.Brand)
 	if c.Title != "" || brand != nil {
-		toolbar := []g.Node{h.Class("gadget-toolbar"), brand}
+		toolbar := []g.Node{h.Class("gomu-toolbar"), brand}
 		if c.Title != "" {
-			toolbar = append(toolbar, h.H2(h.Class("gadget-title"), g.Text(c.Title)))
+			toolbar = append(toolbar, h.H2(h.Class("gomu-title"), g.Text(c.Title)))
 		}
 		chrome = append(chrome, h.Div(toolbar...))
 	}
 	chrome = append(chrome,
 		// The runtime renders one card element into this host.
-		h.Div(h.Class("gadget-card-host"), htmlx.Data("card", "")),
+		h.Div(h.Class("gomu-card-host"), htmlx.Data("card", "")),
 		emptyStateNode(c.Empty),
 		statusNode(),
 	)
-	return h.Div(h.Class("gadget-root"), htmlx.Data("widget", "card"),
+	return h.Div(h.Class("gomu-root"), htmlx.Data("widget", "card"),
 		h.Div(chrome...),
 	)
 }
@@ -79,8 +79,8 @@ func (l *CardList) Document() (string, error) {
 }
 
 func (l *CardList) shell() g.Node {
-	return h.Div(h.Class("gadget-root"), htmlx.Data("widget", "cardlist"),
-		h.Div(h.Class("gadget-card"),
+	return h.Div(h.Class("gomu-root"), htmlx.Data("widget", "cardlist"),
+		h.Div(h.Class("gomu-card"),
 			l.toolbar(),
 			carouselNode(),
 			emptyStateNode(l.Empty),
@@ -97,10 +97,10 @@ func (l *CardList) shell() g.Node {
 // prev/next controls. The runtime fills the strip and toggles the controls
 // from the strip's scroll geometry; both start hidden.
 func carouselNode() g.Node {
-	return h.Div(h.Class("gadget-carousel"),
+	return h.Div(h.Class("gomu-carousel"),
 		carouselNavButton("prev", "Previous cards", "‹"),
 		h.Div(
-			h.Class("gadget-card-strip"),
+			h.Class("gomu-card-strip"),
 			htmlx.Data("cards", ""),
 			h.Role("group"),
 			h.TabIndex("0"),
@@ -113,7 +113,7 @@ func carouselNode() g.Node {
 func carouselNavButton(dir, label, glyph string) g.Node {
 	return h.Button(
 		h.Type("button"),
-		h.Class("gadget-btn gadget-carousel-nav"),
+		h.Class("gomu-btn gomu-carousel-nav"),
 		htmlx.Data("scroll", dir),
 		h.Aria("label", label),
 		g.Attr("hidden"),
@@ -127,10 +127,10 @@ func (l *CardList) toolbar() g.Node {
 		items = append(items, brand)
 	}
 	if l.Title != "" {
-		items = append(items, h.H2(h.Class("gadget-title"), g.Text(l.Title)))
+		items = append(items, h.H2(h.Class("gomu-title"), g.Text(l.Title)))
 	}
 	if l.Selection != nil {
-		items = append(items, h.Label(h.Class("gadget-cards-selectall"),
+		items = append(items, h.Label(h.Class("gomu-cards-selectall"),
 			checkboxNode(htmlx.Data("select-all", ""), h.Aria("label", "Select all cards")),
 			g.Text("Select all"),
 		))
@@ -138,7 +138,7 @@ func (l *CardList) toolbar() g.Node {
 	if l.Filterable {
 		items = append(items, h.Input(
 			h.Type("search"),
-			h.Class("gadget-input gadget-filter"),
+			h.Class("gomu-input gomu-filter"),
 			htmlx.Data("filter", ""),
 			h.Placeholder("Filter…"),
 			h.Aria("label", "Filter cards"),
@@ -149,10 +149,10 @@ func (l *CardList) toolbar() g.Node {
 	}
 	if l.Selection != nil && len(l.Selection.Bulk) > 0 {
 		bulk := []g.Node{
-			h.Class("gadget-bulk"),
+			h.Class("gomu-bulk"),
 			htmlx.Data("bulk", ""),
 			g.Attr("hidden"),
-			h.Span(h.Class("gadget-bulk-count"), htmlx.Data("bulk-count", "")),
+			h.Span(h.Class("gomu-bulk-count"), htmlx.Data("bulk-count", "")),
 		}
 		for i, a := range l.Selection.Bulk {
 			bulk = append(bulk, actionButton(a, "bulk-action", i))
@@ -162,7 +162,7 @@ func (l *CardList) toolbar() g.Node {
 	if len(items) == 0 {
 		return nil
 	}
-	return h.Div(append([]g.Node{h.Class("gadget-toolbar")}, items...)...)
+	return h.Div(append([]g.Node{h.Class("gomu-toolbar")}, items...)...)
 }
 
 // sortControl renders a select over the template's sortable fields; the
@@ -174,7 +174,7 @@ func (l *CardList) sortControl() g.Node {
 		return nil
 	}
 	children := []g.Node{
-		h.Class("gadget-input gadget-sort-select"),
+		h.Class("gomu-input gomu-sort-select"),
 		htmlx.Data("sort-select", ""),
 		h.Aria("label", "Sort cards"),
 		h.Option(h.Value(""), g.Text("Sort…")),

@@ -3,7 +3,6 @@
 // reaches the DOM only through textContent (via dom.h), never innerHTML.
 import { Row } from "../data";
 import { checkbox, h } from "../dom";
-import { CallToolResult } from "../protocol";
 import { DescriptionItemCfg, fillDescriptions } from "./descriptions";
 import { badgeNode, FieldCfg } from "./value";
 
@@ -57,7 +56,7 @@ export interface CardTemplateCfg {
 /**
  * Every action a card can fire, in the order their buttons are indexed:
  * the header slot first, then the footer row. A behavior resolves a clicked
- * button's data-gadget-action against this list.
+ * button's data-gomu-action against this list.
  */
 export function templateActions(tmpl: CardTemplateCfg): ActionCfg[] {
 	const header = tmpl.header?.action ? [tmpl.header.action] : [];
@@ -81,7 +80,7 @@ function slotText(row: Row, key: string | undefined, fixed: string | undefined):
 }
 
 export interface RenderCardOpts {
-	/** The record's stable id (data-gadget-card-id), used for actions. */
+	/** The record's stable id (data-gomu-card-id), used for actions. */
 	id: string;
 	/** When true, a selection checkbox is rendered in the header. */
 	selectable?: boolean;
@@ -97,37 +96,37 @@ export interface RenderCardOpts {
  * rendered empty, so the card keeps its spacing honest.
  */
 export function renderCard(tmpl: CardTemplateCfg, row: Row, opts: RenderCardOpts): HTMLElement {
-	const article = h("article", { class: "gadget-card-item", "data-gadget-card-id": opts.id });
+	const article = h("article", { class: "gomu-card-item", "data-gomu-card-id": opts.id });
 	// Header and footer share one button index space (see templateActions).
 	let actionIndex = 0;
 
 	// --- header ---
-	const header = h("header", { class: "gadget-card-item-header" });
+	const header = h("header", { class: "gomu-card-item-header" });
 	if (opts.selectable) {
 		const cb = checkbox(
-			{ "data-gadget-select-card": "", "aria-label": "Select card" },
-			"gadget-card-select",
+			{ "data-gomu-select-card": "", "aria-label": "Select card" },
+			"gomu-card-select",
 		);
 		cb.input.checked = !!opts.selected;
 		header.append(cb.wrap);
 	}
 
-	const heading = h("div", { class: "gadget-card-heading" });
-	heading.append(h("div", { class: "gadget-card-title" }, String(row[tmpl.header.titleKey] ?? "")));
+	const heading = h("div", { class: "gomu-card-heading" });
+	heading.append(h("div", { class: "gomu-card-title" }, String(row[tmpl.header.titleKey] ?? "")));
 	const description = slotText(row, tmpl.header.descriptionKey, tmpl.header.description);
 	if (description !== "") {
-		heading.append(h("div", { class: "gadget-card-description" }, description));
+		heading.append(h("div", { class: "gomu-card-description" }, description));
 	}
 	header.append(heading);
 
 	if (tmpl.header.badge) {
 		const b = badgeNode(tmpl.header.badge, row);
-		if (b !== "") header.append(h("div", { class: "gadget-card-action" }, b));
+		if (b !== "") header.append(h("div", { class: "gomu-card-action" }, b));
 	} else if (tmpl.header.action) {
 		header.append(
 			h(
 				"div",
-				{ class: "gadget-card-action" },
+				{ class: "gomu-card-action" },
 				actionButton(tmpl.header.action, String(actionIndex++), !!opts.busy),
 			),
 		);
@@ -138,10 +137,10 @@ export function renderCard(tmpl: CardTemplateCfg, row: Row, opts: RenderCardOpts
 	const text = slotText(row, tmpl.content?.textKey, tmpl.content?.text);
 	const items = tmpl.content?.items ?? [];
 	if (text !== "" || items.length > 0) {
-		const content = h("div", { class: "gadget-card-content" });
-		if (text !== "") content.append(h("p", { class: "gadget-card-text" }, text));
+		const content = h("div", { class: "gomu-card-content" });
+		if (text !== "") content.append(h("p", { class: "gomu-card-text" }, text));
 		if (items.length > 0) {
-			const dl = h("dl", { class: "gadget-descriptions gadget-card-items" });
+			const dl = h("dl", { class: "gomu-descriptions gomu-card-items" });
 			fillDescriptions(dl, items, row);
 			content.append(dl);
 		}
@@ -152,10 +151,10 @@ export function renderCard(tmpl: CardTemplateCfg, row: Row, opts: RenderCardOpts
 	const note = slotText(row, tmpl.footer?.textKey, tmpl.footer?.text);
 	const actions = tmpl.footer?.actions ?? [];
 	if (note !== "" || actions.length > 0) {
-		const footer = h("footer", { class: "gadget-card-item-footer" });
-		if (note !== "") footer.append(h("span", { class: "gadget-card-note" }, note));
+		const footer = h("footer", { class: "gomu-card-item-footer" });
+		if (note !== "") footer.append(h("span", { class: "gomu-card-note" }, note));
 		if (actions.length > 0) {
-			const bar = h("div", { class: "gadget-card-item-actions" });
+			const bar = h("div", { class: "gomu-card-item-actions" });
 			for (const a of actions) bar.append(actionButton(a, String(actionIndex++), !!opts.busy));
 			footer.append(bar);
 		}
@@ -167,11 +166,11 @@ export function renderCard(tmpl: CardTemplateCfg, row: Row, opts: RenderCardOpts
 
 /** Renders a card action button carrying its index for event delegation. */
 export function actionButton(action: ActionCfg, index: string, busy: boolean): HTMLElement {
-	let cls = "gadget-btn";
-	if (action.variant) cls += ` gadget-btn--${action.variant}`;
+	let cls = "gomu-btn";
+	if (action.variant) cls += ` gomu-btn--${action.variant}`;
 	return h(
 		"button",
-		{ type: "button", class: cls, "data-gadget-action": index, disabled: busy },
+		{ type: "button", class: cls, "data-gomu-action": index, disabled: busy },
 		action.label,
 	);
 }
@@ -195,12 +194,4 @@ export function resolveArgs(
 		}
 	}
 	return out;
-}
-
-/** First text content block of a tool result, if any. */
-export function textOf(res: CallToolResult): string | undefined {
-	for (const block of res.content ?? []) {
-		if (block.type === "text" && typeof block.text === "string") return block.text;
-	}
-	return undefined;
 }
