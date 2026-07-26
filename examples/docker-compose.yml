@@ -34,7 +34,7 @@ x-hardening: &hardening
     - ALL
 
 services:
-  harness:
+  gomukit_harness:
     build: *build
     image: gomukit:local
     # Publish on the host. Bind to 127.0.0.1 instead (127.0.0.1:8090:8090) when
@@ -45,7 +45,7 @@ services:
     # The image is scratch — no shell or curl — so a container-side healthcheck
     # is not possible; probe http://<host>:8090/ from outside.
 
-  preview:
+  gomukit_preview:
     build: *build
     image: gomukit:local
     entrypoint: ["/preview"]
