@@ -1,6 +1,9 @@
 # Node
 ui/node_modules/
 
+# make build output
+/bin/
+
 # Editors
 .idea/
 *.swp

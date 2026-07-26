@@ -154,6 +154,7 @@ Node).
 make assets       # npm ci + build the runtime bundle
 make test         # go test ./... + vitest
 make verify-dist  # fail if committed dist doesn't match ui/ sources
+make build        # build the example servers into ./bin
 ```
 
 Golden-file tests: `go test ./ -update` regenerates `testdata/golden/`.

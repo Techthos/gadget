@@ -9,9 +9,15 @@ page, this one speaks the protocol: tools are registered tools, widgets are
 ```sh
 make preview                      # streamable HTTP on :8081
 go run ./examples/preview -stdio  # for hosts that spawn the server
+make inspect                      # the same, with the MCP Inspector connected
 ```
 
 Then point an MCP Apps capable inspector at `http://localhost:8081/mcp`.
+
+`make inspect` drives **this** server. The smaller `examples/demo` is a
+different server on a different port — `make inspect-demo` puts the inspector in
+front of that one instead, so its tools (`main_menu`, `list_users`,
+`schedule_followup`, …) are the ones you see.
 
 ## What it contains
 

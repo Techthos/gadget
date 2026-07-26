@@ -1594,6 +1594,9 @@ make typecheck    # tsc --noEmit
 make vet          # go vet ./...
 make assets       # npm ci + rebuild the TS/CSS bundle into internal/assets/dist
 make verify-dist  # rebuild assets, fail if committed dist drifted (CI does this)
+make build        # build the example servers into ./bin (Go only, no Node)
+make inspect      # the preview server with the MCP Inspector in front of it
+make inspect-demo # the same, in front of examples/demo on :8080
 ```
 
 After editing anything under `ui/` (src or css), run `make assets` and commit

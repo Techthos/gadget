@@ -16,6 +16,10 @@ make typecheck    # tsc --noEmit
 make vet          # go vet ./...
 make assets       # npm ci + rebuild the TS/CSS bundle into internal/assets/dist
 make verify-dist  # rebuild assets, fail if committed dist drifted (CI does this)
+make build        # build the example servers into ./bin (BIN_DIR=… to move it)
+make clean        # remove ./bin
+make inspect      # preview server + MCP Inspector, already connected
+make inspect-demo # the same, in front of examples/demo on :8080
 ```
 
 - Single Go test: `go test ./ -run TestName` (or `go test ./internal/htmlx -run TestName`, etc.)
