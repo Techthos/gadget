@@ -11,6 +11,23 @@ Cursor, Goose, Postman, …).
 
 > **Status: pre-release.** APIs are not stable yet.
 
+## Live demo
+
+**`https://gomukit.techthos.systems/mcp`**
+
+Add that URL as a custom connector in Claude or ChatGPT and ask for a table, a
+form, a card list, a date picker or the menu; every widget renders
+interactively inside the chat. No checkout, no install.
+
+- **Claude** (web, desktop): Settings → Connectors → Add custom connector →
+  paste the URL. Available on plans that allow custom connectors.
+- **ChatGPT**: Settings → Connectors (developer mode) → add an MCP server with
+  the same URL.
+
+It is the `examples/preview` server described below, running with `-sandbox`:
+every MCP session gets its own copy of the demo data, so you can use every
+writing tool and no one else sees your edits.
+
 <p align="center">
   <img src="docs/assets/table.png" alt="gomukit Table widget: sortable, filterable, paginated data table with typed columns, badges, row selection and per-row actions" width="780">
 </p>
@@ -123,7 +140,9 @@ host-themed table — sortable, filterable, paginated — inside the chat.
   (customers, orders, forms, confirmations, choices) plus a gallery of every
   widget variant as its own tool. Built for driving from an MCP Apps capable
   inspector. `make preview`, then point the inspector at
-  `http://localhost:8081/mcp`. See [docs/preview.md](docs/preview.md).
+  `http://localhost:8081/mcp`, or use the hosted instance at
+  `https://gomukit.techthos.systems/mcp` without running anything. See
+  [docs/preview.md](docs/preview.md).
 - `examples/harness` — a fake MCP Apps host in one HTML page, with a story
   browser: pick a widget variant from the rail (table, cardlist, card, form,
   menu, plus empty and long-list states), see it rendered in a sandboxed
