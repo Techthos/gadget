@@ -1,4 +1,4 @@
-# Architecture
+# <img src="assets/gomukit-icon.svg" alt="" width="28" align="center"> Architecture
 
 gomukit targets the **MCP Apps extension** (`io.modelcontextprotocol/ui`,
 spec `2026-01-26`): a server predeclares HTML template resources at `ui://`

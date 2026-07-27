@@ -1,4 +1,4 @@
-# AGENTS.md — Working with `gomukit`
+# <img src="docs/assets/gomukit-icon.svg" alt="" width="28" align="center"> AGENTS.md — Working with `gomukit`
 
 This document is the complete reference an LLM (or any agent) needs to **use**
 the `gomukit` library. For repo-contribution guidance (build commands, asset

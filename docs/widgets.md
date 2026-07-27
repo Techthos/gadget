@@ -1,4 +1,4 @@
-# Widget reference
+# <img src="assets/gomukit-icon.svg" alt="" width="28" align="center"> Widget reference
 
 Every widget implements `gomukit.Widget`: it renders one self-contained HTML
 document (`Document()`), registers as one `ui://` resource

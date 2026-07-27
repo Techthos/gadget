@@ -1,4 +1,4 @@
-# Preview server
+# <img src="assets/gomukit-icon.svg" alt="" width="28" align="center"> Preview server
 
 `examples/preview` is a runnable MCP server built for looking at gomukit
 through a real MCP client. Where `examples/harness` fakes the host in one HTML
@@ -149,7 +149,7 @@ The script starts its own harness on a free port, drives an already installed
 Chrome over the DevTools protocol (Node's built-in WebSocket speaks it — there
 is no npm dependency and no browser download), and writes
 `docs/assets/preview/<story>.png` plus a `-dark` variant per story, at 2x. The
-five images the README embeds are rewritten from the same shots. Files whose
+six images the README embeds are rewritten from the same shots. Files whose
 bytes did not change are left alone, so a re-run on an untouched tree leaves
 the working copy clean.
 

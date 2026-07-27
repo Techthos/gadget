@@ -1,4 +1,4 @@
-# Extensibility: custom components
+# <img src="assets/gomukit-icon.svg" alt="" width="28" align="center"> Extensibility: custom components
 
 Status: design proposal, nothing implemented. This describes what it would
 take for a third party to ship a widget that is not built into gomukit, what

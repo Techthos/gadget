@@ -1,4 +1,4 @@
-# Extensibility implementation plan
+# <img src="assets/gomukit-icon.svg" alt="" width="28" align="center"> Extensibility implementation plan
 
 Companion to `docs/extensibility.md`, which argues the design. This is the
 work: ordered steps, files touched, tests, and the decisions each step

@@ -1,4 +1,4 @@
-# Theming
+# <img src="assets/gomukit-icon.svg" alt="" width="28" align="center"> Theming
 
 gomukit uses a two-layer design-token system as CSS custom properties,
 prefixed `--gomu-*`, scoped under `.gomu-root`.

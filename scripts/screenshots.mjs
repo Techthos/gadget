@@ -75,6 +75,7 @@ const README_SHOTS = [
   { file: "form.png", story: "form-edit", theme: "light" },
   { file: "card.png", story: "card-default", theme: "light" },
   { file: "cardlist.png", story: "cards-default", theme: "light" },
+  { file: "confirm.png", story: "confirm-danger", theme: "light" },
 ];
 
 // The host context the widgets are handed. Mirrors what examples/harness's
