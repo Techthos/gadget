@@ -246,7 +246,7 @@ func (c *Confirm) Validate() error {
 			return fmt.Errorf("%s: reject: Args need Reject.Tool", ctx)
 		}
 	}
-	if err := c.Details.validate(ctx + ": details"); err != nil {
+	if err := c.Details.validate(ctx+": details", false); err != nil {
 		return err
 	}
 	for n, e := range c.Effects {

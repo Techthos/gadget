@@ -204,6 +204,108 @@ describe("datepicker behavior", () => {
 		});
 	});
 
+	it("sends what the detail controls collected along with the date", async () => {
+		const root = pickerShell();
+		const details = [
+			{ key: "reference", label: "Booking", type: "text" },
+			{
+				key: "guests",
+				label: "Guests",
+				type: "text",
+				input: { name: "guests", type: "number" as const, required: true, min: 1 },
+			},
+			{ key: "", label: "Late arrival", type: "text", input: { name: "late", type: "checkbox" as const } },
+		];
+		mountDatePicker({ root, config: config({ details }), initialData: DATA, bridge });
+
+		// The record carries no guest count, so the control opens empty.
+		const guests = el<HTMLInputElement>(root, '[data-gomu-input="guests"]');
+		expect(guests.value).toBe("");
+		guests.value = "3";
+		guests.dispatchEvent(new Event("input", { bubbles: true }));
+		const late = el<HTMLInputElement>(root, '[data-gomu-input="late"]');
+		late.checked = true;
+		late.dispatchEvent(new Event("change", { bubbles: true }));
+
+		day(root, "2026-07-20").click();
+		day(root, "2026-07-24").click();
+		submit(root).click();
+		await flush();
+
+		expect(host.received(M.toolsCall)[0]!.params).toMatchObject({
+			name: "hold_room",
+			arguments: { booking: 7, from: "2026-07-20", until: "2026-07-24", guests: 3, late: true },
+		});
+		// The decision is over, so the controls are locked with it.
+		expect(el<HTMLInputElement>(root, '[data-gomu-input="guests"]').disabled).toBe(true);
+	});
+
+	it("keeps a half-typed answer when a tool result re-renders the details", async () => {
+		const root = pickerShell();
+		const details = [
+			{ key: "reference", label: "Booking", type: "text" },
+			{ key: "", label: "Guests", type: "text", input: { name: "guests", type: "number" as const } },
+		];
+		mountDatePicker({ root, config: config({ details }), initialData: DATA, bridge });
+
+		const guests = el<HTMLInputElement>(root, '[data-gomu-input="guests"]');
+		guests.value = "4";
+		guests.dispatchEvent(new Event("input", { bubbles: true }));
+
+		host.notify(M.toolResult, { structuredContent: { rows: [{ id: 7, reference: "BKG-9" }] } });
+		await flush();
+
+		expect(el(root, "[data-gomu-descriptions] dd").textContent).toBe("BKG-9");
+		expect(el<HTMLInputElement>(root, '[data-gomu-input="guests"]').value).toBe("4");
+	});
+
+	it("refuses to submit while a required control is empty", async () => {
+		const root = pickerShell();
+		const details = [
+			{
+				key: "",
+				label: "Guests",
+				type: "text",
+				input: { name: "guests", type: "number" as const, required: true, message: "How many?" },
+			},
+		];
+		mountDatePicker({ root, config: config({ details }), initialData: DATA, bridge });
+
+		day(root, "2026-07-20").click();
+		day(root, "2026-07-24").click();
+		submit(root).click();
+		await flush();
+
+		expect(host.received(M.toolsCall)).toHaveLength(0);
+		expect(status(root).textContent).toBe("Please fix the highlighted fields.");
+		expect(el(root, "[data-gomu-input-error]").textContent).toBe("How many?");
+		expect(submit(root).disabled).toBe(false);
+	});
+
+	it("spells the answers out after the date in a chat turn", async () => {
+		const root = pickerShell();
+		mountDatePicker({
+			root,
+			config: config({
+				details: [
+					{ key: "", label: "Guests", type: "text", input: { name: "guests", type: "number" as const, default: 2 } },
+				],
+				submit: { tool: "hold_room", valueArg: "from", endArg: "until", chatPrompt: "Book the room" },
+			}),
+			initialData: DATA,
+			bridge,
+		});
+
+		day(root, "2026-07-20").click();
+		day(root, "2026-07-24").click();
+		submit(root).click();
+		await flush();
+
+		expect(host.received(M.message)[0]!.params).toMatchObject({
+			content: [{ type: "text", text: "Book the room — chose: 2026-07-20 to 2026-07-24; Guests: 2" }],
+		});
+	});
+
 	it("re-arms after a failed submit", async () => {
 		const root = pickerShell();
 		host.onToolCall = () => ({ isError: true, content: [{ type: "text", text: "Taken." }] });

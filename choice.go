@@ -179,7 +179,7 @@ func (o ChoiceOption) validate(ctx string) error {
 	if o.Default && o.Disabled {
 		return fmt.Errorf("%s: a disabled option cannot be the default", ctx)
 	}
-	return o.Details.validate(ctx + ": details")
+	return o.Details.validate(ctx+": details", false)
 }
 
 // config serializes the option. Everything about it is runtime state — the
@@ -371,7 +371,7 @@ func (c *Choice) Validate() error {
 			return fmt.Errorf("%s: cancel: Args need Cancel.Tool", ctx)
 		}
 	}
-	if err := c.Details.validate(ctx + ": details"); err != nil {
+	if err := c.Details.validate(ctx+": details", false); err != nil {
 		return err
 	}
 	seen := map[string]bool{}

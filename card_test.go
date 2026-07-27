@@ -256,7 +256,11 @@ func TestCardValidate(t *testing.T) {
 			c.Template.Footer.Actions = []Action{{Label: "X", Tool: "x", Args: map[string]ArgSource{"ids": FromSelection("id")}}}
 		},
 		"action no label": func(c *Card) { c.Template.Footer.Actions = []Action{{Tool: "x"}} },
-		"unsafe theme":    func(c *Card) { c.Theme = &theme.Theme{ColorText: "red}</style>"} },
+		"input clashing with an action argument": func(c *Card) {
+			c.Template.Content.Items.Items = append(c.Template.Content.Items.Items,
+				DescriptionItem{Label: "Record id", Input: &Input{Name: "id"}})
+		},
+		"unsafe theme": func(c *Card) { c.Theme = &theme.Theme{ColorText: "red}</style>"} },
 	}
 	if err := canonicalCard().Validate(); err != nil {
 		t.Fatalf("canonical card must validate, got: %v", err)

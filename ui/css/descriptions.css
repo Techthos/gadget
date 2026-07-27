@@ -37,6 +37,37 @@
   color: var(--gomu-color-text-muted);
 }
 
+/* An item that asks rather than states. The label is a real <label> here, so
+ * it reads as the question it is and clicking it reaches the control. */
+.gomu-desc-item--input .gomu-desc-label label {
+  font-weight: 500;
+}
+
+/* The control fills its column: an item is as wide as the grid gave it, and a
+ * control narrower than that would look like it belongs to something else. */
+.gomu-desc-item--input .gomu-input {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Except a dropdown, which is a wrapper around the trigger and the select it
+ * hides — the width belongs on the button the reader sees. */
+.gomu-desc-item--input .gomu-dd {
+  width: 100%;
+}
+
+/* A checkbox is the value, not a field of its own: it sits where the value
+ * would have been rather than stretching across the column. */
+.gomu-desc-check {
+  margin-block-start: calc(var(--gomu-space-unit) * 0.5);
+}
+
+.gomu-desc-error {
+  margin: calc(var(--gomu-space-unit) * 0.5) 0 0;
+  font-size: 0.75rem;
+  color: var(--gomu-color-danger);
+}
+
 @container gomu (max-width: 34rem) {
   .gomu-descriptions {
     padding: calc(var(--gomu-space-unit) * 3);

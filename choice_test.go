@@ -307,6 +307,14 @@ func TestChoiceValidate(t *testing.T) {
 		"no prompt":      func(c *Choice) { c.Prompt = "" },
 		"no submit tool": func(c *Choice) { c.Submit.Tool = "" },
 		"unknown layout": func(c *Choice) { c.Layout = "columns" },
+		"input item in a read-only block": func(c *Choice) {
+			c.Details.Items = append(c.Details.Items,
+				DescriptionItem{Label: "Reason", Input: &Input{Name: "reason"}})
+		},
+		"input item in an option's details": func(c *Choice) {
+			c.Options[0].Details.Items = append(c.Options[0].Details.Items,
+				DescriptionItem{Label: "Reason", Input: &Input{Name: "reason"}})
+		},
 		"selection arg in submit": func(c *Choice) {
 			c.Submit.Args = map[string]ArgSource{"ids": FromSelection("id")}
 		},

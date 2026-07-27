@@ -279,6 +279,10 @@ func TestConfirmValidate(t *testing.T) {
 		"actions item": func(c *Confirm) {
 			c.Details = Descriptions{Items: []DescriptionItem{{Label: "Do", Key: "x", Type: ColActions}}}
 		},
+		"input item in a read-only block": func(c *Confirm) {
+			c.Details.Items = append(c.Details.Items,
+				DescriptionItem{Label: "Reason", Input: &Input{Name: "reason"}})
+		},
 		"duplicate item key": func(c *Confirm) {
 			c.Details.Items = append(c.Details.Items, DescriptionItem{Label: "Name again", Key: "name"})
 		},

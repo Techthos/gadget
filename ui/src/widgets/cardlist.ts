@@ -6,7 +6,7 @@ import type { MountContext } from "../index";
 import { HOST_CONTEXT_EVENT } from "../host";
 import { Row, rowsFrom } from "../data";
 import { clear, delegate, h } from "../dom";
-import { refreshDropdown } from "../dropdown";
+import { refreshDropdown, releaseDropdowns } from "../dropdown";
 import { CallToolResult, M } from "../protocol";
 import {
 	clampPage,
@@ -26,6 +26,15 @@ import {
 	templateActions,
 	templateKeys,
 } from "./card-common";
+import {
+	clearInputErrors,
+	collectInputs,
+	enhanceDescriptionInputs,
+	hasInputs,
+	type InputValues,
+	validateInputs,
+	watchInputs,
+} from "./descriptions";
 import { carouselState, stepFor } from "./carousel";
 
 interface CardListCfg {
@@ -106,6 +115,25 @@ export function mountCardList(ctx: MountContext): void {
 
 	let statusTimer: ReturnType<typeof setTimeout> | undefined;
 	let lastViewKey = "";
+	// What the reader has put into each card's content controls, by record id.
+	// The strip is rebuilt wholesale on every state change, so the answers live
+	// here and are handed back to each card as it is re-rendered.
+	const asks = hasInputs(cfg.card.content?.items ?? []);
+	const inputs = new Map<string, InputValues>();
+
+	function inputsFor(id: string): InputValues {
+		let values = inputs.get(id);
+		if (!values) {
+			values = {};
+			inputs.set(id, values);
+		}
+		return values;
+	}
+
+	/** The card element an event came from, which is the scope of its inputs. */
+	function cardOf(el: Element): HTMLElement | null {
+		return el.closest<HTMLElement>("[data-gomu-card-id]");
+	}
 
 	function visible(s: CardListState): { pageRows: Row[]; total: number } {
 		const filtered = sortRows(filterRows(s.rows, s.filter, filterKeys), s.sort);
@@ -146,7 +174,7 @@ export function mountCardList(ctx: MountContext): void {
 		store.set(patch);
 	}
 
-	async function fire(action: ActionCfg, row: Row | null): Promise<void> {
+	async function fire(action: ActionCfg, row: Row | null, answers: InputValues = {}): Promise<void> {
 		if (action.kind === "link") {
 			const href = row?.[action.hrefKey ?? ""];
 			if (typeof href === "string" && href !== "") void bridge.openLink(href);
@@ -156,7 +184,12 @@ export function mountCardList(ctx: MountContext): void {
 		clearTimeout(statusTimer);
 		store.set({ status: "loading", statusKind: undefined, statusMsg: "Working…" });
 		try {
-			applyResult(await bridge.callTool(action.tool, resolveArgs(action, row, selectedRows())));
+			applyResult(
+				await bridge.callTool(action.tool, {
+					...resolveArgs(action, row, selectedRows()),
+					...answers,
+				}),
+			);
 		} catch (e) {
 			store.set({
 				status: "idle",
@@ -169,7 +202,12 @@ export function mountCardList(ctx: MountContext): void {
 	// Native confirm() is silently disabled in sandboxed MCP Apps iframes, so
 	// confirmation is a two-phase button: first click arms it and shows the
 	// confirm text, a second click within the window fires.
-	function armOrFire(btn: HTMLElement, action: ActionCfg, row: Row | null): void {
+	function armOrFire(
+		btn: HTMLElement,
+		action: ActionCfg,
+		row: Row | null,
+		answers: InputValues = {},
+	): void {
 		if (action.confirm && !btn.hasAttribute("data-gomu-armed")) {
 			const original = btn.textContent;
 			btn.setAttribute("data-gomu-armed", "");
@@ -180,7 +218,7 @@ export function mountCardList(ctx: MountContext): void {
 			}, CONFIRM_RESET_MS);
 			return;
 		}
-		void fire(action, row);
+		void fire(action, row, answers);
 	}
 
 	// --- rendering ---
@@ -194,7 +232,9 @@ export function mountCardList(ctx: MountContext): void {
 		if (!card) return el.hasAttribute("data-gomu-reveal") ? "reveal" : null;
 		const id = card.getAttribute("data-gomu-card-id") ?? "";
 		const action = el.getAttribute("data-gomu-action");
-		return action !== null ? `action:${id}:${action}` : `select:${id}`;
+		if (action !== null) return `action:${id}:${action}`;
+		const input = el.getAttribute("data-gomu-input");
+		return input !== null ? `input:${id}:${input}` : `select:${id}`;
 	}
 
 	function restoreFocus(key: string | null): void {
@@ -208,7 +248,9 @@ export function mountCardList(ctx: MountContext): void {
 			sel =
 				kind === "action"
 					? `${card} [data-gomu-action="${CSS.escape(index ?? "")}"]`
-					: `${card} [data-gomu-select-card]`;
+					: kind === "input"
+						? `${card} [data-gomu-input="${CSS.escape(index ?? "")}"]`
+						: `${card} [data-gomu-select-card]`;
 		}
 		// preventScroll: refocusing must not undo the scroll just restored.
 		strip.querySelector<HTMLElement>(sel)?.focus({ preventScroll: true });
@@ -259,6 +301,8 @@ export function mountCardList(ctx: MountContext): void {
 		const keepScroll = newView ? 0 : strip.scrollLeft;
 		const keepFocus = newView ? null : focusedControl();
 
+		// The dropdowns of the cards being replaced own panels outside the strip.
+		releaseDropdowns(strip);
 		clear(strip);
 		for (const row of pageRows) {
 			strip.append(
@@ -267,9 +311,13 @@ export function mountCardList(ctx: MountContext): void {
 					selectable: !!cfg.selection,
 					selected: selected.has(rowID(row)),
 					busy,
+					values: inputs.get(rowID(row)),
 				}),
 			);
 		}
+		// Selects become dropdowns only now: a panel is placed against the widget
+		// root, which a card could not reach while it was still detached.
+		if (asks) enhanceDescriptionInputs(strip);
 		if (cfg.loadMore && pageRows.length < total) {
 			strip.append(moreTile(pageRows.length, total, busy));
 		}
@@ -505,8 +553,19 @@ export function mountCardList(ctx: MountContext): void {
 	delegate(root, "click", "action", (el, value) => {
 		const action = cardActions[Number(value)];
 		if (!action) return;
-		const id = el.closest("[data-gomu-card-id]")?.getAttribute("data-gomu-card-id");
+		const card = cardOf(el);
+		const id = card?.getAttribute("data-gomu-card-id");
 		const row = store.get().rows.find((r) => rowID(r) === id) ?? null;
+		// A card's controls answer for that card only, so they travel with its
+		// own buttons and with no bulk action.
+		if (asks && card) {
+			if (!validateInputs(card)) {
+				store.set({ statusKind: "error", statusMsg: "Please fix the highlighted fields." });
+				return;
+			}
+			armOrFire(el, action, row, collectInputs(card));
+			return;
+		}
 		armOrFire(el, action, row);
 	});
 
@@ -518,6 +577,15 @@ export function mountCardList(ctx: MountContext): void {
 	delegate(root, "click", "link", (_el, href) => {
 		if (href !== "") void bridge.openLink(href);
 	});
+
+	if (asks) {
+		watchInputs(strip, (name, value, el) => {
+			const card = cardOf(el);
+			if (!card) return;
+			inputsFor(card.getAttribute("data-gomu-card-id") ?? "")[name] = value;
+			if (el.checkValidity()) clearInputErrors(el.closest(".gomu-desc-item") ?? card);
+		});
+	}
 
 	// --- host notifications ---
 

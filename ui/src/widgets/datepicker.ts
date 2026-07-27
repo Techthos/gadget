@@ -23,7 +23,16 @@ import { delegate } from "../dom";
 import { CallToolResult, M } from "../protocol";
 import { errorText, textOf } from "../status";
 import { ActionCfg, resolveArgs } from "./card-common";
-import { DescriptionItemCfg, fillDescriptions } from "./descriptions";
+import {
+	clearInputErrors,
+	collectInputs,
+	DescriptionItemCfg,
+	fillDescriptions,
+	hasInputs,
+	type InputValues,
+	validateInputs,
+	watchInputs,
+} from "./descriptions";
 
 interface DatePickerCfg {
 	widget: string;
@@ -66,6 +75,10 @@ export function mountDatePicker(ctx: MountContext): void {
 	const range = cfg.calendar?.mode === "range";
 	let row: Row | null = rowsFrom(ctx.initialData, cfg.rowsKey)[0] ?? null;
 	let phase: "deciding" | "working" | "settled" = "deciding";
+	// What the reader has put into the detail controls. Held here rather than
+	// read back off the DOM alone, because a tool result re-renders the list
+	// and must not wipe a half-typed answer.
+	const inputs: InputValues = {};
 
 	const cal: CalendarView = createCalendar(cfg.calendar ?? {}, {
 		host: calEl,
@@ -103,11 +116,19 @@ export function mountDatePicker(ctx: MountContext): void {
 			summaryEl.hidden = locked;
 			summaryEl.textContent = summaryText();
 		}
+		// The controls are part of the decision, so they lock with it.
+		for (const el of detailsEl?.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+			"[data-gomu-input]",
+		) ?? []) {
+			el.disabled = locked;
+		}
 		calEl?.classList.toggle("gomu-cal--locked", locked);
 	}
 
 	function renderDetails(): void {
-		if (detailsEl) fillDescriptions(detailsEl, items, row);
+		if (detailsEl) {
+			fillDescriptions(detailsEl, items, row, { values: inputs, disabled: phase !== "deciding" });
+		}
 	}
 
 	// The end of the widget's life: the controls go, the outcome stays.
@@ -173,22 +194,44 @@ export function mountDatePicker(ctx: MountContext): void {
 
 	async function submit(): Promise<void> {
 		if (phase !== "deciding" || !cfg.submit?.tool || !cal.complete()) return;
+		// The details may ask for more than the date, and an unanswered required
+		// question is as good a reason to stop as a missing one.
+		if (detailsEl && !validateInputs(detailsEl)) {
+			showStatus("error", "Please fix the highlighted fields.");
+			return;
+		}
 		const v = cal.value();
 		if (cfg.submit.chatPrompt) {
 			// A picker's whole output is the date, and a chat turn has no argument
 			// to carry it, so it goes in the text. ISO keeps it unambiguous for the
-			// model, whatever the reader's locale showed.
+			// model, whatever the reader's locale showed. Whatever the details
+			// collected is spelled out after it, labelled as it was on screen.
 			const picked = range && v.end ? `${v.start} to ${v.end}` : v.start;
-			if (!(await chat(`${cfg.submit.chatPrompt} — chose: ${picked}`))) return;
+			if (!(await chat(`${cfg.submit.chatPrompt} — chose: ${picked}${answers()}`))) return;
 			settle(cfg.submit.successMessage || "Sent.", "accepted");
 			return;
 		}
-		const args: Record<string, unknown> = { [cfg.submit.valueArg || "date"]: v.start };
+		const args: Record<string, unknown> = {
+			...(detailsEl ? collectInputs(detailsEl) : {}),
+			[cfg.submit.valueArg || "date"]: v.start,
+		};
 		if (range && cfg.submit.endArg) args[cfg.submit.endArg] = v.end;
 		const res = await call(cfg.submit.tool, cfg.submit.args, args, "The action failed.");
 		if (!res) return;
 		applyData(res);
 		settle(cfg.submit.successMessage || textOf(res) || "Done.", "accepted");
+	}
+
+	/** What the detail controls hold, as a phrase to append to a chat turn:
+	 * "; Guests: 3, Notes: late arrival". Empty when nothing was asked or
+	 * nothing was answered. */
+	function answers(): string {
+		if (!detailsEl) return "";
+		const values = collectInputs(detailsEl);
+		const parts = items
+			.filter((i) => i.input && i.input.name in values)
+			.map((i) => `${i.label || i.input?.name}: ${String(values[i.input?.name ?? ""])}`);
+		return parts.length > 0 ? `; ${parts.join(", ")}` : "";
 	}
 
 	async function cancel(): Promise<void> {
@@ -245,6 +288,15 @@ export function mountDatePicker(ctx: MountContext): void {
 
 	submitEl?.addEventListener("click", () => void submit());
 	cancelEl?.addEventListener("click", () => void cancel());
+
+	// The list is rebuilt whenever the record changes, so answers are kept here
+	// and handed back to it; a control the reader fixes clears its own message.
+	if (detailsEl && hasInputs(items)) {
+		watchInputs(detailsEl, (name, value, el) => {
+			inputs[name] = value;
+			if (el.checkValidity()) clearInputErrors(el.closest(".gomu-desc-item") ?? detailsEl);
+		});
+	}
 
 	// Link values in a detail list go to the host: navigation is blocked inside
 	// the sandboxed iframe.

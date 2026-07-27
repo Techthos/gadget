@@ -662,7 +662,9 @@ same trust level and the same checks as `Brand.LogoSVG`.
 
 A label/value detail list. **Not a widget**: no URI, no `Document()`, not
 registerable. It is a shared block embedded by value, used by `Confirm`, `Choice` (both
-for the record and per option) and a card's content section.
+for the record and per option), `DatePicker` and a card's content section. Its
+items normally state a value; in the widgets that own a call they can also ask
+for one (see Editable items below).
 
 ```go
 type Descriptions struct {
@@ -671,13 +673,14 @@ type Descriptions struct {
 
 type DescriptionItem struct {
     Label  string                  // required
-    Key    string                  // record field holding the value
+    Key    string                  // record field holding the value (prefill source on an Input item)
     Text   string                  // fixed authored value, used instead of Key
     Type   ColumnType              // ColText (default), ColNumber, ColDate, ColBadge, ColLink
     Format string                  // same Intl format strings as Column.Format
     Badge  map[string]BadgeVariant // value -> variant (ColBadge)
     Link   *LinkSpec               // ColLink; URL comes from the record
     Align  Align
+    Input  *Input                  // renders a control instead of a value
 }
 ```
 
@@ -685,6 +688,52 @@ Exactly one of `Key` and `Text` per item. A `Key` value is read from the
 record at runtime and typed/Intl-formatted exactly like a table cell; a `Text`
 value is authored in Go and always plain text. `ColActions` is not a valid
 item type.
+
+#### Editable items (`Input`)
+
+An item with an `Input` asks instead of states: its value cell holds a control,
+and what the reader puts in it is collected at call time and merged into the
+arguments of the widget's own call.
+
+```go
+type InputType string
+
+const (
+    InputText     InputType = "text"     // the zero-value default
+    InputNumber   InputType = "number"   // value travels as a number
+    InputSelect   InputType = "select"   // dropdown over Options
+    InputCheckbox InputType = "checkbox" // value travels as a bool
+)
+
+type Input struct {
+    Name        string      // tool argument the value travels in (required, unique in the block)
+    Type        InputType   // InputText default
+    Placeholder string      // empty-state text; a select's unchosen label
+    Required    bool        // blocks the widget's call until filled in
+    Default     any         // string-like for text/number/select, bool for InputCheckbox
+    Options     []Option    // required for InputSelect, invalid otherwise
+    Validation  *Validation // as on a form Field; only Message applies to select/checkbox
+}
+```
+
+Where inputs are accepted, and what carries their values:
+
+| Block | Carries the values |
+|---|---|
+| `DatePicker.Details` | the submit call, alongside the picked date(s) |
+| `Card` / `CardList` / `Carousel` `Content.Items` | every action button of the card the item sits in (per record; bulk actions get nothing) |
+| `Confirm.Details`, `Choice.Details`, `ChoiceOption.Details` | nothing — an `Input` there is a validation error |
+
+The control opens on the reader's own answer if it has one, else on the record
+field named by `Key`, else on `Default`. Answers survive re-renders: a tool
+result landing mid-answer replaces the values around the control, not in it.
+Native constraint validation runs before the call and shows `Validation.Message`
+(or the browser's own text) under the offending control; a required control
+that is empty blocks the call. An empty number input sends no argument at all.
+
+With `DateSubmit.ChatPrompt` set, the picker posts a chat turn instead of
+calling the tool, so the answers are appended to the text as
+`"; Guests: 3, Bed: double"` rather than sent as arguments.
 
 There are no layout options by design: the list flows into as many columns as
 the widget's own width allows and collapses to one in a narrow pane. The item
@@ -944,7 +993,9 @@ type DatePicker struct {
     Default    string // preselected date "YYYY-MM-DD" (the start, in a range)
     DefaultEnd string // preselected end of the span (DateRange only)
 
-    Details Descriptions // describes the record the question is about (rows[0])
+    Details Descriptions // describes the record the question is about (rows[0]);
+                         // its items may also ask (Input), and their values
+                         // travel with the submit call (see 3.13)
 
     Submit DateSubmit   // required
     Cancel *RejectSpec  // nil renders no declining button
@@ -1201,6 +1252,19 @@ Descriptions (wherever embedded):
 - Exactly one of `Key` and `Text` per item; a `Text` item must be `ColText`.
 - text/number/date/badge items need `Key`; link items need `Link.HrefKey`.
 - No duplicate item `Key`s; `ColActions` is rejected.
+
+Descriptions items with an `Input`:
+- Rejected outright in `Confirm.Details`, `Choice.Details` and
+  `ChoiceOption.Details` (nothing there carries what a control collects).
+- `Input.Name` required and unique within the block. Two items may share a
+  `Key` when one of them only prefills a control from it.
+- `Input.Type` must be an `Input*` constant; `InputSelect` needs `Options` and
+  every other type rejects them; an `InputCheckbox` `Default` must be a `bool`.
+- An `Input` item cannot also carry `Text`, `Type`, `Format`, `Badge` or `Link`.
+- `DatePicker`: an input name cannot repeat the date arguments (`ValueArg`,
+  `EndArg`) or any key of `Submit.Args`.
+- `Card`/`CardList`: an input name cannot repeat an argument name of the
+  header action or any footer action.
 
 Brand (all widgets, when set):
 - `Name` or a logo is required.

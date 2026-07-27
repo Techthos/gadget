@@ -409,6 +409,11 @@ func galleryCatalog() []preview {
 			Widget: galleryDatePickerDropdowns(),
 		},
 		{
+			Tool: "preview_date_inputs", Group: "Date picker", Label: "Date picker, asking for more", Icon: iconCal,
+			Desc:   "Details that ask as well as state: a count, a choice and a checkbox travel with the dates.",
+			Widget: galleryDatePickerInputs(), Data: rowsOnly(galleryOrderRow()),
+		},
+		{
 			Tool: "preview_date_runtime", Group: "Date picker", Label: "Date picker, runtime availability", Icon: iconCal,
 			Desc:   "The window and the nights already booked arrive with the tool result.",
 			Widget: galleryDatePickerRuntime(),
@@ -952,6 +957,51 @@ func galleryDatePickerDropdowns() *gomukit.DatePicker {
 			StartOn:         "2027-03-01",
 		},
 		Submit: gomukit.DateSubmit{Tool: "sandbox_schedule", Label: "Set the date"},
+		Cancel: &gomukit.RejectSpec{},
+		Brand:  appBrand(),
+		Theme:  appTheme(),
+	}
+}
+
+// galleryDatePickerInputs asks the questions that come with the dates: what
+// the controls collect is merged into the same submit call.
+func galleryDatePickerInputs() *gomukit.DatePicker {
+	return &gomukit.DatePicker{
+		URI:    "ui://preview/gallery-date-inputs",
+		Title:  "Booking",
+		Prompt: "Which nights should we hold the suite?",
+		Body:   "Rates are per night and include breakfast.",
+		Mode:   gomukit.DateRange,
+		Calendar: &gomukit.Calendar{
+			Min:         "2026-08-01",
+			Max:         "2026-12-31",
+			WeekNumbers: true,
+		},
+		Default:    "2026-08-20",
+		DefaultEnd: "2026-08-23",
+		Details: gomukit.Descriptions{Items: []gomukit.DescriptionItem{
+			{Label: "Order", Key: "reference"},
+			{Label: "Guests", Input: &gomukit.Input{
+				Name:       "guests",
+				Type:       gomukit.InputNumber,
+				Default:    2,
+				Required:   true,
+				Validation: &gomukit.Validation{Min: ptr(1.0), Max: ptr(6.0), Step: ptr(1.0), Message: "Between one and six guests."},
+			}},
+			{Label: "Bed", Input: &gomukit.Input{
+				Name:        "bed",
+				Type:        gomukit.InputSelect,
+				Placeholder: "Pick one",
+				Options: []gomukit.Option{
+					{Value: "double", Label: "One double"},
+					{Value: "twin", Label: "Two singles"},
+				},
+			}},
+			{Label: "Arriving after 22:00", Input: &gomukit.Input{Name: "late", Type: gomukit.InputCheckbox}},
+			{Label: "Anything else?", Input: &gomukit.Input{Name: "notes", Placeholder: "Allergies, a cot, a late checkout…"}},
+		}},
+		Submit: gomukit.DateSubmit{Tool: "sandbox_schedule", Label: "Hold it",
+			ValueArg: "from", EndArg: "until", SuccessMessage: "Held."},
 		Cancel: &gomukit.RejectSpec{},
 		Brand:  appBrand(),
 		Theme:  appTheme(),

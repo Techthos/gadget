@@ -480,10 +480,11 @@ choice := &gomukit.Choice{
 ### Descriptions
 
 `Descriptions` is a shared block, not a widget: a label/value detail list used
-by `Confirm`, `Choice` (both for the record and per option) and a card's
-content. Each item takes its value from a record field (`Key`, typed and
+by `Confirm`, `Choice` (both for the record and per option), `DatePicker` and a
+card's content. Each item takes its value from a record field (`Key`, typed and
 Intl-formatted exactly like a table cell) or from fixed
-text authored in Go (`Text`) — one or the other, never both.
+text authored in Go (`Text`) — one or the other, never both. An item can also
+ask for a value instead of stating one (`Input`, below).
 
 ```go
 gomukit.Descriptions{Items: []gomukit.DescriptionItem{
@@ -503,6 +504,46 @@ gomukit.Descriptions{Items: []gomukit.DescriptionItem{
   `Theme: &theme.Theme{Extra: map[string]string{"--gomu-desc-min": "16rem"}}`.
 - **A value the record does not carry renders as an em dash** rather than
   disappearing: a reader deciding on these facts should see which are missing.
+
+#### Items that ask: `Input`
+
+An item with an `Input` renders a control in its value cell, and what the
+reader puts in it travels with the widget's own call — the question a widget
+asks in passing, rather than a form of its own.
+
+```go
+gomukit.Descriptions{Items: []gomukit.DescriptionItem{
+    {Label: "Booking", Key: "reference"},
+    {Label: "Guests", Key: "guests", Input: &gomukit.Input{
+        Name: "guests", Type: gomukit.InputNumber, Default: 2, Required: true,
+        Validation: &gomukit.Validation{Min: &one, Max: &six, Message: "Between one and six."},
+    }},
+    {Label: "Bed", Input: &gomukit.Input{
+        Name: "bed", Type: gomukit.InputSelect, Placeholder: "Pick one",
+        Options: []gomukit.Option{{Value: "double", Label: "One double"}, {Value: "twin", Label: "Two singles"}},
+    }},
+    {Label: "Arriving after 22:00", Input: &gomukit.Input{Name: "late", Type: gomukit.InputCheckbox}},
+}}
+```
+
+- **Four control types**: `InputText` (the default), `InputNumber`,
+  `InputSelect` (a gomukit dropdown over `Options`) and `InputCheckbox`. A
+  number arrives as a number and a checkbox as a bool; an empty number sends
+  no argument at all.
+- **Only widgets that own a call take them.** `DatePicker.Details` merges the
+  values into the submit call beside the picked date; a card's `Content.Items`
+  merge them into every action button of that card (per record — a `CardList`
+  keeps each card's answers to itself, and bulk actions get none). An `Input`
+  in `Confirm.Details` or a `Choice`'s details is a validation error: nothing
+  there would carry it.
+- **`Name` is a tool argument** and must not collide with anything else the
+  call already builds — the date arguments, `Submit.Args`, an action's `Args`.
+- **Prefill order**: the reader's own answer, else the record field named by
+  `Key`, else `Default`. Answers survive re-renders, so a tool result landing
+  mid-answer replaces the values around the control, not in it.
+- **Validation** is native and runs before the call: a required control that is
+  empty, or one outside its bounds, blocks it and shows `Validation.Message`
+  (or the browser's own text) under the control.
 
 ## DatePicker
 
@@ -553,7 +594,11 @@ picker := &gomukit.DatePicker{
   kind of thing that changes between registration and the question, so
   `LoadTool`/`LoadArgs` fetch it fresh on load.
 - **`Details`** describes the record the question is about (from `rows[0]`),
-  the same block `Confirm` and `Choice` use.
+  the same block `Confirm` and `Choice` use — and, here, one that can ask as
+  well as state: an item with an `Input` renders a control above the grid whose
+  value travels with the submit call (see Descriptions → Items that ask). With
+  `ChatPrompt` set there are no arguments to fill, so the answers are appended
+  to the message text instead.
 - **The decision is final**: once submitted or cancelled the controls are gone
   and the outcome stays on screen, even if the host pushes later results.
 

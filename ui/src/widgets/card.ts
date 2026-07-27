@@ -8,6 +8,7 @@ import { Row, rowsFrom } from "../data";
 import { clear } from "../dom";
 import { CallToolResult, M } from "../protocol";
 import { errorText, textOf } from "../status";
+import { releaseDropdowns } from "../dropdown";
 import {
 	ActionCfg,
 	CardTemplateCfg,
@@ -15,6 +16,15 @@ import {
 	resolveArgs,
 	templateActions,
 } from "./card-common";
+import {
+	clearInputErrors,
+	collectInputs,
+	enhanceDescriptionInputs,
+	hasInputs,
+	type InputValues,
+	validateInputs,
+	watchInputs,
+} from "./descriptions";
 
 interface CardCfg {
 	widget: string;
@@ -45,6 +55,10 @@ export function mountCard(ctx: MountContext): void {
 	let row: Row | null = rowsFrom(ctx.initialData, cfg.rowsKey)[0] ?? null;
 	let busy = false;
 	let statusTimer: ReturnType<typeof setTimeout> | undefined;
+	// The card is rebuilt on every state change, so what the reader has put
+	// into its content controls is kept here and handed back to each render.
+	const inputs: InputValues = {};
+	const asks = hasInputs(cfg.card.content?.items ?? []);
 
 	function showStatus(kind: "loading" | "error" | "success" | "", msg: string): void {
 		if (!statusEl) return;
@@ -54,9 +68,14 @@ export function mountCard(ctx: MountContext): void {
 	}
 
 	function render(): void {
+		// The dropdowns of the card being replaced own panels outside it.
+		releaseDropdowns(host);
 		clear(host);
 		if (row) {
-			host.append(renderCard(cfg.card, row, { id: rowID(row), busy }));
+			host.append(renderCard(cfg.card, row, { id: rowID(row), busy, values: inputs }));
+			// Selects become dropdowns only now: a panel is placed against the
+			// widget root, which the card could not reach while detached.
+			if (asks) enhanceDescriptionInputs(host);
 		}
 		if (emptyEl) emptyEl.hidden = !!row;
 	}
@@ -83,6 +102,13 @@ export function mountCard(ctx: MountContext): void {
 			return;
 		}
 		if (!action.tool) return;
+		// What the card's controls hold travels with the action, so an
+		// unanswered required question stops it the way a form's would.
+		if (asks && !validateInputs(host)) {
+			showStatus("error", "Please fix the highlighted fields.");
+			return;
+		}
+		const answers = asks ? collectInputs(host) : {};
 		clearTimeout(statusTimer);
 		busy = true;
 		render();
@@ -98,7 +124,9 @@ export function mountCard(ctx: MountContext): void {
 				showStatus("", "");
 				return;
 			}
-			applyResult(await bridge.callTool(action.tool, resolveArgs(action, row, [])));
+			applyResult(
+				await bridge.callTool(action.tool, { ...resolveArgs(action, row, []), ...answers }),
+			);
 		} catch (e) {
 			busy = false;
 			render();
@@ -120,6 +148,13 @@ export function mountCard(ctx: MountContext): void {
 			return;
 		}
 		void fire(action);
+	}
+
+	if (asks) {
+		watchInputs(host, (name, value, el) => {
+			inputs[name] = value;
+			if (el.checkValidity()) clearInputErrors(el.closest(".gomu-desc-item") ?? host);
+		});
 	}
 
 	host.addEventListener("click", (ev) => {

@@ -37,6 +37,11 @@ func canonicalDatePicker() *DatePicker {
 		Details: Descriptions{Items: []DescriptionItem{
 			{Label: "Booking", Key: "reference"},
 			{Label: "Room", Text: "Suite 4"},
+			{Label: "Guests", Key: "guests", Input: &Input{
+				Name: "guests", Type: InputNumber, Default: 2, Required: true,
+				Validation: &Validation{Min: f64(1), Max: f64(8)},
+			}},
+			{Label: "Late arrival", Input: &Input{Name: "late", Type: InputCheckbox}},
 		}},
 		Submit: DateSubmit{
 			Tool:           "hold_room",
@@ -316,6 +321,18 @@ func TestDatePickerValidate(t *testing.T) {
 		"backwards preset":          func(d *DatePicker) { d.Calendar.Presets[2].End = "2026-09-01" },
 		"widget item with key and text": func(d *DatePicker) {
 			d.Details = Descriptions{Items: []DescriptionItem{{Label: "Booking", Key: "reference", Text: "x"}}}
+		},
+		"input clashing with the date argument": func(d *DatePicker) {
+			d.Details.Items = append(d.Details.Items,
+				DescriptionItem{Label: "From", Input: &Input{Name: "from"}})
+		},
+		"input clashing with the end argument": func(d *DatePicker) {
+			d.Details.Items = append(d.Details.Items,
+				DescriptionItem{Label: "Until", Input: &Input{Name: "until"}})
+		},
+		"input clashing with a submit argument": func(d *DatePicker) {
+			d.Details.Items = append(d.Details.Items,
+				DescriptionItem{Label: "Booking", Input: &Input{Name: "booking"}})
 		},
 		"unsafe theme": func(d *DatePicker) { d.Theme = &theme.Theme{ColorText: "red}</style>"} },
 	}

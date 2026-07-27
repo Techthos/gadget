@@ -3,7 +3,12 @@
 // reaches the DOM only through textContent (via dom.h), never innerHTML.
 import { Row } from "../data";
 import { checkbox, h } from "../dom";
-import { DescriptionItemCfg, fillDescriptions } from "./descriptions";
+import {
+	collectInputs,
+	DescriptionItemCfg,
+	fillDescriptions,
+	type InputValues,
+} from "./descriptions";
 import { badgeNode, FieldCfg } from "./value";
 
 export interface ArgSourceCfg {
@@ -88,6 +93,9 @@ export interface RenderCardOpts {
 	selected?: boolean;
 	/** When true, action buttons render disabled. */
 	busy?: boolean;
+	/** What this record's content controls hold, kept across re-renders by the
+	 * behavior (a card is rebuilt wholesale on every state change). */
+	values?: InputValues;
 }
 
 /**
@@ -141,7 +149,7 @@ export function renderCard(tmpl: CardTemplateCfg, row: Row, opts: RenderCardOpts
 		if (text !== "") content.append(h("p", { class: "gomu-card-text" }, text));
 		if (items.length > 0) {
 			const dl = h("dl", { class: "gomu-descriptions gomu-card-items" });
-			fillDescriptions(dl, items, row);
+			fillDescriptions(dl, items, row, { values: opts.values, disabled: !!opts.busy });
 			content.append(dl);
 		}
 		article.append(content);
@@ -173,6 +181,16 @@ export function actionButton(action: ActionCfg, index: string, busy: boolean): H
 		{ type: "button", class: cls, "data-gomu-action": index, disabled: busy },
 		action.label,
 	);
+}
+
+/**
+ * The arguments a card's own controls contribute to an action fired from it.
+ * A bulk action gets none: what a control holds belongs to the one record it
+ * was rendered under, and a selection spans many.
+ */
+export function cardInputs(el: Element | null): InputValues {
+	const card = el?.closest("[data-gomu-card-id]");
+	return card ? collectInputs(card) : {};
 }
 
 /** Resolves an action's tool arguments from static values, the row, or the

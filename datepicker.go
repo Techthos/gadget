@@ -264,8 +264,19 @@ func (d *DatePicker) Validate() error {
 			return fmt.Errorf("%s: cancel: Args need Cancel.Tool", ctx)
 		}
 	}
-	if err := d.Details.validate(ctx + ": details"); err != nil {
+	if err := d.Details.validate(ctx+": details", true); err != nil {
 		return err
+	}
+	// What the details collect rides along with the date in the same call, so
+	// the two sets of arguments have to stay apart.
+	for _, name := range d.Details.inputNames() {
+		switch name {
+		case d.valueArg(), d.endArg():
+			return fmt.Errorf("%s: details: input %q is also a date argument", ctx, name)
+		}
+		if _, clash := d.Submit.Args[name]; clash {
+			return fmt.Errorf("%s: details: input %q is also a submit argument", ctx, name)
+		}
 	}
 	if err := d.Brand.Validate(); err != nil {
 		return fmt.Errorf("%s: %w", ctx, err)

@@ -430,6 +430,52 @@ describe("cardlist behavior", () => {
 		expect(bulkBar.hidden).toBe(true);
 	});
 
+	it("keeps each card's answers to itself and sends them with that card's action", async () => {
+		const root = listShell({ selection: true });
+		const asking = {
+			...TEMPLATE,
+			content: {
+				items: [
+					{
+						key: "",
+						label: "Note",
+						type: "text",
+						input: { name: "note", type: "text" },
+					},
+				],
+			},
+			footer: {
+				actions: [{ label: "Flag", kind: "tool", tool: "flag_user", args: { id: { row: "id" } } }],
+			},
+		};
+		host.onToolCall = () => ({ content: [{ type: "text", text: "Flagged." }] });
+		mountCardList({
+			root,
+			config: listConfig({ card: asking, selection: { bulk: [] } }),
+			initialData: { rows: ROWS },
+			bridge,
+		});
+
+		const notes = [...root.querySelectorAll<HTMLInputElement>('[data-gomu-input="note"]')];
+		expect(notes).toHaveLength(3);
+		notes[1]!.value = "check this one";
+		notes[1]!.dispatchEvent(new Event("input", { bubbles: true }));
+
+		// A re-render rebuilds the whole strip; the answer belongs to its record.
+		const selectCard = root.querySelectorAll<HTMLInputElement>("[data-gomu-select-card]")[0]!;
+		selectCard.checked = true;
+		selectCard.dispatchEvent(new Event("change", { bubbles: true }));
+		const after = [...root.querySelectorAll<HTMLInputElement>('[data-gomu-input="note"]')];
+		expect(after.map((el) => el.value)).toEqual(["", "check this one", ""]);
+
+		root.querySelectorAll<HTMLElement>('[data-gomu-action="0"]')[1]!.click();
+		await flush();
+		expect(host.received(M.toolsCall)[0]!.params).toMatchObject({
+			name: "flag_user",
+			arguments: { id: 2, note: "check this one" },
+		});
+	});
+
 	it("updates from tool-result notifications", async () => {
 		const root = listShell();
 		mountCardList({ root, config: listConfig(), initialData: { rows: ROWS }, bridge });
@@ -562,6 +608,52 @@ describe("card behavior", () => {
 		expect(calls[0]!.params).toMatchObject({ name: "edit_user", arguments: { id: 1 } });
 		expect(root.querySelector(".gomu-card-title")?.textContent).toBe("Caroline");
 		expect(root.querySelector<HTMLElement>("[data-gomu-status]")?.textContent).toBe("Saved.");
+	});
+
+	it("sends what the card's own controls collected with its action", async () => {
+		const root = cardShell();
+		const asking = {
+			...TEMPLATE,
+			content: {
+				items: [
+					...TEMPLATE.content.items,
+					{
+						key: "balance",
+						label: "Top up by",
+						type: "text",
+						input: { name: "amount", type: "number", required: true, message: "How much?" },
+					},
+				],
+			},
+			footer: {
+				actions: [{ label: "Top up", kind: "tool", tool: "top_up", args: { id: { row: "id" } } }],
+			},
+		};
+		mountCard({ root, config: cardConfig({ card: asking }), initialData: { rows: ROWS }, bridge });
+
+		// The item's key prefills the control from the record.
+		const amount = root.querySelector<HTMLInputElement>('[data-gomu-input="amount"]')!;
+		expect(amount.value).toBe("30");
+		amount.value = "";
+		amount.dispatchEvent(new Event("input", { bubbles: true }));
+
+		// Required and empty: the action does not fire.
+		root.querySelector<HTMLElement>('[data-gomu-action="0"]')!.click();
+		await flush();
+		expect(host.received(M.toolsCall)).toHaveLength(0);
+		expect(root.querySelector("[data-gomu-input-error]")?.textContent).toBe("How much?");
+
+		root.querySelector<HTMLInputElement>('[data-gomu-input="amount"]')!.value = "50";
+		root
+			.querySelector<HTMLInputElement>('[data-gomu-input="amount"]')!
+			.dispatchEvent(new Event("input", { bubbles: true }));
+		root.querySelector<HTMLElement>('[data-gomu-action="0"]')!.click();
+		await flush();
+
+		expect(host.received(M.toolsCall)[0]!.params).toMatchObject({
+			name: "top_up",
+			arguments: { id: 1, amount: 50 },
+		});
 	});
 
 	it("updates from tool-result notifications", async () => {

@@ -111,7 +111,7 @@ func (c CardContent) validate(ctx string) error {
 	if err := validateTextSlot(ctx+": text", c.TextKey, c.Text); err != nil {
 		return err
 	}
-	return c.Items.validate(ctx)
+	return c.Items.validate(ctx, true)
 }
 
 func (c CardContent) config() map[string]any {
@@ -202,7 +202,33 @@ func (t CardTemplate) validate(ctx string) error {
 	if err := t.Content.validate(ctx + ": content"); err != nil {
 		return err
 	}
-	return t.Footer.validate(ctx + ": footer")
+	if err := t.Footer.validate(ctx + ": footer"); err != nil {
+		return err
+	}
+	return t.validateInputs(ctx)
+}
+
+// validateInputs checks the content's controls against the buttons that will
+// carry what they collect: an action fires with its own arguments merged with
+// the card's input values, so a shared name would send one where the other is
+// expected.
+func (t CardTemplate) validateInputs(ctx string) error {
+	names := t.Content.Items.inputNames()
+	if len(names) == 0 {
+		return nil
+	}
+	actions := append([]Action{}, t.Footer.Actions...)
+	if t.Header.Action != nil {
+		actions = append(actions, *t.Header.Action)
+	}
+	for _, a := range actions {
+		for _, name := range names {
+			if _, clash := a.Args[name]; clash {
+				return fmt.Errorf("%s: content: input %q is also an argument of action %q", ctx, name, a.Label)
+			}
+		}
+	}
+	return nil
 }
 
 // config serializes the template into the "card" object of the config island.
@@ -224,7 +250,10 @@ func (t CardTemplate) config() map[string]any {
 func (t CardTemplate) sortOptions() []map[string]any {
 	var opts []map[string]any
 	for _, item := range t.Content.Items.Items {
-		if item.Key == "" || !item.column().sortable() {
+		// An input item's Key is a prefill source, not a value on display;
+		// sorting a list by what its controls hold would order it by nothing
+		// the reader can see.
+		if item.Input != nil || item.Key == "" || !item.column().sortable() {
 			continue
 		}
 		label := item.Label

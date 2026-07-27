@@ -172,6 +172,11 @@ func catalog() []story {
 			Payload: pushRows, build: func() gomukit.Widget { return cardEmpty() },
 		},
 		{
+			ID: "card-inputs", Group: "Card", Label: "A card that asks",
+			Desc:    "Content items rendering controls; what they hold travels with the footer button.",
+			Payload: pushRows, build: func() gomukit.Widget { return cardInputs() },
+		},
+		{
 			ID: "descriptions-types", Group: "Descriptions", Label: "All item types",
 			Desc:    "Every item type in one list. Step the width down: the grid drops a column at a time and ends up stacked.",
 			Payload: pushDetails, build: func() gomukit.Widget { return descriptionsTypes() },
@@ -255,6 +260,11 @@ func catalog() []story {
 			ID: "datepicker-dropdowns", Group: "Date picker", Label: "Month and year",
 			Desc:    "Caption dropdowns for a date far from today, with weekends blocked.",
 			Payload: pushDates, build: func() gomukit.Widget { return datePickerDropdowns() },
+		},
+		{
+			ID: "datepicker-inputs", Group: "Date picker", Label: "Asks for more than the date",
+			Desc:    "Details that ask as well as state: guests, a bed choice and a late-arrival box travel with the dates.",
+			Payload: pushDates, build: func() gomukit.Widget { return datePickerInputs() },
 		},
 		{
 			ID: "datepicker-runtime", Group: "Date picker", Label: "Runtime availability",
@@ -348,6 +358,53 @@ func datePickerDropdowns() *gomukit.DatePicker {
 		},
 		Submit: gomukit.DateSubmit{Tool: "set_start_date", Label: "Set the date"},
 		Cancel: &gomukit.RejectSpec{},
+		Brand:  demoBrand(),
+		Theme:  demoTheme(),
+	}
+}
+
+// datePickerInputs is the picker asking the questions that come with the date:
+// the answers ride along in the same call.
+func datePickerInputs() *gomukit.DatePicker {
+	return &gomukit.DatePicker{
+		URI:    "ui://harness/datepicker-inputs",
+		Title:  "Booking",
+		Prompt: "Which nights should we hold the suite?",
+		Body:   "Rates are per night and include breakfast.",
+		Mode:   gomukit.DateRange,
+		Calendar: &gomukit.Calendar{
+			Min:         "2026-08-01",
+			Max:         "2026-12-31",
+			WeekNumbers: true,
+		},
+		Default:    "2026-08-20",
+		DefaultEnd: "2026-08-23",
+		Details: gomukit.Descriptions{Items: []gomukit.DescriptionItem{
+			{Label: "Booking", Key: "reference"},
+			{Label: "Guests", Key: "guests", Input: &gomukit.Input{
+				Name:       "guests",
+				Type:       gomukit.InputNumber,
+				Default:    2,
+				Required:   true,
+				Validation: &gomukit.Validation{Min: num(1), Max: num(6), Step: num(1), Message: "Between one and six guests."},
+			}},
+			{Label: "Bed", Input: &gomukit.Input{
+				Name:        "bed",
+				Type:        gomukit.InputSelect,
+				Placeholder: "Pick one",
+				Options:     []gomukit.Option{{Value: "double", Label: "One double"}, {Value: "twin", Label: "Two singles"}},
+			}},
+			{Label: "Arriving after 22:00", Input: &gomukit.Input{Name: "late", Type: gomukit.InputCheckbox}},
+			{Label: "Anything else?", Input: &gomukit.Input{Name: "notes", Placeholder: "Allergies, a cot, a late checkout…"}},
+		}},
+		Submit: gomukit.DateSubmit{
+			Tool:           "hold_room",
+			Label:          "Hold it",
+			ValueArg:       "from",
+			EndArg:         "until",
+			SuccessMessage: "Held.",
+		},
+		Cancel: &gomukit.RejectSpec{Label: "Cancel", Message: "Nothing was held."},
 		Brand:  demoBrand(),
 		Theme:  demoTheme(),
 	}
@@ -775,6 +832,57 @@ func menuPrompt() *gomukit.Menu {
 				Prompt:       "Open the edit form for Ada Lovelace",
 				Badge:        "chat",
 				BadgeVariant: gomukit.BadgeNeutral,
+			},
+		},
+		Brand: demoBrand(),
+		Theme: demoTheme(),
+	}
+}
+
+// cardInputs is the card asking about the record it shows: the controls sit in
+// the content list, and the footer button carries what they hold.
+func cardInputs() *gomukit.Card {
+	return &gomukit.Card{
+		URI:         "ui://harness/card-inputs",
+		Title:       "Adjust balance",
+		InitialData: map[string]any{"rows": harnessRows()[:1]},
+		Template: gomukit.CardTemplate{
+			Header: gomukit.CardHeader{
+				TitleKey:       "name",
+				DescriptionKey: "email",
+				Badge: gomukit.Badge("status", "Status", map[string]gomukit.BadgeVariant{
+					"active":   gomukit.BadgeSuccess,
+					"invited":  gomukit.BadgeInfo,
+					"archived": gomukit.BadgeNeutral,
+				}),
+			},
+			Content: gomukit.CardContent{
+				Items: gomukit.Descriptions{Items: []gomukit.DescriptionItem{
+					{Label: "Current balance", Key: "balance", Type: gomukit.ColNumber, Format: "currency:EUR"},
+					{Label: "New balance", Key: "balance", Input: &gomukit.Input{
+						Name:       "amount",
+						Type:       gomukit.InputNumber,
+						Required:   true,
+						Validation: &gomukit.Validation{Min: num(0), Step: num(0.01), Message: "A balance cannot go below zero."},
+					}},
+					{Label: "Reason", Input: &gomukit.Input{
+						Name:        "reason",
+						Type:        gomukit.InputSelect,
+						Placeholder: "Why?",
+						Options: []gomukit.Option{
+							{Value: "refund", Label: "Refund"},
+							{Value: "credit", Label: "Goodwill credit"},
+							{Value: "correction", Label: "Correction"},
+						},
+					}},
+					{Label: "Tell the customer", Input: &gomukit.Input{Name: "notify", Type: gomukit.InputCheckbox, Default: true}},
+				}},
+			},
+			Footer: gomukit.CardFooter{
+				Text: "The adjustment is logged against your account.",
+				Actions: []gomukit.Action{
+					{Label: "Apply", Tool: "set_balance", Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")}, Variant: gomukit.VariantPrimary},
+				},
 			},
 		},
 		Brand: demoBrand(),

@@ -42,6 +42,28 @@ export function refreshDropdown(select: HTMLSelectElement | null | undefined): v
   if (select) registry.get(select)?.sync();
 }
 
+/**
+ * Undoes the upgrade of a select that is about to be thrown away. A panel is
+ * a child of the widget root rather than of the select (see popup.ts), so
+ * dropping the select alone would leave the panel behind — a list rebuilt on
+ * every data change would pile them up.
+ */
+export function releaseDropdown(select: HTMLSelectElement | null | undefined): void {
+  if (!select) return;
+  const dd = registry.get(select);
+  if (!dd) return;
+  dd.close();
+  dd.panel.remove();
+  registry.delete(select);
+}
+
+/** releaseDropdown for every select under root. */
+export function releaseDropdowns(root: ParentNode): void {
+  for (const select of root.querySelectorAll<HTMLSelectElement>("select")) {
+    releaseDropdown(select);
+  }
+}
+
 /** refreshDropdown for every select under root. */
 export function refreshDropdowns(root: ParentNode): void {
   for (const select of root.querySelectorAll<HTMLSelectElement>("select")) {

@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.7.1 - 2026-07-27
+
+- **`Descriptions` items can ask, not only state.** A `DescriptionItem` with an
+  `Input` renders a control in its value cell — `InputText` (default),
+  `InputNumber`, `InputSelect` (a gomukit dropdown over `Options`) or
+  `InputCheckbox` — with `Placeholder`, `Required`, `Default` and the same
+  `Validation` a form `Field` takes. What the reader puts in it is collected at
+  call time and merged into the widget's own call: `DatePicker.Details` sends it
+  with the picked date(s) (or appends it to the turn when `ChatPrompt` is set),
+  and a card's `Content.Items` send it with every action button of that card —
+  per record, so a `CardList` keeps each card's answers to itself and bulk
+  actions get none. `Confirm.Details` and a `Choice`'s details stay read-only
+  and reject an `Input` at validation time. Prefill order is the reader's own
+  answer, then the record field named by `Key`, then `Default`; answers survive
+  the re-render a tool result causes. Native constraint validation runs before
+  the call and shows the message under the offending control, and an input name
+  colliding with an argument the call already builds is a validation error.
+
 ## v0.6.0 - 2026-07-26
 
 - **New widget `DatePicker`**, and a calendar for forms. One grid, two
