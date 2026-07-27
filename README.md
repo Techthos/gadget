@@ -1,4 +1,6 @@
-# gomukit
+<p align="center">
+  <img src="docs/assets/gomukit-banner.svg" alt="gomukit — interactive MCP Apps widgets for Go" width="900">
+</p>
 
 Prebuilt, parameterized, interactive HTML widgets for [MCP Apps](https://modelcontextprotocol.io/extensions/apps/overview) — in Go, out of the box.
 
@@ -16,8 +18,9 @@ Cursor, Goose, Postman, …).
 **`https://gomukit.techthos.systems/mcp`**
 
 Add that URL as a custom connector in Claude or ChatGPT and ask for a table, a
-form, a card list, a date picker or the menu; every widget renders
-interactively inside the chat. No checkout, no install.
+form, a card list, a date picker or the menu — or ask to delete a customer and
+get the confirmation; every widget renders interactively inside the chat. No
+checkout, no install.
 
 - **Claude** (web, desktop): Settings → Connectors → Add custom connector →
   paste the URL. Available on plans that allow custom connectors.
@@ -49,6 +52,12 @@ writing tool and no one else sees your edits.
 </p>
 
 <p align="center"><sub>CardList lays a collection out as a horizontally scrolling card carousel that fits a narrow chat pane (same filter/sort/pagination/selection as Table); Card renders a single record.</sub></p>
+
+<p align="center">
+  <img src="docs/assets/confirm.png" alt="gomukit Confirm widget: a destructive-action confirmation showing the record's details, the effects of the action, an acknowledgement checkbox and a type-to-confirm field above the accept and reject buttons" width="420">
+</p>
+
+<p align="center"><sub>Confirm asks before something irreversible happens: details, effects, and optional guards (acknowledge, type-to-confirm) — the accept button stays disabled until they are satisfied.</sub></p>
 
 ## Quickstart
 
@@ -112,6 +121,9 @@ host-themed table — sortable, filterable, paginated — inside the chat.
   ISO week numbers, month/year travel, full keyboard control.
 - **Menu**: a launcher grid of tiles, one per UI-backed tool — the app's front
   door. Choosing a tile calls that tool so the host opens its widget.
+- **Confirm**: a full-widget confirmation before an irreversible tool call —
+  record details, the effects of the action, and optional guards (acknowledge
+  checkbox, type-to-confirm) that gate the accept button.
 - **Host-aware theming**: `--gomu-*` design tokens defaulting to
   host-injected CSS variables (Claude/ChatGPT look automatic), `Theme` struct
   overrides, dark mode.

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="t">
+  <title id="t">gomukit</title>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#14324B"/>
+      <stop offset="1" stop-color="#0A1826"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="15" fill="url(#tile)"/>
+
+  <!-- feet and arms, behind the body -->
+  <ellipse cx="25" cy="51" rx="6.5" ry="4" fill="#007D9C"/>
+  <ellipse cx="39" cy="51" rx="6.5" ry="4" fill="#007D9C"/>
+  <g stroke="#00ADD8" stroke-width="4.5" stroke-linecap="round" fill="none">
+    <path d="M15 33 C 9 32, 7 26, 9 21"/>
+    <path d="M49 34 C 54 35, 56 38, 55 41"/>
+  </g>
+  <circle cx="9" cy="21" r="3" fill="#00ADD8"/>
+  <circle cx="55" cy="41" r="3" fill="#00ADD8"/>
+
+  <!-- body: a widget card -->
+  <rect x="13" y="12" width="38" height="38" rx="9" fill="#FFFFFF"/>
+
+  <!-- header bar = the face -->
+  <path d="M13 30 V21 A9 9 0 0 1 22 12 H42 A9 9 0 0 1 51 21 V30 Z" fill="#00ADD8"/>
+  <ellipse cx="25.5" cy="20.5" rx="4.3" ry="4.6" fill="#FFFFFF"/>
+  <ellipse cx="38.5" cy="20.5" rx="4.3" ry="4.6" fill="#FFFFFF"/>
+  <circle cx="26.7" cy="21.6" r="2.1" fill="#0B1B2B"/>
+  <circle cx="39.7" cy="21.6" r="2.1" fill="#0B1B2B"/>
+  <circle cx="25.1" cy="18.9" r="0.85" fill="#FFFFFF"/>
+  <circle cx="38.1" cy="18.9" r="0.85" fill="#FFFFFF"/>
+  <path d="M27 26.4 q5 3.6 10 0" fill="none" stroke="#08394B" stroke-width="1.8" stroke-linecap="round"/>
+
+  <!-- rows and a badge -->
+  <rect x="19" y="34" width="16" height="5" rx="2.5" fill="#C3D3DC"/>
+  <rect x="37" y="34" width="8" height="5" rx="2.5" fill="#CE3262"/>
+  <rect x="19" y="41.5" width="22" height="5" rx="2.5" fill="#E1EBF0"/>
+</svg>

@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" width="1200" height="360" role="img" aria-labelledby="bt">
+  <title id="bt">gomukit — interactive MCP Apps widgets for Go</title>
+  <defs>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0E2438"/>
+      <stop offset="1" stop-color="#081320"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#00ADD8" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#00ADD8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="360" rx="28" fill="url(#panel)"/>
+  <rect x="0.5" y="0.5" width="1199" height="359" rx="27.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.07"/>
+  <circle cx="215" cy="175" r="185" fill="url(#glow)"/>
+
+  <!-- mascot: the widget itself, alive -->
+  <g transform="translate(80,72)">
+    <!-- feet, behind the body -->
+    <ellipse cx="88" cy="186" rx="24" ry="14" fill="#007D9C"/>
+    <ellipse cx="172" cy="186" rx="24" ry="14" fill="#007D9C"/>
+
+    <!-- arms -->
+    <g stroke="#00ADD8" stroke-width="14" stroke-linecap="round" fill="none">
+      <path d="M40 118 C 16 116, 8 96, 14 74"/>
+      <path d="M220 124 C 240 128, 248 140, 244 152"/>
+    </g>
+    <circle cx="14" cy="74" r="10" fill="#00ADD8"/>
+    <circle cx="244" cy="152" r="10" fill="#00ADD8"/>
+
+    <!-- body: a widget card -->
+    <rect x="30" y="10" width="200" height="170" rx="26" fill="#FFFFFF"/>
+
+    <!-- header bar = the face -->
+    <path d="M30 84 V36 A26 26 0 0 1 56 10 H204 A26 26 0 0 1 230 36 V84 Z" fill="#00ADD8"/>
+    <ellipse cx="98" cy="44" rx="15" ry="16" fill="#FFFFFF"/>
+    <ellipse cx="162" cy="44" rx="15" ry="16" fill="#FFFFFF"/>
+    <circle cx="102" cy="47" r="7" fill="#0B1B2B"/>
+    <circle cx="166" cy="47" r="7" fill="#0B1B2B"/>
+    <circle cx="97" cy="40" r="2.6" fill="#FFFFFF"/>
+    <circle cx="161" cy="40" r="2.6" fill="#FFFFFF"/>
+    <path d="M114 64 q16 13 32 0" fill="none" stroke="#08394B" stroke-width="4.5" stroke-linecap="round"/>
+
+    <!-- rows and a badge -->
+    <rect x="54" y="102" width="86" height="13" rx="6.5" fill="#C3D3DC"/>
+    <rect x="152" y="99" width="54" height="19" rx="9.5" fill="#CE3262"/>
+    <rect x="54" y="130" width="120" height="13" rx="6.5" fill="#E1EBF0"/>
+    <rect x="54" y="154" width="72" height="13" rx="6.5" fill="#E1EBF0"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="400" y="160" textLength="326" lengthAdjust="spacing"
+        font-family="'JetBrains Mono','IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace"
+        font-size="78" font-weight="700" letter-spacing="-2" fill="#FFFFFF">gomu<tspan fill="#00ADD8">kit</tspan></text>
+  <rect x="742" y="110" width="20" height="52" rx="3" fill="#00ADD8" fill-opacity="0.85"/>
+
+  <text x="402" y="205" font-family="'Inter','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif"
+        font-size="23" fill="#93AEBE">Interactive MCP Apps widgets — in Go, out of the box.</text>
+
+  <!-- chips: the widget set, in the product's own vocabulary -->
+  <g font-family="'Inter','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="13" fill="#8FD3E6" text-anchor="middle">
+    <g fill="#00ADD8" fill-opacity="0.12" stroke="#00ADD8" stroke-opacity="0.35">
+      <rect x="402" y="232" width="62" height="30" rx="15"/>
+      <rect x="474" y="232" width="56" height="30" rx="15"/>
+      <rect x="540" y="232" width="56" height="30" rx="15"/>
+      <rect x="606" y="232" width="84" height="30" rx="15"/>
+      <rect x="700" y="232" width="56" height="30" rx="15"/>
+      <rect x="766" y="232" width="98" height="30" rx="15"/>
+    </g>
+    <text x="433" y="252">Table</text>
+    <text x="502" y="252">Form</text>
+    <text x="568" y="252">Card</text>
+    <text x="648" y="252">CardList</text>
+    <text x="728" y="252">Menu</text>
+    <text x="815" y="252">DatePicker</text>
+  </g>
+</svg>
