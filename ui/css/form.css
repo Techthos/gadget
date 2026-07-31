@@ -3,18 +3,151 @@
   display: flex;
   flex-direction: column;
   gap: calc(var(--gomu-space-unit) * 3.5);
-  max-width: 36rem;
+  /* A reading measure for one column of controls; the multi-column tiers
+   * below widen it, since four columns at 36rem are four unusable ones. */
+  max-width: var(--gomu-form-max, 36rem);
+  /* Centred in whatever room the widget was given: once the measure is
+   * narrower than the card, the slack belongs on both sides — a form pinned
+   * to the left edge reads as the start of a two-column page whose second
+   * column never arrives. */
+  margin-inline: auto;
 }
+
+.gomu-form--cols-2 {
+  --gomu-form-max: 48rem;
+}
+
+.gomu-form--cols-3 {
+  --gomu-form-max: 60rem;
+}
+
+.gomu-form--cols-4 {
+  --gomu-form-max: 72rem;
+}
+
+/* --- Field grid -------------------------------------------------------
+ * One block of fields. The column count is authored (Form.Columns,
+ * FieldSet.Columns) rather than derived from a width floor: "these two
+ * belong on one line" is a statement about the fields, not about the room.
+ * The tiers at the bottom of this file take columns away as the widget
+ * narrows, so the same document still reads in a chat pane. */
+.gomu-form-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--gomu-form-cols, 1), minmax(0, 1fr));
+  gap: calc(var(--gomu-space-unit) * 3.5) calc(var(--gomu-space-unit) * 4);
+  align-items: start;
+}
+
+.gomu-cols-2 {
+  --gomu-form-cols: 2;
+}
+
+.gomu-cols-3 {
+  --gomu-form-cols: 3;
+}
+
+.gomu-cols-4 {
+  --gomu-form-cols: 4;
+}
+
+.gomu-span-2 {
+  grid-column: span 2;
+}
+
+.gomu-span-3 {
+  grid-column: span 3;
+}
+
+.gomu-span-4 {
+  grid-column: span 4;
+}
+
+/* --- Field set --------------------------------------------------------
+ * A titled group. The <fieldset> is stripped of its UA chrome (border, the
+ * min-width: min-content that would let a wide control push the whole form
+ * out) and given ours; the title is a heading the fieldset points at with
+ * aria-labelledby, so there is no <legend> to fight with the layout. */
+.gomu-fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gomu-space-unit) * 3.5);
+}
+
+/* Groups need more air between them than fields do inside one, or the last
+ * field of one group reads as the first of the next. */
+.gomu-fieldset:not(:first-child) {
+  margin-block-start: calc(var(--gomu-space-unit) * 2);
+}
+
+.gomu-fieldset-head {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gomu-space-unit) * 0.5);
+  padding-block-end: calc(var(--gomu-space-unit) * 2);
+  border-block-end: 1px solid var(--gomu-color-border);
+}
+
+/* A notch above the field labels under it: the group's title is the line the
+ * reader scans to, and at the labels' own size the rule is doing all the
+ * work of saying so. */
+.gomu-fieldset-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.gomu-fieldset-desc {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--gomu-color-text-muted);
+}
+
+/* The boxed variant: the same chrome the widget card wears — a filled header
+ * strip over a bordered body — one level in. */
+.gomu-fieldset--boxed {
+  gap: 0;
+  border: 1px solid var(--gomu-color-border);
+  border-radius: var(--gomu-radius-m);
+  overflow: hidden;
+}
+
+.gomu-fieldset--boxed .gomu-fieldset-head {
+  padding: calc(var(--gomu-space-unit) * 2.5) calc(var(--gomu-space-unit) * 3.5);
+  background: var(--gomu-color-surface);
+}
+
+.gomu-fieldset--boxed .gomu-form-grid {
+  padding: calc(var(--gomu-space-unit) * 3.5);
+}
+
+/* --- Fields ----------------------------------------------------------- */
 
 .gomu-field {
   display: flex;
   flex-direction: column;
   gap: calc(var(--gomu-space-unit) * 1);
+  /* A grid item's automatic minimum is its content's: without this an input
+   * at its default size keeps its column from ever getting narrower. */
+  min-width: 0;
 }
 
 .gomu-field label {
   font-size: 0.8125rem;
   font-weight: 500;
+}
+
+/* The control fills the column it was given rather than sitting at its
+ * intrinsic size, so two fields sharing a row are exactly as wide as each
+ * other. (Composite controls — a date range, an upgraded dropdown — divide
+ * that width themselves; see calendar.css and dropdown.css.) */
+.gomu-field > .gomu-input {
+  width: 100%;
+  min-width: 0;
 }
 
 .gomu-field--checkbox {
@@ -60,9 +193,43 @@
   margin-top: calc(var(--gomu-space-unit) * 1);
 }
 
+/* Three and four columns stop being readable well before two do: their
+ * controls hit the width of the words in them first. */
+@container gomu (max-width: 46rem) {
+  .gomu-cols-3,
+  .gomu-cols-4 {
+    --gomu-form-cols: 2;
+  }
+
+  .gomu-span-3,
+  .gomu-span-4 {
+    grid-column: span 2;
+  }
+}
+
 @container gomu (max-width: 34rem) {
   .gomu-form {
     padding: calc(var(--gomu-space-unit) * 3);
+  }
+
+  /* One column, and with it no spans: a field that asked for two of two is
+   * simply the whole row again. */
+  .gomu-form-grid {
+    --gomu-form-cols: 1;
+  }
+
+  .gomu-span-2,
+  .gomu-span-3,
+  .gomu-span-4 {
+    grid-column: auto;
+  }
+
+  .gomu-fieldset--boxed .gomu-form-grid {
+    padding: calc(var(--gomu-space-unit) * 3);
+  }
+
+  .gomu-fieldset--boxed .gomu-fieldset-head {
+    padding-inline: calc(var(--gomu-space-unit) * 3);
   }
 
   /* Submit and cancel share the row and grow into it; once labels are long

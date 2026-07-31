@@ -238,11 +238,13 @@ gomukit.ActionsColumn(actions...)           // per-row actions column (empty Lab
 
 ```go
 type Form struct {
-    URI    string      // REQUIRED. ui:// resource URI
-    Title  string      // heading + document title
-    Fields []Field     // REQUIRED, non-empty
-    Submit SubmitSpec  // REQUIRED (Submit.Tool must be set)
-    Cancel *CancelSpec // when set, adds a reset button
+    URI       string     // REQUIRED. ui:// resource URI
+    Title     string     // heading + document title
+    Fields    []Field    // ungrouped fields, rendered above FieldSets
+    FieldSets []FieldSet // titled groups of fields, rendered in order after Fields
+    Columns   int        // fields per row: 1 (default) .. 4
+    Submit    SubmitSpec  // REQUIRED (Submit.Tool must be set)
+    Cancel    *CancelSpec // when set, adds a reset button
 
     PrefillKey string  // structuredContent key with {"field": value} prefill. Default "values"
     ErrorsKey  string  // structuredContent key with {"field": "message"} errors. Default "errors"
@@ -265,6 +267,50 @@ type SubmitSpec struct {
 type CancelSpec struct {
     Label string // default "Cancel"
 }
+
+type FieldSet struct {
+    Title       string  // REQUIRED: names the group
+    Description string  // a line under the title
+    Fields      []Field // REQUIRED, non-empty
+    Columns     int     // overrides Form.Columns for this group (1..4); 0 inherits
+    Boxed       bool    // draw as a bordered panel with a filled header
+}
+```
+
+A form needs at least one field, in `Fields` or in a `FieldSet`. Grouped
+fields are fields: they share one name/argument namespace with everything
+else in the form, submit identically, prefill identically, and the runtime is
+told nothing about the groups. A `FieldSet` renders as a `<fieldset>` named
+by its title through `aria-labelledby`.
+
+**Layout.** `Form.Columns` (1..4, default 1) is how many fields share a row;
+a `FieldSet` may set its own, and `Field.Span` lets one field take several of
+its group's columns (`Span: 2` in a two-column group = the whole row). The
+grid narrows with the widget — three and four columns drop to two under
+46rem, everything drops to one column (and every span is ignored) under 34rem
+— so a multi-column form still reads in a chat pane. The document's own
+maximum width follows its widest group (36rem for one column, up to 72rem for
+four).
+
+```go
+form := &gomukit.Form{
+    URI: "ui://myapp/employee", Title: "New employee", Columns: 2,
+    Fields: []gomukit.Field{
+        {Name: "workspace", Label: "Workspace", Type: gomukit.FReadonly, Span: 2},
+    },
+    FieldSets: []gomukit.FieldSet{{
+        Title: "Person", Description: "How the record reads everywhere it appears.",
+        Fields: []gomukit.Field{
+            {Name: "first", Label: "First name", Required: true},
+            {Name: "last", Label: "Last name", Required: true},
+            {Name: "email", Label: "Email", Span: 2},
+        },
+    }, {
+        Title: "Notes", Columns: 1, Boxed: true,
+        Fields: []gomukit.Field{{Name: "notes", Label: "Notes", Type: gomukit.FTextarea}},
+    }},
+    Submit: gomukit.SubmitSpec{Tool: "create_employee"},
+}
 ```
 
 ### 3.6 `Field`
@@ -281,6 +327,7 @@ type Field struct {
     Options     []Option    // REQUIRED for FSelect / FMultiSelect
     Validation  *Validation // client-side constraints (date fields take bounds from Calendar instead)
     Rows        int         // textarea height (FTextarea), default 3
+    Span        int         // columns the field occupies within its group: 1 (default) .. the group's Columns
 
     Calendar *Calendar // FDate / FDateRange only: the grid the field opens (see 3.16.1)
     EndName  string    // FDateRange only: argument carrying the range's end. Default Name + "_end"
@@ -1155,10 +1202,14 @@ Table:
 - `Theme` must pass `theme.Validate()`.
 
 Form:
-- `URI` as above; at least one field; `Submit.Tool` required.
-- Field `Name` required and unique. An `FDateRange` field's `EndName` shares
-  that namespace: it must not collide with another field's `Name`, nor with its
-  own.
+- `URI` as above; at least one field (in `Fields` or a `FieldSet`);
+  `Submit.Tool` required.
+- Field `Name` required and unique across the whole form, grouped or not. An
+  `FDateRange` field's `EndName` shares that namespace: it must not collide
+  with another field's `Name`, nor with its own.
+- `Columns` (form and field set) must be 0..4; `FieldSet.Title` required;
+  a `FieldSet` needs at least one field.
+- `Field.Span` must be 0..the columns of its group.
 - `FSelect`/`FMultiSelect` require non-empty `Options`.
 - `Calendar` requires `FDate` or `FDateRange`; `EndName` requires `FDateRange`.
 - Date defaults must be `"YYYY-MM-DD"`, must not run backwards, and must be days

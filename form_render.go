@@ -45,9 +45,15 @@ func (f *Form) shell() g.Node {
 	// novalidate: the runtime runs checkValidity itself and renders inline
 	// errors; native validation would swallow the submit event and rely on
 	// browser bubbles that hosts' sandboxed iframes may not show.
-	formChildren := []g.Node{h.Class("gomu-form"), htmlx.Data("form", ""), g.Attr("novalidate")}
-	for _, fd := range f.Fields {
-		formChildren = append(formChildren, fieldNode(fd))
+	formClass := "gomu-form"
+	// The form's own width follows its widest grid: one column is a reading
+	// measure, four need the room to be four.
+	if widest := f.widestGroup(); widest > 1 {
+		formClass += " gomu-form--cols-" + strconv.Itoa(widest)
+	}
+	formChildren := []g.Node{h.Class(formClass), htmlx.Data("form", ""), g.Attr("novalidate")}
+	for i, gr := range f.groups() {
+		formChildren = append(formChildren, groupNode(gr, i))
 	}
 
 	submitLabel := f.Submit.Label
@@ -80,7 +86,54 @@ func (f *Form) shell() g.Node {
 	)
 }
 
-func fieldNode(fd Field) g.Node {
+// groupNode renders one block of fields: a bare grid for the form's ungrouped
+// fields, or a <fieldset> around the same grid for a FieldSet.
+//
+// The title is a heading the fieldset points at with aria-labelledby rather
+// than a <legend>: a legend is laid out inside the fieldset's border by the
+// UA, which no grid or panel chrome survives, while aria-labelledby names the
+// group just as well.
+func groupNode(gr fieldGroup, i int) g.Node {
+	grid := gridNode(gr)
+	if gr.set == nil {
+		return grid
+	}
+	titleID := fmt.Sprintf("gomu-fs-%d", i)
+	class := "gomu-fieldset"
+	if gr.set.Boxed {
+		class += " gomu-fieldset--boxed"
+	}
+	head := []g.Node{
+		h.Class("gomu-fieldset-head"),
+		h.H3(h.Class("gomu-fieldset-title"), h.ID(titleID), g.Text(gr.set.Title)),
+	}
+	if gr.set.Description != "" {
+		head = append(head, h.P(h.Class("gomu-fieldset-desc"), g.Text(gr.set.Description)))
+	}
+	return h.FieldSet(
+		h.Class(class),
+		h.Aria("labelledby", titleID),
+		h.Div(head...),
+		grid,
+	)
+}
+
+// gridNode lays a group's fields out in its columns. The column count travels
+// as a class rather than an inline style: there are four of them, and the
+// narrow tiers below override the same classes.
+func gridNode(gr fieldGroup) g.Node {
+	class := "gomu-form-grid"
+	if gr.cols > 1 {
+		class += " gomu-cols-" + strconv.Itoa(gr.cols)
+	}
+	children := []g.Node{h.Class(class)}
+	for _, fd := range gr.fields {
+		children = append(children, fieldNode(fd, gr.cols))
+	}
+	return h.Div(children...)
+}
+
+func fieldNode(fd Field, cols int) g.Node {
 	ft := fd.fieldType()
 	id := "gomu-f-" + fd.Name
 
@@ -152,7 +205,11 @@ func fieldNode(fd Field) g.Node {
 		labelChildren = append(labelChildren, h.Span(h.Class("gomu-required"), h.Aria("hidden", "true"), g.Text(" *")))
 	}
 
-	nodes := []g.Node{h.Class("gomu-field gomu-field--" + string(ft))}
+	class := "gomu-field gomu-field--" + string(ft)
+	if span := fd.span(cols); span > 1 {
+		class += " gomu-span-" + strconv.Itoa(span)
+	}
+	nodes := []g.Node{h.Class(class)}
 	if ft == FCheckbox {
 		// Checkbox: control first, label after.
 		nodes = append(nodes, control, h.Label(labelChildren...))

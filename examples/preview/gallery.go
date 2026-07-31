@@ -325,6 +325,11 @@ func galleryCatalog() []preview {
 			Desc:   "Readonly, text, select, multi-select, number, date, time, textarea, checkbox and hidden.",
 			Widget: galleryFormFields(),
 		},
+		{
+			Tool: "preview_form_layout", Group: "Form", Label: "Form, grouped fields", Icon: iconForm,
+			Desc:   "Two columns, three field sets — one boxed, one single-column — and fields spanning the row.",
+			Widget: galleryFormLayout(),
+		},
 
 		// Menu
 		{
@@ -715,6 +720,59 @@ func galleryFormFields() *gomukit.Form {
 			{Name: "notify", Label: "Send notifications", Type: gomukit.FCheckbox, Default: true},
 		},
 		Submit: gomukit.SubmitSpec{Tool: "sandbox_save", Label: "Create user", SuccessMessage: "User created."},
+		Cancel: &gomukit.CancelSpec{},
+		Brand:  appBrand(),
+		Theme:  appTheme(),
+	}
+}
+
+func galleryFormLayout() *gomukit.Form {
+	return &gomukit.Form{
+		URI:     "ui://preview/gallery-form-layout",
+		Title:   "New employee",
+		Columns: 2,
+		Fields: []gomukit.Field{
+			{Name: "id", Type: gomukit.FHidden, Default: "0"},
+			{Name: "account", Label: "Workspace", Type: gomukit.FReadonly, Default: "acme-eu", Span: 2},
+		},
+		FieldSets: []gomukit.FieldSet{
+			{
+				Title:       "Person",
+				Description: "How the record reads everywhere it appears.",
+				Fields: []gomukit.Field{
+					{Name: "first", Label: "First name", Required: true, Placeholder: "Ada"},
+					{Name: "last", Label: "Last name", Required: true, Placeholder: "Lovelace"},
+					{Name: "email", Label: "Email", Required: true, Span: 2, Placeholder: "ada@example.com",
+						Validation: &gomukit.Validation{Pattern: `[^@\s]+@[^@\s]+`, Message: "Enter a valid email address."}},
+					{Name: "phone", Label: "Phone", Placeholder: "+30 …"},
+					{Name: "birthday", Label: "Date of birth", Type: gomukit.FDate,
+						Calendar: &gomukit.Calendar{Max: "2026-01-01", MonthDropdowns: true, FromYear: 1950, ToYear: 2026}},
+				},
+			},
+			{
+				Title:       "Employment",
+				Description: "What the contract says.",
+				Boxed:       true,
+				Fields: []gomukit.Field{
+					{Name: "role", Label: "Role", Type: gomukit.FSelect, Default: "engineer",
+						Options: []gomukit.Option{gomukit.Opt("engineer"), gomukit.Opt("designer"), gomukit.Opt("support")}},
+					{Name: "hours", Label: "Weekly hours", Type: gomukit.FNumber, Default: "40",
+						Validation: &gomukit.Validation{Min: ptr(1.0), Max: ptr(40.0), Step: ptr(1.0)}},
+					{Name: "startsOn", Label: "Contract period", Type: gomukit.FDateRange, EndName: "endsOn", Span: 2,
+						Description: "Leave the end open for a permanent contract.",
+						Calendar:    &gomukit.Calendar{Min: "2026-01-01"}},
+				},
+			},
+			{
+				Title:   "Notes",
+				Columns: 1,
+				Fields: []gomukit.Field{
+					{Name: "notes", Label: "Anything the team should know", Type: gomukit.FTextarea, Rows: 3},
+					{Name: "notify", Label: "Announce in the team channel", Type: gomukit.FCheckbox, Default: true},
+				},
+			},
+		},
+		Submit: gomukit.SubmitSpec{Tool: "sandbox_save", Label: "Create employee", SuccessMessage: "Employee created."},
 		Cancel: &gomukit.CancelSpec{},
 		Brand:  appBrand(),
 		Theme:  appTheme(),

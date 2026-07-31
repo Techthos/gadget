@@ -46,6 +46,11 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 // Keyed by story id first, then by story group; DEFAULT_WIDTH otherwise.
 const WIDTHS = {
   "datepicker-range": 820,
+  // Multi-column forms: at the group's 520 they would document themselves
+  // collapsed into the single column every form falls back to.
+  "form-layout": 780,
+  "form-columns": 860,
+  "form-sets": 620,
   "table-long": 900,
   Table: 860,
   CardList: 880,

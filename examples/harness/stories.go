@@ -197,6 +197,21 @@ func catalog() []story {
 			Payload: pushErrors, build: func() gomukit.Widget { return formCreate() },
 		},
 		{
+			ID: "form-layout", Group: "Form", Label: "Grouped fields",
+			Desc:    "Two columns, three field sets, spans. Drag the width down: the grid drops to one column.",
+			Payload: pushValues, build: func() gomukit.Widget { return formLayout() },
+		},
+		{
+			ID: "form-columns", Group: "Form", Label: "Columns only",
+			Desc:    "No groups: three columns and two spans. Past 46rem it drops to two, past 34rem to one.",
+			Payload: pushValues, build: func() gomukit.Widget { return formColumns() },
+		},
+		{
+			ID: "form-sets", Group: "Form", Label: "Field sets only",
+			Desc:    "One column, three groups: plain, boxed, and one that overrides the form's columns.",
+			Payload: pushValues, build: func() gomukit.Widget { return formSets() },
+		},
+		{
 			ID: "menu-default", Group: "Menu", Label: "Launcher",
 			Desc:    "Tiles with icons and badges; each tile fires a tools/call.",
 			Payload: pushEmptyRows, build: func() gomukit.Widget { return menu() },
@@ -743,6 +758,143 @@ func formCreate() *gomukit.Form {
 			{Name: "notify", Label: "Send notifications", Type: gomukit.FCheckbox, Default: true},
 		},
 		Submit:      gomukit.SubmitSpec{Tool: "save_user", Label: "Create user", SuccessMessage: "User created."},
+		Cancel:      &gomukit.CancelSpec{},
+		InitialData: map[string]any{},
+		Brand:       demoBrand(),
+		Theme:       demoTheme(),
+	}
+}
+
+func formLayout() *gomukit.Form {
+	return &gomukit.Form{
+		URI:     "ui://harness/form-layout",
+		Title:   "New employee",
+		Columns: 2,
+		Fields: []gomukit.Field{
+			{Name: "id", Type: gomukit.FHidden, Default: "0"},
+			{Name: "account", Label: "Workspace", Type: gomukit.FReadonly, Default: "acme-eu", Span: 2},
+		},
+		FieldSets: []gomukit.FieldSet{
+			{
+				Title:       "Person",
+				Description: "How the record reads everywhere it appears.",
+				Fields: []gomukit.Field{
+					{Name: "first", Label: "First name", Required: true, Placeholder: "Ada"},
+					{Name: "last", Label: "Last name", Required: true, Placeholder: "Lovelace"},
+					{Name: "email", Label: "Email", Required: true, Span: 2, Placeholder: "ada@example.com",
+						Validation: &gomukit.Validation{Pattern: `[^@\s]+@[^@\s]+`, Message: "Enter a valid email address."}},
+					{Name: "phone", Label: "Phone", Placeholder: "+30 …"},
+					{Name: "birthday", Label: "Date of birth", Type: gomukit.FDate,
+						Calendar: &gomukit.Calendar{Max: "2026-01-01", MonthDropdowns: true, FromYear: 1950, ToYear: 2026}},
+				},
+			},
+			{
+				Title:       "Employment",
+				Description: "What the contract says.",
+				Boxed:       true,
+				Fields: []gomukit.Field{
+					{Name: "role", Label: "Role", Type: gomukit.FSelect, Default: "engineer",
+						Options: []gomukit.Option{gomukit.Opt("engineer"), gomukit.Opt("designer"), gomukit.Opt("support")}},
+					{Name: "seats", Label: "Weekly hours", Type: gomukit.FNumber, Default: "40",
+						Validation: &gomukit.Validation{Min: num(1), Max: num(40), Step: num(1)}},
+					{Name: "startsOn", Label: "Contract period", Type: gomukit.FDateRange, EndName: "endsOn", Span: 2,
+						Description: "Leave the end open for a permanent contract.",
+						Calendar:    &gomukit.Calendar{Min: "2026-01-01"}},
+				},
+			},
+			{
+				Title:   "Notes",
+				Columns: 1,
+				Fields: []gomukit.Field{
+					{Name: "notes", Label: "Anything the team should know", Type: gomukit.FTextarea, Rows: 3},
+					{Name: "notify", Label: "Announce in the team channel", Type: gomukit.FCheckbox, Default: true},
+				},
+			},
+		},
+		Submit:      gomukit.SubmitSpec{Tool: "save_user", Label: "Create employee", SuccessMessage: "Employee created."},
+		Cancel:      &gomukit.CancelSpec{},
+		InitialData: map[string]any{},
+		Brand:       demoBrand(),
+		Theme:       demoTheme(),
+	}
+}
+
+// formColumns is the layout system with no groups at all: one grid, three
+// columns, two fields taking more than one of them.
+func formColumns() *gomukit.Form {
+	return &gomukit.Form{
+		URI:     "ui://harness/form-columns",
+		Title:   "Shipping address",
+		Columns: 3,
+		Fields: []gomukit.Field{
+			{Name: "recipient", Label: "Recipient", Required: true, Span: 2, Placeholder: "Ada Lovelace"},
+			{Name: "phone", Label: "Phone", Placeholder: "+30 …"},
+			{Name: "street", Label: "Street and number", Required: true, Span: 3, Placeholder: "Ermou 12"},
+			{Name: "postcode", Label: "Post code", Required: true, Placeholder: "10563"},
+			{Name: "city", Label: "City", Required: true, Placeholder: "Athens"},
+			{Name: "country", Label: "Country", Type: gomukit.FSelect, Default: "GR",
+				Options: []gomukit.Option{
+					{Value: "GR", Label: "Greece"},
+					{Value: "DE", Label: "Germany"},
+					{Value: "NL", Label: "Netherlands"},
+				}},
+			{Name: "notes", Label: "Delivery notes", Type: gomukit.FTextarea, Rows: 2, Span: 3,
+				Description: "Gate codes, floor, where to leave the parcel."},
+		},
+		Submit:      gomukit.SubmitSpec{Tool: "save_user", Label: "Save address", SuccessMessage: "Address saved."},
+		Cancel:      &gomukit.CancelSpec{},
+		InitialData: map[string]any{},
+		Brand:       demoBrand(),
+		Theme:       demoTheme(),
+	}
+}
+
+// formSets is the grouping with no multi-column layout: the long form read as
+// three blocks rather than one column of twelve controls.
+func formSets() *gomukit.Form {
+	return &gomukit.Form{
+		URI:   "ui://harness/form-sets",
+		Title: "Account settings",
+		FieldSets: []gomukit.FieldSet{
+			{
+				Title:       "Profile",
+				Description: "What other people see.",
+				Fields: []gomukit.Field{
+					{Name: "displayName", Label: "Display name", Required: true, Default: "Ada Lovelace"},
+					{Name: "bio", Label: "Bio", Type: gomukit.FTextarea, Rows: 2,
+						Default: "Mathematician. Writes about engines."},
+				},
+			},
+			{
+				Title:       "Notifications",
+				Description: "Nothing here changes what other people see.",
+				Boxed:       true,
+				Fields: []gomukit.Field{
+					{Name: "digest", Label: "Email digest", Type: gomukit.FSelect, Default: "daily",
+						Options: []gomukit.Option{gomukit.Opt("off"), gomukit.Opt("daily"), gomukit.Opt("weekly")}},
+					{Name: "digestAt", Label: "Send at", Type: gomukit.FTime, Default: "09:00"},
+					{Name: "mentions", Label: "Email me when I am mentioned", Type: gomukit.FCheckbox, Default: true},
+				},
+			},
+			{
+				// This group overrides the form's single column.
+				Title:   "Danger zone",
+				Columns: 2,
+				Fields: []gomukit.Field{
+					// A select always holds one of its options, so "nobody" is an
+					// option rather than a placeholder the control never shows.
+					{Name: "successor", Label: "Hand the workspace to", Type: gomukit.FSelect,
+						Options: []gomukit.Option{
+							{Value: "", Label: "Nobody"},
+							gomukit.Opt("grace@example.com"),
+							gomukit.Opt("alan@example.com"),
+						}},
+					{Name: "closeOn", Label: "Close the account on", Type: gomukit.FDate,
+						Calendar: &gomukit.Calendar{Min: "2026-08-01"}},
+				},
+			},
+		},
+		Submit:      gomukit.SubmitSpec{Tool: "save_user", SuccessMessage: "Settings saved."},
 		Cancel:      &gomukit.CancelSpec{},
 		InitialData: map[string]any{},
 		Brand:       demoBrand(),

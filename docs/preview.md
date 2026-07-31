@@ -51,9 +51,10 @@ resource, covering the renderings the scenario has no room for. Start at
 `preview_index`, a menu listing all of them, or call any `preview_*` tool
 directly. It mirrors the story list in `examples/harness`, including the empty
 states, the long list, the load-more strip, both menu styles, all three choice
-layouts, the date and date-range pickers with presets and caption dropdowns, the runtime-data variants, a table with `RowsKey`/`RowID` moved off
-their defaults, a full theme-token override, the frameless theme, and the
-data-URI brand path.
+layouts, the date and date-range pickers with presets and caption dropdowns,
+a form laid out in columns with grouped field sets, the runtime-data variants,
+a table with `RowsKey`/`RowID` moved off their defaults, a full theme-token
+override, the frameless theme, and the data-URI brand path.
 
 Gallery data is canned and stateless. Actions fired from a gallery widget land
 on the `sandbox_*` tools, which compute an answer from the same fixture, so

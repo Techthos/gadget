@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+- **A `Form` can group and lay out its fields.** `Form.FieldSets` are titled
+  groups — `Title`, `Description`, `Fields`, and `Boxed` for a bordered panel
+  with a filled header — rendered after the form's own ungrouped `Fields`, as
+  a `<fieldset>` named by its title. Grouped fields are fields: one namespace,
+  the same submission, the same prefill, and the runtime is told nothing about
+  the groups.
+- **Columns.** `Form.Columns` (1..4) puts several fields on a row,
+  `FieldSet.Columns` overrides it per group, and `Field.Span` lets one field
+  take several of its group's columns. The grid hands columns back as the
+  widget narrows — three and four drop to two under 46rem, everything to one
+  (spans included) under 34rem — and the document's own maximum width follows
+  its widest group, so a two-column form still reads in a chat pane.
+- **Every form is centred in the room it was given.** A form is capped at a
+  reading measure; the slack past it used to sit entirely on the right, which
+  read as the first column of a two-column page whose second column never
+  arrived. This changes how existing forms look in a panel wider than their
+  measure — nothing about their markup or behaviour.
+
 ## v0.7.1 - 2026-07-27
 
 - **`Descriptions` items can ask, not only state.** A `DescriptionItem` with an

@@ -1,7 +1,8 @@
 // Command demo is a runnable MCP server showcasing gomukit widgets: a user
 // table with row/bulk actions, the same users as a card grid, an edit form
-// with server-side validation, a confirmation, and a date picker whose
-// selectable window is computed per call.
+// with server-side validation, the whole record as a grouped profile form
+// laid out in columns, a confirmation, and a date picker whose selectable
+// window is computed per call.
 //
 // Run with streamable HTTP (default, for MCPJam / Claude custom connectors):
 //
@@ -43,6 +44,19 @@ type user struct {
 	// FollowUp is the day the account manager calls back, "YYYY-MM-DD", set
 	// by the date picker. Empty until someone picks one.
 	FollowUp string `json:"followUpAt"`
+
+	// The rest of the account, edited through the grouped profile form. The
+	// short edit form never touches these, and the table does not show them —
+	// they are what a form with field sets is for: more of a record than one
+	// column of controls can hold.
+	Phone    string `json:"phone"`
+	Company  string `json:"company"`
+	Plan     string `json:"plan"`
+	Seats    int    `json:"seats"`
+	StartsOn string `json:"startsOn"` // "YYYY-MM-DD", contract start
+	EndsOn   string `json:"endsOn"`   // "YYYY-MM-DD", empty = permanent
+	Notes    string `json:"notes"`
+	Announce bool   `json:"announce"` // tell the team channel about changes
 }
 
 type db struct {
@@ -53,10 +67,17 @@ type db struct {
 
 func seed() *db {
 	users := []*user{
-		{1, "Ada Lovelace", "ada@example.com", "active", 1200.50, "2026-01-12T09:00:00Z", ""},
-		{2, "Grace Hopper", "grace@example.com", "active", 815.00, "2026-02-03T10:30:00Z", ""},
-		{3, "Alan Turing", "alan@example.com", "invited", 0, "2026-03-19T14:00:00Z", ""},
-		{4, "Katherine Johnson", "katherine@example.com", "archived", 233.10, "2026-04-01T08:15:00Z", ""},
+		{ID: 1, Name: "Ada Lovelace", Email: "ada@example.com", Status: "active", Balance: 1200.50,
+			Created: "2026-01-12T09:00:00Z", Phone: "+30 210 0000001", Company: "Analytical Engines",
+			Plan: "enterprise", Seats: 24, StartsOn: "2026-01-12", Announce: true},
+		{ID: 2, Name: "Grace Hopper", Email: "grace@example.com", Status: "active", Balance: 815.00,
+			Created: "2026-02-03T10:30:00Z", Phone: "+30 210 0000002", Company: "Compiler Works",
+			Plan: "team", Seats: 8, StartsOn: "2026-02-03", EndsOn: "2027-02-02"},
+		{ID: 3, Name: "Alan Turing", Email: "alan@example.com", Status: "invited",
+			Created: "2026-03-19T14:00:00Z", Company: "Bletchley Ltd", Plan: "starter", Seats: 1},
+		{ID: 4, Name: "Katherine Johnson", Email: "katherine@example.com", Status: "archived", Balance: 233.10,
+			Created: "2026-04-01T08:15:00Z", Company: "Orbital Maths", Plan: "team", Seats: 5,
+			StartsOn: "2026-04-01", EndsOn: "2026-07-01", Notes: "Archived after the pilot."},
 	}
 	m := map[int]*user{}
 	for _, u := range users {
@@ -207,6 +228,75 @@ func userForm() *gomukit.Form {
 	}
 }
 
+// profileForm is the whole account rather than the five fields the edit form
+// touches: too much for one column of controls, so it is read as four groups
+// laid out two fields to a row. Everything else — validation, prefill,
+// submission — works exactly as it does in userForm; grouping is layout.
+func profileForm() *gomukit.Form {
+	return &gomukit.Form{
+		URI:     "ui://demo/user-profile",
+		Title:   "Customer profile",
+		Columns: 2,
+		Fields: []gomukit.Field{
+			{Name: "id", Type: gomukit.FHidden},
+			// Ungrouped fields sit above the first group. Span 2: the account
+			// this record belongs to is a statement about all four groups.
+			{Name: "company", Label: "Company", Required: true, Span: 2,
+				Description: "The account every seat below is billed to."},
+		},
+		FieldSets: []gomukit.FieldSet{
+			{
+				Title:       "Contact",
+				Description: "Who we talk to about this account.",
+				Fields: []gomukit.Field{
+					{Name: "name", Label: "Name", Required: true},
+					{Name: "phone", Label: "Phone", Placeholder: "+30 …"},
+					{Name: "email", Label: "Email", Required: true, Span: 2,
+						Validation: &gomukit.Validation{Pattern: `[^@\s]+@[^@\s]+`, Message: "Enter a valid email address."}},
+				},
+			},
+			{
+				Title:       "Subscription",
+				Description: "The plan decides the seat floor; the server checks it.",
+				Boxed:       true,
+				Fields: []gomukit.Field{
+					{Name: "plan", Label: "Plan", Type: gomukit.FSelect, Required: true,
+						Options: []gomukit.Option{gomukit.Opt("starter"), gomukit.Opt("team"), gomukit.Opt("enterprise")}},
+					{Name: "seats", Label: "Seats", Type: gomukit.FNumber, Required: true,
+						Validation: &gomukit.Validation{Min: ptr(1.0), Max: ptr(500.0), Step: ptr(1.0)}},
+					{Name: "status", Label: "Status", Type: gomukit.FSelect, Required: true,
+						Options: []gomukit.Option{gomukit.Opt("active"), gomukit.Opt("invited"), gomukit.Opt("archived")}},
+					{Name: "balance", Label: "Balance (EUR)", Type: gomukit.FNumber,
+						Validation: &gomukit.Validation{Min: ptr(0.0), Step: ptr(0.01)}},
+					{Name: "startsOn", Label: "Contract period", Type: gomukit.FDateRange, EndName: "endsOn", Span: 2,
+						Description: "Leave the end open for a rolling contract.",
+						Calendar: &gomukit.Calendar{
+							Presets: []gomukit.DatePreset{
+								{Label: "Next 30 days", Span: gomukit.SpanNext30Days},
+								{Label: "This month", Span: gomukit.SpanThisMonth},
+							},
+						}},
+				},
+			},
+			{
+				// One column, whatever the form says: neither of these two reads
+				// well beside something else.
+				Title:   "Internal",
+				Columns: 1,
+				Fields: []gomukit.Field{
+					{Name: "notes", Label: "Account notes", Type: gomukit.FTextarea, Rows: 3,
+						Placeholder: "Anything the next person on this account should know"},
+					{Name: "announce", Label: "Announce changes in the team channel", Type: gomukit.FCheckbox},
+				},
+			},
+		},
+		Submit: gomukit.SubmitSpec{Tool: "save_profile", Label: "Save profile", SuccessMessage: "Profile saved."},
+		Cancel: &gomukit.CancelSpec{},
+		Brand:  demoBrand(),
+		Theme:  &theme.Theme{ColorPrimary: "#7c3aed"},
+	}
+}
+
 // deleteConfirm asks before a deletion runs. The record and the consequences
 // are per call, so both arrive from confirm_delete_user's result: the user
 // under "rows", what removing them costs under "effects".
@@ -314,6 +404,15 @@ func demoMenu() *gomukit.Menu {
 				BadgeVariant: gomukit.BadgeWarning,
 			},
 			{
+				Tool:         "edit_profile",
+				Args:         map[string]any{"id": 1},
+				Label:        "Ada's full profile",
+				Description:  "The whole account, in grouped fields two to a row.",
+				IconSVG:      iconProfile,
+				Badge:        "write",
+				BadgeVariant: gomukit.BadgeWarning,
+			},
+			{
 				Tool:         "schedule_followup",
 				Args:         map[string]any{"id": 1},
 				Label:        "Call Ada back",
@@ -334,6 +433,7 @@ const (
 	iconCards    = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="8" height="14" rx="2"/><rect x="13" y="5" width="8" height="14" rx="2"/></svg>`
 	iconPencil   = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20h4L20 8l-4-4L4 16v4z"/></svg>`
 	iconCalendar = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>`
+	iconProfile  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M6 16c.7-1.6 1.9-2.4 3-2.4s2.3.8 3 2.4M15 9h3M15 13h3"/></svg>`
 )
 
 // demoBrand is the application mark shown at the top left of every widget.
@@ -357,6 +457,7 @@ func newServer(data *db) *mcp.Server {
 	table := usersTable()
 	cards := usersCards()
 	form := userForm()
+	profile := profileForm()
 	menu := demoMenu()
 	confirm := deleteConfirm()
 	picker := followUpPicker()
@@ -578,6 +679,88 @@ func newServer(data *db) *mcp.Server {
 			u.Name, u.Email, u.Status, u.Balance = in.Name, in.Email, in.Status, in.Balance
 			data.Unlock()
 			return textResult("User saved."), saveOut{}, nil
+		}))
+
+	// Model-visible: the same record in the grouped profile form. Prefill is
+	// one flat {field: value} map whatever the grouping is — RowsOf over the
+	// record covers every field of every group, because a field set changes
+	// where a field is drawn and nothing else.
+	must(gosdk.AddWidgetToolFor(server, profile,
+		&mcp.Tool{Name: "edit_profile", Description: "Open the full customer profile form for the given user id."},
+		func(_ context.Context, _ *mcp.CallToolRequest, in editIn) (*mcp.CallToolResult, editOut, error) {
+			data.Lock()
+			u := data.users[in.ID]
+			data.Unlock()
+			if u == nil {
+				return textResult(fmt.Sprintf("User %d not found.", in.ID)), editOut{}, nil
+			}
+			values, err := gomukit.RowsOf([]*user{u})
+			if err != nil {
+				return nil, editOut{}, err
+			}
+			return nil, editOut{Values: values[0]}, nil
+		}))
+
+	// App-only: the profile form's submit target. A grouped form submits one
+	// flat argument map, so this reads exactly like save_user — the date range
+	// is the only shape worth noting, and it is two plain string arguments.
+	type saveProfileIn struct {
+		ID       string  `json:"id"` // hidden fields submit strings
+		Company  string  `json:"company"`
+		Name     string  `json:"name"`
+		Phone    string  `json:"phone"`
+		Email    string  `json:"email"`
+		Plan     string  `json:"plan"`
+		Seats    int     `json:"seats"`
+		Status   string  `json:"status"`
+		Balance  float64 `json:"balance"`
+		StartsOn string  `json:"startsOn"`
+		EndsOn   string  `json:"endsOn"`
+		Notes    string  `json:"notes"`
+		Announce bool    `json:"announce"`
+	}
+	// Seat floors per plan: a rule the browser cannot check, so it comes back
+	// as a field error on the control it belongs to.
+	seatFloor := map[string]int{"starter": 1, "team": 3, "enterprise": 10}
+	saveProfile := &mcp.Tool{Name: "save_profile", Description: "Save the full customer profile."}
+	gosdk.AppOnly(saveProfile, profile)
+	must(gosdk.AddWidgetToolFor(server, profile, saveProfile,
+		func(_ context.Context, _ *mcp.CallToolRequest, in saveProfileIn) (*mcp.CallToolResult, saveOut, error) {
+			userID, _ := strconv.Atoi(in.ID) // 0 (no/invalid id) creates a new user
+			errs := map[string]string{}
+			if strings.TrimSpace(in.Company) == "" {
+				errs["company"] = "Every seat is billed to a company."
+			}
+			if strings.TrimSpace(in.Name) == "" {
+				errs["name"] = "Name must not be empty."
+			}
+			if floor := seatFloor[in.Plan]; in.Seats < floor {
+				errs["seats"] = fmt.Sprintf("The %s plan starts at %d seats.", in.Plan, floor)
+			}
+			if in.EndsOn != "" && in.StartsOn == "" {
+				errs["startsOn"] = "A contract that ends has to start."
+			}
+			data.Lock()
+			for id, u := range data.users {
+				if id != userID && strings.EqualFold(u.Email, in.Email) {
+					errs["email"] = "This email is already taken."
+				}
+			}
+			if len(errs) > 0 {
+				data.Unlock()
+				return nil, saveOut{Errors: errs}, nil
+			}
+			u := data.users[userID]
+			if u == nil {
+				u = &user{ID: data.nextID, Created: "2026-07-23T00:00:00Z"}
+				data.nextID++
+				data.users[u.ID] = u
+			}
+			u.Company, u.Name, u.Phone, u.Email = in.Company, in.Name, in.Phone, in.Email
+			u.Plan, u.Seats, u.Status, u.Balance = in.Plan, in.Seats, in.Status, in.Balance
+			u.StartsOn, u.EndsOn, u.Notes, u.Announce = in.StartsOn, in.EndsOn, in.Notes, in.Announce
+			data.Unlock()
+			return textResult(fmt.Sprintf("Saved the profile for %s.", u.Name)), saveOut{}, nil
 		}))
 
 	return server

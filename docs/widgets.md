@@ -149,6 +149,16 @@ form := &gomukit.Form{
 
 - **Field types**: `text`, `textarea`, `number`, `checkbox`, `select`,
   `multiselect`, `date`, `daterange`, `time`, `hidden`, `readonly`.
+- **Groups and layout**: `FieldSets` are titled groups (`Title`,
+  `Description`, `Fields`, and `Boxed` for a bordered panel), rendered after
+  the form's own ungrouped `Fields`. `Columns` puts several fields on a row —
+  1 to 4, set on the form and overridable per field set — and `Field.Span`
+  lets one field take several of its group's columns. The grid gives columns
+  back as the widget narrows (three or four drop to two under 46rem,
+  everything to one under 34rem), so the same document reads in a chat pane
+  and in a wide panel. Groups change nothing about submission: a grouped
+  field shares the same name namespace and submits exactly like an ungrouped
+  one.
 - **Dropdowns**: `select` and `multiselect` render as the gomukit dropdown —
   the runtime upgrades the `<select>` into a trigger plus popup listbox
   (arrow keys, Home/End, typeahead, Escape, check marks) and keeps the select
@@ -179,6 +189,45 @@ form := &gomukit.Form{
   `structuredContent`; they render inline and mark the form failed.
 - **Edit mode**: a model-invoked tool linked to the form (e.g. `edit_user`)
   returns `{PrefillKey: {...}}`; the form prefills from the tool result.
+
+### Field sets and columns
+
+```go
+form := &gomukit.Form{
+    URI: "ui://myapp/employee", Title: "New employee",
+    Columns: 2, // two fields per row, everywhere below unless overridden
+    Fields: []gomukit.Field{
+        // Ungrouped fields come first. Span 2 = the whole row.
+        {Name: "workspace", Label: "Workspace", Type: gomukit.FReadonly, Span: 2},
+    },
+    FieldSets: []gomukit.FieldSet{
+        {
+            Title:       "Person",
+            Description: "How the record reads everywhere it appears.",
+            Fields: []gomukit.Field{
+                {Name: "first", Label: "First name", Required: true},
+                {Name: "last", Label: "Last name", Required: true},
+                {Name: "email", Label: "Email", Required: true, Span: 2},
+            },
+        },
+        {
+            Title: "Employment", Boxed: true, // a bordered panel
+            Fields: []gomukit.Field{
+                {Name: "role", Label: "Role", Type: gomukit.FSelect,
+                    Options: []gomukit.Option{gomukit.Opt("engineer"), gomukit.Opt("designer")}},
+                {Name: "hours", Label: "Weekly hours", Type: gomukit.FNumber},
+            },
+        },
+        {
+            Title: "Notes", Columns: 1, // one column, whatever the form says
+            Fields: []gomukit.Field{
+                {Name: "notes", Label: "Anything the team should know", Type: gomukit.FTextarea},
+            },
+        },
+    },
+    Submit: gomukit.SubmitSpec{Tool: "create_employee", Label: "Create employee"},
+}
+```
 
 ## Card and CardList
 

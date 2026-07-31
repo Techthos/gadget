@@ -19,8 +19,16 @@ type Form struct {
 	URI string
 	// Title is shown above the form and as the document title.
 	Title string
-	// Fields defines the form fields (required, non-empty).
+	// Fields defines the ungrouped form fields, rendered above FieldSets.
+	// A form needs at least one field, here or in a FieldSet.
 	Fields []Field
+	// FieldSets are titled groups of fields, rendered in order after Fields.
+	FieldSets []FieldSet
+	// Columns is how many columns the fields lay themselves out in: 1 (the
+	// zero value) through 4. A FieldSet may set its own; a Field may span
+	// several. The grid drops to fewer columns as the widget narrows, so the
+	// same document reads in a chat pane and in a wide panel.
+	Columns int
 	// Submit configures the submit tool call (required).
 	Submit SubmitSpec
 	// Cancel, when set, adds a reset button.
@@ -70,6 +78,101 @@ type SubmitSpec struct {
 type CancelSpec struct {
 	// Label defaults to "Cancel".
 	Label string
+}
+
+// FieldSet is a titled group of fields — the block a long form is read in
+// rather than as one undifferentiated column. It renders as a <fieldset>, so
+// assistive technology announces the group's title with every control in it.
+//
+// Its fields share the form's namespace: a name is unique across the whole
+// form, grouped or not, and every field submits the same way.
+type FieldSet struct {
+	// Title names the group (required).
+	Title string
+	// Description is a line under the title saying what the group is for.
+	Description string
+	// Fields are the group's fields (required, non-empty).
+	Fields []Field
+	// Columns overrides Form.Columns for this group (1..4). Zero inherits.
+	Columns int
+	// Boxed draws the group as a bordered panel with a filled header, rather
+	// than a heading over a rule.
+	Boxed bool
+}
+
+// maxFormColumns caps the grid. Past four, a column is narrower than the
+// controls in it at any width a widget is given.
+const maxFormColumns = 4
+
+// columns is the form-wide default: one, unless asked for more.
+func (f *Form) columns() int {
+	if f.Columns <= 0 {
+		return 1
+	}
+	return f.Columns
+}
+
+// columns is the group's own count, inheriting the form's when unset.
+func (fs FieldSet) columns(form int) int {
+	if fs.Columns <= 0 {
+		return form
+	}
+	return fs.Columns
+}
+
+// fieldGroup is one laid-out block of fields: the form's ungrouped Fields, or
+// a FieldSet. Validation and rendering both walk this list, so what they see
+// cannot drift apart.
+type fieldGroup struct {
+	set    *FieldSet // nil for the ungrouped block
+	fields []Field
+	cols   int
+	ctx    string // error-message prefix
+}
+
+// groups lists the form's blocks in rendering order. The ungrouped block is
+// omitted when empty, so a form built entirely out of field sets renders no
+// stray grid before them.
+func (f *Form) groups() []fieldGroup {
+	cols := f.columns()
+	var out []fieldGroup
+	if len(f.Fields) > 0 {
+		out = append(out, fieldGroup{fields: f.Fields, cols: cols, ctx: "gomukit: form " + f.URI})
+	}
+	for i := range f.FieldSets {
+		fs := &f.FieldSets[i]
+		out = append(out, fieldGroup{
+			set:    fs,
+			fields: fs.Fields,
+			cols:   fs.columns(cols),
+			ctx:    fmt.Sprintf("gomukit: form %s: fieldset %d (%s)", f.URI, i, fs.Title),
+		})
+	}
+	return out
+}
+
+// widestGroup is the largest column count the form lays out anywhere. The
+// document's own width follows it: a two-column form needs more room than the
+// single column the widget otherwise caps itself at.
+func (f *Form) widestGroup() int {
+	widest := 1
+	for _, gr := range f.groups() {
+		if gr.cols > widest {
+			widest = gr.cols
+		}
+	}
+	return widest
+}
+
+// allFields walks every field of the form, grouped or not, in reading order.
+// The runtime knows nothing about groups — a field is a field — so this is
+// what the config island and the name checks are built from.
+func (f *Form) allFields() []Field {
+	out := make([]Field, 0, len(f.Fields))
+	for _, gr := range f.groups() {
+		out = append(out, gr.fields...)
+	}
+	return out
 }
 
 // FieldType selects the control a Field renders.
@@ -143,6 +246,11 @@ type Field struct {
 	Validation *Validation
 	// Rows sets the textarea height (FTextarea).
 	Rows int
+	// Span is how many of its group's columns the field occupies: 1 (the zero
+	// value) through the group's own column count, so a field can take the
+	// whole row in a two-column form. It is ignored while the grid is down to
+	// one column.
+	Span int
 
 	// Calendar configures the grid an FDate or FDateRange field opens, exactly
 	// as it configures the standalone DatePicker widget: bounds, blocked days,
@@ -153,6 +261,19 @@ type Field struct {
 	// (FDateRange only). Defaults to Name + "_end". It shares the field's
 	// namespace, so it must not collide with another field's Name.
 	EndName string
+}
+
+// span is the number of columns the field takes, clamped to what the group
+// actually has. Validate rejects a span too wide for its group; the clamp is
+// what keeps a rendering honest anyway.
+func (f Field) span(cols int) int {
+	if f.Span <= 1 {
+		return 1
+	}
+	if f.Span > cols {
+		return cols
+	}
+	return f.Span
 }
 
 func (f Field) fieldType() FieldType {
@@ -222,11 +343,26 @@ func (f *Form) Validate() error {
 	if err := uispec.ValidateURI(f.URI); err != nil {
 		return fmt.Errorf("gomukit: form: %w", err)
 	}
-	if len(f.Fields) == 0 {
+	if len(f.Fields) == 0 && len(f.FieldSets) == 0 {
 		return fmt.Errorf("gomukit: form %s: at least one field is required", f.URI)
 	}
 	if f.Submit.Tool == "" {
 		return fmt.Errorf("gomukit: form %s: Submit.Tool is required", f.URI)
+	}
+	if f.Columns < 0 || f.Columns > maxFormColumns {
+		return fmt.Errorf("gomukit: form %s: Columns must be 1..%d, got %d", f.URI, maxFormColumns, f.Columns)
+	}
+	for i, fs := range f.FieldSets {
+		ctx := fmt.Sprintf("gomukit: form %s: fieldset %d (%s)", f.URI, i, fs.Title)
+		if fs.Title == "" {
+			return fmt.Errorf("%s: Title is required", ctx)
+		}
+		if len(fs.Fields) == 0 {
+			return fmt.Errorf("%s: at least one field is required", ctx)
+		}
+		if fs.Columns < 0 || fs.Columns > maxFormColumns {
+			return fmt.Errorf("%s: Columns must be 1..%d, got %d", ctx, maxFormColumns, fs.Columns)
+		}
 	}
 	// One namespace for both: a range's end argument is as much a tool
 	// argument as any field name, and a collision would send one value where
@@ -239,44 +375,11 @@ func (f *Form) Validate() error {
 		seen[name] = true
 		return nil
 	}
-	for i, fd := range f.Fields {
-		ctx := fmt.Sprintf("gomukit: form %s: field %d (%s)", f.URI, i, fd.Name)
-		if fd.Name == "" {
-			return fmt.Errorf("%s: name is required", ctx)
-		}
-		if err := claim(ctx, fd.Name, "field name"); err != nil {
-			return err
-		}
-		switch fd.fieldType() {
-		case FText, FTextarea, FNumber, FCheckbox, FTime, FHidden, FReadonly:
-		case FSelect, FMultiSelect:
-			if len(fd.Options) == 0 {
-				return fmt.Errorf("%s: select fields need options", ctx)
-			}
-		case FDate, FDateRange:
-			if fd.fieldType() == FDateRange {
-				if err := claim(ctx, fd.endName(), "field name"); err != nil {
-					return err
-				}
-			}
-			start, end := fd.rangeDefaults()
-			if err := validateDefaultRange(ctx, start, end); err != nil {
+	for _, gr := range f.groups() {
+		for i, fd := range gr.fields {
+			if err := validateField(gr, i, fd, claim); err != nil {
 				return err
 			}
-			if err := fd.Calendar.validate(ctx+": calendar", fd.dateMode()); err != nil {
-				return err
-			}
-			if err := fd.Calendar.validateWithin(ctx, start, end); err != nil {
-				return err
-			}
-		default:
-			return fmt.Errorf("%s: unknown field type %q", ctx, fd.Type)
-		}
-		if fd.Calendar != nil && !dateFieldTypes[fd.fieldType()] {
-			return fmt.Errorf("%s: Calendar needs FDate or FDateRange", ctx)
-		}
-		if fd.EndName != "" && fd.fieldType() != FDateRange {
-			return fmt.Errorf("%s: EndName needs FDateRange", ctx)
 		}
 	}
 	if err := f.Brand.Validate(); err != nil {
@@ -284,6 +387,53 @@ func (f *Form) Validate() error {
 	}
 	if err := f.Theme.Validate(); err != nil {
 		return fmt.Errorf("gomukit: form %s: %w", f.URI, err)
+	}
+	return nil
+}
+
+// validateField checks one field within the group it is laid out in. claim
+// reserves its tool-argument names against every other field of the form.
+func validateField(gr fieldGroup, i int, fd Field, claim func(ctx, name, what string) error) error {
+	ctx := fmt.Sprintf("%s: field %d (%s)", gr.ctx, i, fd.Name)
+	if fd.Name == "" {
+		return fmt.Errorf("%s: name is required", ctx)
+	}
+	if err := claim(ctx, fd.Name, "field name"); err != nil {
+		return err
+	}
+	if fd.Span < 0 || fd.Span > gr.cols {
+		return fmt.Errorf("%s: Span must be 1..%d (the columns of its group), got %d", ctx, gr.cols, fd.Span)
+	}
+	switch fd.fieldType() {
+	case FText, FTextarea, FNumber, FCheckbox, FTime, FHidden, FReadonly:
+	case FSelect, FMultiSelect:
+		if len(fd.Options) == 0 {
+			return fmt.Errorf("%s: select fields need options", ctx)
+		}
+	case FDate, FDateRange:
+		if fd.fieldType() == FDateRange {
+			if err := claim(ctx, fd.endName(), "field name"); err != nil {
+				return err
+			}
+		}
+		start, end := fd.rangeDefaults()
+		if err := validateDefaultRange(ctx, start, end); err != nil {
+			return err
+		}
+		if err := fd.Calendar.validate(ctx+": calendar", fd.dateMode()); err != nil {
+			return err
+		}
+		if err := fd.Calendar.validateWithin(ctx, start, end); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("%s: unknown field type %q", ctx, fd.Type)
+	}
+	if fd.Calendar != nil && !dateFieldTypes[fd.fieldType()] {
+		return fmt.Errorf("%s: Calendar needs FDate or FDateRange", ctx)
+	}
+	if fd.EndName != "" && fd.fieldType() != FDateRange {
+		return fmt.Errorf("%s: EndName needs FDateRange", ctx)
 	}
 	return nil
 }
@@ -307,8 +457,9 @@ func (f *Form) ToolMeta() map[string]any {
 // config builds the #gomu-config island content. The runtime needs field
 // names/types for value coercion, plus submit wiring; markup is SSR'd.
 func (f *Form) config() map[string]any {
-	fields := make([]map[string]any, len(f.Fields))
-	for i, fd := range f.Fields {
+	all := f.allFields()
+	fields := make([]map[string]any, len(all))
+	for i, fd := range all {
 		fc := map[string]any{
 			"name": fd.Name,
 			"type": string(fd.fieldType()),

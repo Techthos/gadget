@@ -104,6 +104,115 @@ func TestFormGolden(t *testing.T) {
 	}
 }
 
+// layoutForm groups its fields and lays them out in columns.
+func layoutForm() *Form {
+	return &Form{
+		URI:     "ui://demo/user-layout",
+		Title:   "New user",
+		Columns: 2,
+		Fields: []Field{
+			{Name: "account", Label: "Workspace", Type: FReadonly, Default: "acme-eu", Span: 2},
+			{Name: "id", Type: FHidden, Default: "42"},
+		},
+		FieldSets: []FieldSet{
+			{
+				Title:       "Contact",
+				Description: "How we reach this person.",
+				Fields: []Field{
+					{Name: "first", Label: "First name", Required: true},
+					{Name: "last", Label: "Last name", Required: true},
+					{Name: "email", Label: "Email", Span: 2},
+				},
+			},
+			{
+				Title:   "Access",
+				Boxed:   true,
+				Columns: 1,
+				Fields: []Field{
+					{Name: "role", Label: "Role", Type: FSelect, Options: []Option{Opt("user"), Opt("admin")}},
+					{Name: "notify", Label: "Notify", Type: FCheckbox, Default: true},
+				},
+			},
+		},
+		Submit: SubmitSpec{Tool: "save_user"},
+	}
+}
+
+func TestFormLayout(t *testing.T) {
+	doc, err := layoutForm().Document()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		// The form's own width follows its widest grid.
+		`<form class="gomu-form gomu-form--cols-2" data-gomu-form`,
+		`<div class="gomu-form-grid gomu-cols-2">`,
+		`<div class="gomu-field gomu-field--readonly gomu-span-2">`,
+		// A field set: a <fieldset> named by its heading, not by a <legend>.
+		`<fieldset class="gomu-fieldset" aria-labelledby="gomu-fs-1">`,
+		`<h3 class="gomu-fieldset-title" id="gomu-fs-1">Contact</h3>`,
+		`<p class="gomu-fieldset-desc">How we reach this person.</p>`,
+		`<fieldset class="gomu-fieldset gomu-fieldset--boxed" aria-labelledby="gomu-fs-2">`,
+		// A one-column group inside a two-column form drops the grid class.
+		`<h3 class="gomu-fieldset-title" id="gomu-fs-2">Access</h3></div><div class="gomu-form-grid">`,
+	} {
+		if !strings.Contains(doc, want) {
+			t.Errorf("document missing %q", want)
+		}
+	}
+	if _, err := xhtml.Parse(strings.NewReader(doc)); err != nil {
+		t.Fatalf("document does not parse: %v", err)
+	}
+
+	// A grouped field is a field: the runtime is told about all of them, in
+	// reading order, and knows nothing about the groups.
+	b, err := json.Marshal(layoutForm().config())
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `"fields":[{"name":"account","type":"readonly"},{"name":"id","type":"hidden"},` +
+		`{"name":"first","type":"text"},{"name":"last","type":"text"},{"name":"email","type":"text"},` +
+		`{"name":"role","type":"select"},{"name":"notify","type":"checkbox"}]`
+	if !strings.Contains(string(b), want) {
+		t.Errorf("config island missing %s\nfull: %s", want, b)
+	}
+}
+
+func TestFormLayoutValidate(t *testing.T) {
+	if err := layoutForm().Validate(); err != nil {
+		t.Fatalf("layout form must validate, got: %v", err)
+	}
+	cases := map[string]func(*Form){
+		"too many columns":     func(f *Form) { f.Columns = 5 },
+		"negative columns":     func(f *Form) { f.Columns = -1 },
+		"fieldset columns":     func(f *Form) { f.FieldSets[0].Columns = 9 },
+		"untitled fieldset":    func(f *Form) { f.FieldSets[0].Title = "" },
+		"empty fieldset":       func(f *Form) { f.FieldSets[0].Fields = nil },
+		"span past the group":  func(f *Form) { f.FieldSets[1].Fields[0].Span = 2 },
+		"span past the form":   func(f *Form) { f.Fields[0].Span = 3 },
+		"negative span":        func(f *Form) { f.Fields[0].Span = -1 },
+		"name across groups":   func(f *Form) { f.FieldSets[1].Fields[0].Name = "email" },
+		"name against a field": func(f *Form) { f.FieldSets[0].Fields[0].Name = "account" },
+	}
+	for name, mutate := range cases {
+		form := layoutForm()
+		mutate(form)
+		if err := form.Validate(); err == nil {
+			t.Errorf("%s: Validate() = nil, want error", name)
+		}
+	}
+
+	// Fields may live entirely in field sets.
+	only := layoutForm()
+	only.Fields = nil
+	if err := only.Validate(); err != nil {
+		t.Errorf("a form of field sets alone must validate, got: %v", err)
+	}
+	if got := len(only.allFields()); got != 5 {
+		t.Errorf("allFields() = %d fields, want 5", got)
+	}
+}
+
 func TestFormConfigIsland(t *testing.T) {
 	b, err := json.Marshal(canonicalForm().config())
 	if err != nil {
