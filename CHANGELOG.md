@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.8.0 - 2026-08-01
 
 - **A `Form` can group and lay out its fields.** `Form.FieldSets` are titled
   groups — `Title`, `Description`, `Fields`, and `Boxed` for a bordered panel
