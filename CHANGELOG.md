@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.9.0 - 2026-08-01
+
+- **An action can say which records it applies to.** `Action.VisibleWhen` takes
+  a row predicate — `RowIs(key, value)`, `RowIn(key, values...)`, or `RowNot(p)`
+  for the complement — and the action is drawn only on the records that match
+  it, so a paused schedule offers Activate and a running one Pause instead of
+  both rows offering both. The predicate is data rather than a Go closure: the
+  document is rendered before any record exists, so the test travels into the
+  config island and the runtime evaluates it per record, comparing raw values
+  strictly by JSON type. Write it against machine values, never a display label,
+  which the application localises. It applies to table row actions and to
+  `Card` / `CardList` buttons: a row no action applies to renders no "⋯"
+  trigger, such a card no action bar, and bulk actions reject the field because
+  they stand over a selection rather than one record. Hidden buttons keep their
+  place in the action list, so a click always fires the tool its own button
+  declares. An action without a predicate renders exactly as it did before.
+
 ## v0.8.0 - 2026-08-01
 
 - **A `Form` can group and lay out its fields.** `Form.FieldSets` are titled
