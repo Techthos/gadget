@@ -126,6 +126,42 @@ func TestTableConfigIsland(t *testing.T) {
 	}
 }
 
+func TestTableConfigVisibleWhen(t *testing.T) {
+	tbl := canonicalTable()
+	tbl.Columns = append(tbl.Columns, ActionsColumn(
+		Action{Label: "Activate", Tool: "schedule_manage", VisibleWhen: RowIs("state", "paused")},
+		Action{Label: "Pause", Tool: "schedule_manage", VisibleWhen: RowIs("state", "running")},
+	))
+	if err := tbl.Validate(); err != nil {
+		t.Fatalf("Validate() = %v, want nil", err)
+	}
+	b, err := json.Marshal(tbl.config())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := string(b)
+	for _, want := range []string{
+		`"label":"Activate"`,
+		`"visibleWhen":{"equals":"paused","key":"state"}`,
+		`"visibleWhen":{"equals":"running","key":"state"}`,
+	} {
+		if !strings.Contains(cfg, want) {
+			t.Errorf("config island missing %s\nfull: %s", want, cfg)
+		}
+	}
+}
+
+func TestTableBulkRejectsVisibleWhen(t *testing.T) {
+	tbl := canonicalTable()
+	tbl.Selection = &SelectionConfig{Bulk: []Action{
+		{Label: "Archive", Tool: "archive_users", VisibleWhen: RowIs("state", "paused")},
+	}}
+	err := tbl.Validate()
+	if err == nil || !strings.Contains(err.Error(), "only valid on per-record actions") {
+		t.Errorf("Validate() = %v, want a bulk/VisibleWhen complaint", err)
+	}
+}
+
 func TestTableConfigLoadTool(t *testing.T) {
 	tbl := canonicalTable()
 	tbl.LoadTool = "list_users"

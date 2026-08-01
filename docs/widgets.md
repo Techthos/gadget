@@ -79,6 +79,26 @@ table := &gomukit.Table{
   "Actions" trigger in the toolbar, each opening a menu of the labels — an
   actions column costs the same width whether it holds one action or five, and
   the confirmation is asked on the menu item.
+- **`VisibleWhen`** limits an action to the records it applies to, so a switch
+  shows one direction at a time instead of both:
+
+  ```go
+  gomukit.Action{
+      Label: "Activate", Tool: "schedule_manage",
+      VisibleWhen: gomukit.RowIs("state", "paused"),
+      Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")},
+  }
+  ```
+
+  `RowIs(key, value)` tests one value, `RowIn(key, values...)` a set, and
+  `RowNot(p)` the complement; an absent predicate shows the action everywhere.
+  The rows arrive after the document is rendered, so the test travels into the
+  config island and runs per row in the browser — against raw record values,
+  compared strictly by JSON type. Write predicates against machine values
+  (a state code, a flag), never a display label, which the application
+  localises. A row every action excludes renders no "⋯" trigger at all, and
+  hiding a button never changes what the buttons beside it fire. Bulk actions
+  stand over a selection rather than one record and reject the field.
 - If an action's result contains `RowsKey`, the table re-renders with the
   returned rows and clears the selection — return the updated list from
   mutating tools.
@@ -311,8 +331,10 @@ card := &gomukit.Card{URI: "ui://myapp/user", Title: "User", Template: tmpl}
   `InitialData` and `LoadTool`/`LoadArgs` load-time hydration, and re-render
   when an action or tool result returns `RowsKey`.
 - **Actions** behave exactly as in tables (`Static`/`FromRow` args, inline
-  `Confirm`, `Variant`); `FromSelection` is bulk-only via
-  `CardList.Selection`.
+  `Confirm`, `Variant`, `VisibleWhen`); `FromSelection` is bulk-only via
+  `CardList.Selection`. A record whose every action is hidden by its predicate
+  renders no action bar, and no footer at all when the footer holds nothing
+  else.
 
 ## Menu
 

@@ -395,6 +395,100 @@ describe("table behavior", () => {
     expect(root.querySelector<HTMLElement>(".gomu-action-panel")!.hidden).toBe(true);
   });
 
+  // --- per-row visibility (Action.VisibleWhen) ---
+
+  const SCHEDULES = [
+    { id: 1, name: "Nightly", state: "running" },
+    { id: 2, name: "Weekly", state: "paused" },
+    { id: 3, name: "Retired", state: "archived" },
+  ];
+
+  function schedulesConfig(): Record<string, unknown> {
+    return config({
+      columns: [
+        { key: "name", label: "Name", type: "text", sortable: true },
+        {
+          key: "",
+          label: "",
+          type: "actions",
+          sortable: false,
+          actions: [
+            {
+              label: "Activate",
+              kind: "tool",
+              tool: "schedule_activate",
+              args: { id: { row: "id" } },
+              visibleWhen: { key: "state", equals: "paused" },
+            },
+            {
+              label: "Pause",
+              kind: "tool",
+              tool: "schedule_pause",
+              args: { id: { row: "id" } },
+              visibleWhen: { key: "state", equals: "running" },
+            },
+            {
+              label: "Edit",
+              kind: "tool",
+              tool: "schedule_edit",
+              args: { id: { row: "id" } },
+              visibleWhen: { key: "state", in: ["running", "paused"] },
+            },
+          ],
+        },
+      ],
+    });
+  }
+
+  it("shows a row only the actions that apply to it", () => {
+    const root = shell();
+    mountTable({ root, config: schedulesConfig(), initialData: { rows: SCHEDULES }, bridge });
+
+    expect(openMenu(root, 'tbody tr:nth-child(1) [data-gomu-action-menu]').map((el) => el.textContent))
+      .toEqual(["Pause", "Edit"]);
+    root.querySelector<HTMLElement>('tbody tr:nth-child(1) [data-gomu-action-menu]')!.click();
+    expect(openMenu(root, 'tbody tr:nth-child(2) [data-gomu-action-menu]').map((el) => el.textContent))
+      .toEqual(["Activate", "Edit"]);
+  });
+
+  // The regression this guards: actions are addressed by position, so a row
+  // whose first action is hidden must still fire what its buttons say.
+  it("fires the action the reader chose when earlier ones are hidden", async () => {
+    const root = shell();
+    mountTable({ root, config: schedulesConfig(), initialData: { rows: SCHEDULES }, bridge });
+
+    // Row 1 is running: "Activate" is gone, so the first item is "Pause".
+    const items = openMenu(root, 'tbody tr:nth-child(1) [data-gomu-action-menu]');
+    expect(items[0]!.textContent).toBe("Pause");
+    items[0]!.click();
+    await flush();
+    expect(host.received(M.toolsCall)[0]!.params).toMatchObject({
+      name: "schedule_pause",
+      arguments: { id: 1 },
+    });
+
+    // …and the item after it is still its own action, not its neighbour's.
+    const rest = openMenu(root, 'tbody tr:nth-child(1) [data-gomu-action-menu]');
+    rest[1]!.click();
+    await flush();
+    expect(host.received(M.toolsCall)[1]!.params).toMatchObject({
+      name: "schedule_edit",
+      arguments: { id: 1 },
+    });
+  });
+
+  it("renders no trigger on a row every action excludes", () => {
+    const root = shell();
+    mountTable({ root, config: schedulesConfig(), initialData: { rows: SCHEDULES }, bridge });
+
+    const triggers = [...root.querySelectorAll("tbody tr")].map(
+      (tr) => tr.querySelector("[data-gomu-action-menu]") !== null,
+    );
+    expect(triggers).toEqual([true, true, false]);
+    // The cell itself stays, so the column keeps its shape.
+    expect(root.querySelectorAll("tbody tr:nth-child(3) td")).toHaveLength(2);
+  });
+
   it("selects rows, shows bulk actions, and resolves FromSelection args", async () => {
     const root = shell({ selection: true, bulk: true });
     const cfg = config({

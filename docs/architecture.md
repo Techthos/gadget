@@ -68,6 +68,9 @@ declarations needed.
   `data-gomu-theme`, host fonts, locale/timeZone; watches content size via
   `ResizeObserver` → `ui/notifications/size-changed`.
 - `state.ts` — store + pure reducers (sort/filter/pagination/selection).
+- `predicate.ts` — evaluates an action's `VisibleWhen` against a record, and
+  filters an action list while keeping each survivor's index in the full one
+  (buttons are addressed by position).
 - `dropdown.ts` — upgrades every server-rendered `<select>` into the gomukit
   dropdown (trigger + popup listbox, keyboard and typeahead). The select stays
   in the DOM as the value holder, so behaviors keep reading and writing it;

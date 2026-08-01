@@ -58,6 +58,84 @@ type Action struct {
 	// dialogs are silently disabled in sandboxed MCP Apps iframes.)
 	Confirm string
 	Variant ActionVariant
+	// VisibleWhen, when set, draws the action only on the records it applies
+	// to: a button that takes a paused schedule to running belongs on the
+	// paused rows and nowhere else. The zero value is absent, which shows the
+	// action on every record.
+	//
+	// Only per-record actions may set it (table row actions, Card and CardList
+	// buttons); a bulk action stands over a selection rather than on one
+	// record, so it has nothing to read.
+	VisibleWhen RowPredicate
+}
+
+// RowPredicate decides, per record, whether an action applies to it.
+//
+// It is authored in Go but evaluated in the browser: the document is rendered
+// once, at registration time, and the records arrive later over
+// ui/notifications/tool-result — so the test travels into the config island as
+// data instead of running as a Go closure.
+//
+// Construct it with RowIs, RowIn or RowNot. A predicate reads a raw record
+// value and compares it strictly, by JSON type and value. Compare machine
+// values (a state code, a boolean flag), never a display label: an application
+// that translates its labels would match in one language and silently hide the
+// button in the other twenty.
+type RowPredicate struct {
+	key    string
+	values []any
+	negate bool
+	set    bool
+}
+
+// RowIs matches the records whose key field equals value.
+func RowIs(key string, value any) RowPredicate {
+	return RowPredicate{key: key, values: []any{value}, set: true}
+}
+
+// RowIn matches the records whose key field equals any of values.
+func RowIn(key string, values ...any) RowPredicate {
+	return RowPredicate{key: key, values: values, set: true}
+}
+
+// RowNot returns the complement of p: it matches exactly the records p does
+// not. Negating an absent predicate leaves it absent — there is nothing to
+// take the complement of.
+func RowNot(p RowPredicate) RowPredicate {
+	if !p.set {
+		return p
+	}
+	p.negate = !p.negate
+	return p
+}
+
+func (p RowPredicate) validate(ctx string) error {
+	if !p.set {
+		return nil
+	}
+	if p.key == "" {
+		return fmt.Errorf("%s: VisibleWhen: a row field is required", ctx)
+	}
+	if len(p.values) == 0 {
+		return fmt.Errorf("%s: VisibleWhen: RowIn needs at least one value", ctx)
+	}
+	return nil
+}
+
+// config returns the predicate's JSON-island representation:
+// {"key": k, "equals": v} for one value, {"key": k, "in": [v, …]} for a set,
+// carrying "not": true when negated.
+func (p RowPredicate) config() map[string]any {
+	m := map[string]any{"key": p.key}
+	if len(p.values) == 1 {
+		m["equals"] = p.values[0]
+	} else {
+		m["in"] = p.values
+	}
+	if p.negate {
+		m["not"] = true
+	}
+	return m
 }
 
 func (a Action) kind() ActionKind {
@@ -91,6 +169,19 @@ func (a Action) validate(context string) error {
 			return fmt.Errorf("%s: action %q: argument %q must be built with Static, FromRow, or FromSelection", context, a.Label, name)
 		}
 	}
+	return a.VisibleWhen.validate(fmt.Sprintf("%s: action %q", context, a.Label))
+}
+
+// validateBulkAction checks an action shown over a selection: valid in itself,
+// and carrying no VisibleWhen — a bulk action stands over a set of records
+// rather than on one, so there is no record for a predicate to read.
+func validateBulkAction(context string, a Action) error {
+	if err := a.validate(context); err != nil {
+		return err
+	}
+	if a.VisibleWhen.set {
+		return fmt.Errorf("%s: action %q: VisibleWhen is only valid on per-record actions", context, a.Label)
+	}
 	return nil
 }
 
@@ -118,6 +209,9 @@ func (a Action) config() map[string]any {
 	}
 	if a.Variant != "" {
 		m["variant"] = string(a.Variant)
+	}
+	if a.VisibleWhen.set {
+		m["visibleWhen"] = a.VisibleWhen.config()
 	}
 	return m
 }

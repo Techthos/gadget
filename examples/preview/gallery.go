@@ -130,6 +130,42 @@ func galleryRowActions() gomukit.Column {
 	)
 }
 
+// galleryStateActions are the actions of a roster whose buttons depend on the
+// record: the two directions of the invite/suspend switch never appear on the
+// same record, and the reminder belongs to the ones still waiting. The
+// predicates read the raw "status" field, never the badge's words.
+func galleryStateActions() []gomukit.Action {
+	arg := map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")}
+	// The complement: everything but a closed record can still be deleted,
+	// which leaves a closed one with no actions at all.
+	del := galleryDeleteAction()
+	del.VisibleWhen = gomukit.RowNot(gomukit.RowIs("status", "closed"))
+	return []gomukit.Action{
+		{Label: "Send reminder", Tool: "sandbox_invite", Args: arg,
+			VisibleWhen: gomukit.RowIs("status", "invited")},
+		{Label: "Suspend", Tool: "sandbox_archive_one", Args: arg,
+			VisibleWhen: gomukit.RowIs("status", "active")},
+		{Label: "Reinstate", Tool: "sandbox_invite", Args: arg,
+			VisibleWhen: gomukit.RowIs("status", "archived")},
+		del,
+	}
+}
+
+// galleryStateRows carries one record per status, so a state-dependent action
+// list can be read against every branch at once — including a closed record no
+// action applies to, which is drawn without a menu trigger.
+func galleryStateRows() []map[string]any {
+	rows := galleryRows()
+	rows[3]["status"] = "archived"
+	return append(rows, map[string]any{
+		"id": 5, "name": "Barbara Liskov", "email": "barbara@example.com",
+		"company": "Abstraction Ltd", "balance": 0, "seats": 0, "utilization": 0,
+		"createdAt": "2026-05-04T11:00:00Z", "renewsAt": "2026-05-04T00:00:00Z",
+		"status": "closed", "website": "",
+		"bio": "Account closed; nothing left to do here.",
+	})
+}
+
 func galleryBulk() *gomukit.SelectionConfig {
 	return &gomukit.SelectionConfig{Bulk: []gomukit.Action{
 		{Label: "Archive", Tool: "sandbox_archive",
@@ -254,6 +290,12 @@ func galleryCatalog() []preview {
 		},
 
 		{
+			Tool: "preview_table_visibility", Group: "Table", Label: "Table, state-dependent actions", Icon: iconTable,
+			Desc:   "VisibleWhen: each row's menu carries only the actions its status admits.",
+			Widget: galleryTableVisibility(), Data: rowsOnly(galleryStateRows()),
+		},
+
+		{
 			Tool: "preview_table_keys", Group: "Table", Label: "Table, renamed data keys", Icon: iconTable,
 			Desc:   "RowsKey and RowID moved off their defaults: the rows arrive under \"records\", keyed by \"code\".",
 			Widget: galleryTableKeys(),
@@ -273,6 +315,11 @@ func galleryCatalog() []preview {
 			Tool: "preview_cards_loadmore", Group: "CardList", Label: "Cards, load more", Icon: iconCards,
 			Desc:   "A growing strip: the pagination bar is replaced by a load-more tile.",
 			Widget: galleryCardsLoadMore(), Data: rowsOnly(long),
+		},
+		{
+			Tool: "preview_cards_visibility", Group: "CardList", Label: "Cards, state-dependent actions", Icon: iconCards,
+			Desc:   "The same predicates on card buttons: a record no action applies to keeps no action bar.",
+			Widget: galleryCardsVisibility(), Data: rowsOnly(galleryStateRows()),
 		},
 		{
 			Tool: "preview_cards_empty", Group: "CardList", Label: "Cards, empty state", Icon: iconCards,
@@ -473,6 +520,24 @@ func galleryTable() *gomukit.Table {
 	}
 }
 
+// galleryTableVisibility shows one actions column over records in different
+// states: a row's menu holds only what that row's status admits, and a row
+// nothing admits keeps no trigger.
+func galleryTableVisibility() *gomukit.Table {
+	return &gomukit.Table{
+		URI:   "ui://preview/gallery-table-visibility",
+		Title: "Roster",
+		Columns: []gomukit.Column{
+			gomukit.Text("name", "Name"),
+			gomukit.Text("email", "Email"),
+			customerStatusBadge(),
+			gomukit.ActionsColumn(galleryStateActions()...),
+		},
+		Brand: appBrand(),
+		Theme: appTheme(),
+	}
+}
+
 // galleryTableReadonly is the one variant that ships its data baked in: the
 // document paints before any tool result arrives.
 func galleryTableReadonly() *gomukit.Table {
@@ -590,6 +655,19 @@ func galleryCardsLoadMore() *gomukit.CardList {
 	l.PageSize = 6
 	l.PageSizes = nil
 	l.LoadMore = true
+	return l
+}
+
+// galleryCardsVisibility gives the cards the state-dependent buttons the
+// roster table puts in its menus.
+func galleryCardsVisibility() *gomukit.CardList {
+	l := galleryCards()
+	l.URI = "ui://preview/gallery-cards-visibility"
+	l.Title = "Roster"
+	l.PageSize = 0
+	l.PageSizes = nil
+	l.Selection = nil
+	l.Template.Footer.Actions = galleryStateActions()
 	return l
 }
 

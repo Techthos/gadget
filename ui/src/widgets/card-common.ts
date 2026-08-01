@@ -3,6 +3,7 @@
 // reaches the DOM only through textContent (via dom.h), never innerHTML.
 import { Row } from "../data";
 import { checkbox, h } from "../dom";
+import { actionVisible, type RowPredicateCfg, visibleActions } from "../predicate";
 import {
 	collectInputs,
 	DescriptionItemCfg,
@@ -27,6 +28,8 @@ export interface ActionCfg {
 	hrefKey?: string;
 	confirm?: string;
 	variant?: string;
+	/** Draws the action only on the records it matches. See Action.VisibleWhen. */
+	visibleWhen?: RowPredicateCfg;
 }
 
 /** The card's top section: title, description, and one badge-or-button slot. */
@@ -105,8 +108,12 @@ export interface RenderCardOpts {
  */
 export function renderCard(tmpl: CardTemplateCfg, row: Row, opts: RenderCardOpts): HTMLElement {
 	const article = h("article", { class: "gomu-card-item", "data-gomu-card-id": opts.id });
-	// Header and footer share one button index space (see templateActions).
-	let actionIndex = 0;
+	// Header and footer share one button index space (see templateActions), and
+	// an index is a position in the full list, not in what this record shows: a
+	// button hidden by its predicate must not renumber the ones behind it, or a
+	// click on Edit would resolve to Delete.
+	const headerAction = tmpl.header?.action;
+	const footerBase = headerAction ? 1 : 0;
 
 	// --- header ---
 	const header = h("header", { class: "gomu-card-item-header" });
@@ -130,13 +137,9 @@ export function renderCard(tmpl: CardTemplateCfg, row: Row, opts: RenderCardOpts
 	if (tmpl.header.badge) {
 		const b = badgeNode(tmpl.header.badge, row);
 		if (b !== "") header.append(h("div", { class: "gomu-card-action" }, b));
-	} else if (tmpl.header.action) {
+	} else if (headerAction && actionVisible(headerAction, row)) {
 		header.append(
-			h(
-				"div",
-				{ class: "gomu-card-action" },
-				actionButton(tmpl.header.action, String(actionIndex++), !!opts.busy),
-			),
+			h("div", { class: "gomu-card-action" }, actionButton(headerAction, "0", !!opts.busy)),
 		);
 	}
 	article.append(header);
@@ -157,13 +160,15 @@ export function renderCard(tmpl: CardTemplateCfg, row: Row, opts: RenderCardOpts
 
 	// --- footer ---
 	const note = slotText(row, tmpl.footer?.textKey, tmpl.footer?.text);
-	const actions = tmpl.footer?.actions ?? [];
+	const actions = visibleActions(tmpl.footer?.actions ?? [], row);
 	if (note !== "" || actions.length > 0) {
 		const footer = h("footer", { class: "gomu-card-item-footer" });
 		if (note !== "") footer.append(h("span", { class: "gomu-card-note" }, note));
 		if (actions.length > 0) {
 			const bar = h("div", { class: "gomu-card-item-actions" });
-			for (const a of actions) bar.append(actionButton(a, String(actionIndex++), !!opts.busy));
+			for (const { action, index } of actions) {
+				bar.append(actionButton(action, String(index + footerBase), !!opts.busy));
+			}
 			footer.append(bar);
 		}
 		article.append(footer);

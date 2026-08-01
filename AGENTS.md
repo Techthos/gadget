@@ -415,8 +415,37 @@ type Action struct {
     HrefKey string               // row field holding the URL (REQUIRED for ActionLink; opens via ui/open-link)
     Confirm string               // when set: inline two-phase confirmation with this text before firing
     Variant ActionVariant        // VariantDefault ("") | VariantPrimary | VariantDanger
+    VisibleWhen RowPredicate     // draw the action only on records matching this test; absent = every record
 }
 ```
+
+**Per-record visibility** (`RowPredicate` is opaque — construct ONLY with
+these; the zero value is absent):
+
+```go
+gomukit.RowIs("state", "paused")               // field equals the value
+gomukit.RowIn("state", "paused", "failed")     // field equals any of the values
+gomukit.RowNot(gomukit.RowIs("state", "running")) // the complement of a predicate
+```
+
+The document is rendered once, before any record exists, so the test travels
+into the config island as data (`{"visibleWhen":{"key":"state","equals":"paused"}}`,
+`"in":[…]` for a set, plus `"not":true` when negated) and the runtime evaluates
+it per record. Consequences:
+
+- Compare **raw record values**, never a display label: the comparison is
+  strict (same JSON type and value), and a predicate written against a
+  translated word would match in one language and silently hide the button in
+  every other. `RowIs("count", 0)` does not match `"0"`.
+- A missing field and a missing record both read as `null`, so
+  `RowIs("field", nil)` matches records that lack it.
+- Hidden buttons keep their **index** in the full action list, so a click always
+  fires the tool the button declares.
+- In a `Table`, a row whose actions are all hidden renders **no "⋯" trigger**;
+  in `Card`/`CardList` such a record renders **no action bar** (and no footer at
+  all when the footer carries nothing else).
+- Bulk actions (`SelectionConfig.Bulk`) reject `VisibleWhen` (validation error):
+  they stand over a selection, not over one record.
 
 **Argument sources** (`ArgSource` is opaque — construct ONLY with these):
 
@@ -1198,7 +1227,8 @@ Table:
   `DefaultSort.Key` required when `DefaultSort` is set.
 - Actions: `Label` required; `Tool` required for tool kind; `HrefKey` required
   for link kind; all `Args` built with the constructors; `FromSelection` only
-  in bulk actions.
+  in bulk actions; `VisibleWhen` only on per-record actions, and it needs a
+  field name plus at least one value.
 - `Theme` must pass `theme.Validate()`.
 
 Form:
@@ -1229,6 +1259,7 @@ Card / CardList (via `CardTemplate`):
   `Link.HrefKey`; no duplicate item `Key`s.
 - `Header.Action` and `Footer.Actions`: validated like any action;
   `FromSelection` is rejected (per-card actions run on one record).
+  `VisibleWhen` is allowed here and rejected on `Selection.Bulk`.
 - CardList only: `PageSize >= 0`; `PageSizes` entries `> 0` and only with
   `PageSize > 0`; `LoadMore` needs `PageSize > 0` and rejects `PageSizes`;
   `DefaultSort.Key` required when set; bulk actions validated.

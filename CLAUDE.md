@@ -63,6 +63,8 @@ JSON-RPC method names live in `ui/src/spec-constants.json`, consumed by TS and m
 - `bridge.ts` — JSON-RPC 2.0 over `postMessage`: request correlation/timeouts, `ui/initialize` handshake, `tools/call`, size-changed reporting. Only host→view methods are accepted inbound.
 - `host.ts` — applies `hostContext` (style vars, theme, fonts, locale/timeZone); `ResizeObserver` → size-changed notifications.
 - `state.ts` — store + pure reducers (sort/filter/pagination/selection).
+- `predicate.ts` — evaluates `Action.VisibleWhen` per record; filters action
+  lists while keeping each survivor's index in the full list.
 - `dropdown.ts` — upgrades every `<select>` into the gomukit dropdown; the
   select stays in the DOM as the value holder.
 - `widgets/*.ts` — event-delegated behaviors on `data-gomu-*` attributes.

@@ -477,7 +477,7 @@ func (l *CardList) Validate() error {
 	}
 	if l.Selection != nil {
 		for _, a := range l.Selection.Bulk {
-			if err := a.validate(fmt.Sprintf("gomukit: cardlist %s: bulk", l.URI)); err != nil {
+			if err := validateBulkAction(fmt.Sprintf("gomukit: cardlist %s: bulk", l.URI), a); err != nil {
 				return err
 			}
 		}

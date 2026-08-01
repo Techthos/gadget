@@ -260,7 +260,7 @@ func (t *Table) Validate() error {
 	}
 	if t.Selection != nil {
 		for _, a := range t.Selection.Bulk {
-			if err := a.validate(fmt.Sprintf("gomukit: table %s: bulk", t.URI)); err != nil {
+			if err := validateBulkAction(fmt.Sprintf("gomukit: table %s: bulk", t.URI), a); err != nil {
 				return err
 			}
 		}

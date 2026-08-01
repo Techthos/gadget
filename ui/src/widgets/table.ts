@@ -7,6 +7,7 @@ import { Row, rowsFrom } from "../data";
 import { checkbox, clear, delegate, h } from "../dom";
 import { refreshDropdown } from "../dropdown";
 import { formatCell } from "../format";
+import { anyVisible, type RowPredicateCfg, visibleActions } from "../predicate";
 import { CallToolResult, M } from "../protocol";
 import { errorText, textOf } from "../status";
 import {
@@ -35,6 +36,8 @@ interface ActionCfg {
 	hrefKey?: string;
 	confirm?: string;
 	variant?: string;
+	/** Shows the action only on the rows it matches. See Action.VisibleWhen. */
+	visibleWhen?: RowPredicateCfg;
 }
 
 interface ColumnCfg {
@@ -231,11 +234,20 @@ export function mountTable(ctx: MountContext): void {
 	const menu = createActionMenu(root);
 
 	menu.bind(root, "action-menu", (el, value) => {
-		const actions = cfg.columns[Number(value)]?.actions ?? [];
-		if (actions.length === 0) return null;
 		const id = el.closest("tr")?.getAttribute("data-gomu-row-id");
 		const row = store.get().rows.find((r) => rowID(r) === id) ?? null;
-		return { items: actions, onSelect: (i) => void fire(actions[i] as ActionCfg, row) };
+		// The menu is filled per row, so a choice resolves against the actions
+		// this row actually offers rather than against a position in the column's
+		// full list.
+		const items = visibleActions(cfg.columns[Number(value)]?.actions ?? [], row);
+		if (items.length === 0) return null;
+		return {
+			items: items.map((i) => i.action),
+			onSelect: (i) => {
+				const chosen = items[i]?.action;
+				if (chosen) void fire(chosen, row);
+			},
+		};
 	});
 
 	menu.bind(root, "bulk-menu", () => {
@@ -288,9 +300,13 @@ export function mountTable(ctx: MountContext): void {
 			}
 			case "actions": {
 				const td = h("td", cellAttrs(col, "gomu-td-actions"));
-				td.append(
-					actionMenuTrigger({ "data-gomu-action-menu": String(colIdx), disabled: busy }),
-				);
+				// A row every action has excluded gets no trigger: an empty menu is
+				// a promise the row cannot keep.
+				if (anyVisible(col.actions ?? [], row)) {
+					td.append(
+						actionMenuTrigger({ "data-gomu-action-menu": String(colIdx), disabled: busy }),
+					);
+				}
 				return td;
 			}
 			default:

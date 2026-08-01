@@ -142,6 +142,11 @@ func catalog() []story {
 			Payload: pushRows, build: func() gomukit.Widget { return tableEmpty() },
 		},
 		{
+			ID: "table-visibility", Group: "Table", Label: "State-dependent actions",
+			Desc:    "VisibleWhen: each row's menu carries only the actions its status admits.",
+			Payload: pushRows, build: func() gomukit.Widget { return tableVisibility() },
+		},
+		{
 			ID: "cards-default", Group: "CardList", Label: "Carousel",
 			Desc:    "Paged card carousel with filter, sort and bulk archive.",
 			Payload: pushRows, build: func() gomukit.Widget { return cardList() },
@@ -155,6 +160,11 @@ func catalog() []story {
 			ID: "cards-empty", Group: "CardList", Label: "Empty state",
 			Desc:    "No records baked in — exercises the empty message.",
 			Payload: pushRows, build: func() gomukit.Widget { return cardListEmpty() },
+		},
+		{
+			ID: "cards-visibility", Group: "CardList", Label: "State-dependent actions",
+			Desc:    "VisibleWhen on card buttons: an invited record is reminded, an active one suspended.",
+			Payload: pushRows, build: func() gomukit.Widget { return cardListVisibility() },
 		},
 		{
 			ID: "card-default", Group: "Card", Label: "Single record",
@@ -508,6 +518,25 @@ func rowActions() gomukit.Column {
 	)
 }
 
+// stateActions are the actions of a roster whose buttons depend on the record:
+// the two directions of the invite/suspend switch never appear together, and
+// the reminder belongs to the records still waiting. The predicates read the
+// raw "status" field, never the badge's words.
+func stateActions() []gomukit.Action {
+	return []gomukit.Action{
+		{Label: "Send reminder", Tool: "invite_user", VisibleWhen: gomukit.RowIs("status", "invited"),
+			Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")}},
+		{Label: "Suspend", Tool: "suspend_user", VisibleWhen: gomukit.RowIs("status", "active"),
+			Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")}},
+		{Label: "Reinstate", Tool: "reinstate_user", VisibleWhen: gomukit.RowIs("status", "archived"),
+			Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")}},
+		// The complement: everything but a closed record can still be edited,
+		// which leaves a closed one with no actions and so no menu trigger.
+		{Label: "Edit", Tool: "edit_user", VisibleWhen: gomukit.RowNot(gomukit.RowIs("status", "closed")),
+			Args: map[string]gomukit.ArgSource{"id": gomukit.FromRow("id")}},
+	}
+}
+
 func archiveBulk() *gomukit.SelectionConfig {
 	return &gomukit.SelectionConfig{Bulk: []gomukit.Action{
 		{Label: "Archive", Tool: "archive_users", Args: map[string]gomukit.ArgSource{"ids": gomukit.FromSelection("id")}},
@@ -550,6 +579,38 @@ func table() *gomukit.Table {
 		Brand:       demoBrand(),
 		Theme:       demoTheme(),
 	}
+}
+
+// tableVisibility shows the same actions column over records in different
+// states: every row's menu holds only what that row's status admits.
+func tableVisibility() *gomukit.Table {
+	t := table()
+	t.URI = "ui://harness/table-visibility"
+	t.Title = "Roster"
+	t.Columns = []gomukit.Column{
+		gomukit.Text("name", "Name"),
+		gomukit.Text("email", "Email"),
+		statusBadge(),
+		gomukit.ActionsColumn(stateActions()...),
+	}
+	t.PageSize = 0
+	t.PageSizes = nil
+	t.Selection = nil
+	t.InitialData = map[string]any{"rows": mixedStatusRows()}
+	return t
+}
+
+// mixedStatusRows carries one record per status, so a state-dependent action
+// list can be read against every branch at once — including a closed record
+// no action applies to, which is drawn without a menu trigger.
+func mixedStatusRows() []map[string]any {
+	rows := harnessRows()
+	rows[3]["status"] = "archived"
+	return append(rows, map[string]any{
+		"id": 5, "name": "Barbara Liskov", "email": "barbara@example.com", "balance": 0,
+		"createdAt": "2026-05-04T11:00:00Z", "status": "closed", "website": "",
+		"bio": "Account closed; nothing left to do here.",
+	})
 }
 
 func tablePlain() *gomukit.Table {
@@ -657,6 +718,21 @@ func cardListLoadMore() *gomukit.CardList {
 	l.PageSizes = nil
 	l.LoadMore = true
 	l.InitialData = map[string]any{"rows": manyRows(24)}
+	return l
+}
+
+// cardListVisibility gives the cards the same state-dependent buttons the
+// roster table puts in its menus — and a record no action applies to keeps no
+// action bar at all.
+func cardListVisibility() *gomukit.CardList {
+	l := cardList()
+	l.URI = "ui://harness/cards-visibility"
+	l.Title = "Roster"
+	l.PageSize = 0
+	l.PageSizes = nil
+	l.Selection = nil
+	l.Template.Footer.Actions = stateActions()
+	l.InitialData = map[string]any{"rows": mixedStatusRows()}
 	return l
 }
 

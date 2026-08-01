@@ -37,6 +37,61 @@ const ROWS = [
 	{ id: 3, name: "Bob", email: "bob@x.io", status: "active", balance: 35, website: "" },
 ];
 
+// A roster whose buttons depend on the record's state: exactly one direction
+// of the switch applies to any one card (Action.VisibleWhen).
+const SCHEDULE_TEMPLATE = {
+	header: {
+		titleKey: "name",
+		action: {
+			label: "Open",
+			kind: "tool",
+			tool: "schedule_open",
+			args: { id: { row: "id" } },
+			visibleWhen: { key: "state", equals: "running" },
+		},
+	},
+	footer: {
+		actions: [
+			{
+				label: "Activate",
+				kind: "tool",
+				tool: "schedule_activate",
+				args: { id: { row: "id" } },
+				visibleWhen: { key: "state", equals: "paused" },
+			},
+			{
+				label: "Pause",
+				kind: "tool",
+				tool: "schedule_pause",
+				args: { id: { row: "id" } },
+				visibleWhen: { key: "state", equals: "running" },
+			},
+			{
+				label: "Edit",
+				kind: "tool",
+				tool: "schedule_edit",
+				args: { id: { row: "id" } },
+				visibleWhen: { key: "state", in: ["running", "paused"] },
+			},
+		],
+	},
+};
+
+const SCHEDULES = [
+	{ id: 1, name: "Nightly", state: "running" },
+	{ id: 2, name: "Weekly", state: "paused" },
+	{ id: 3, name: "Retired", state: "archived" },
+];
+
+/** The action buttons of one card, as label → data-gomu-action index. */
+function actionIndices(card: Element): Record<string, string> {
+	const out: Record<string, string> = {};
+	for (const btn of card.querySelectorAll("[data-gomu-action]")) {
+		out[btn.textContent ?? ""] = btn.getAttribute("data-gomu-action") ?? "";
+	}
+	return out;
+}
+
 // --- CardList ---
 
 function listShell({
@@ -262,6 +317,72 @@ describe("cardlist behavior", () => {
 			name: "edit_user",
 			arguments: { id: 1 },
 		});
+	});
+
+	// --- per-record visibility (Action.VisibleWhen) ---
+
+	it("draws each card only the actions that apply to it, keeping their indices", () => {
+		const root = listShell();
+		mountCardList({
+			root,
+			config: listConfig({ card: SCHEDULE_TEMPLATE }),
+			initialData: { rows: SCHEDULES },
+			bridge,
+		});
+		const cards = [...root.querySelectorAll(".gomu-card-item")];
+		expect(cards).toHaveLength(3);
+		// Indices count the header slot and then the whole footer list, so a
+		// hidden button leaves a gap rather than renumbering the rest.
+		expect(actionIndices(cards[0]!)).toEqual({ Open: "0", Pause: "2", Edit: "3" });
+		expect(actionIndices(cards[1]!)).toEqual({ Activate: "1", Edit: "3" });
+		expect(actionIndices(cards[2]!)).toEqual({});
+	});
+
+	it("fires the tool a button declares on a card whose earlier actions are hidden", async () => {
+		const root = listShell();
+		host.onToolCall = () => ({ structuredContent: {} });
+		mountCardList({
+			root,
+			config: listConfig({ card: SCHEDULE_TEMPLATE }),
+			initialData: { rows: SCHEDULES },
+			bridge,
+		});
+		// The paused card: its header action and the first footer action are both
+		// gone, so the leading button is "Activate" at index 1.
+		const paused = root.querySelectorAll(".gomu-card-item")[1]!;
+		const buttons = [...paused.querySelectorAll<HTMLElement>("[data-gomu-action]")];
+		expect(buttons[0]!.textContent).toBe("Activate");
+		buttons[0]!.click();
+		await flush();
+		expect(host.received(M.toolsCall)[0]!.params).toMatchObject({
+			name: "schedule_activate",
+			arguments: { id: 2 },
+		});
+
+		// The strip is rebuilt after a call, so the second button is looked up
+		// again — and is still its own action, not its hidden neighbour's.
+		const rebuilt = root.querySelectorAll(".gomu-card-item")[1]!;
+		rebuilt.querySelectorAll<HTMLElement>("[data-gomu-action]")[1]!.click();
+		await flush();
+		expect(host.received(M.toolsCall)[1]!.params).toMatchObject({
+			name: "schedule_edit",
+			arguments: { id: 2 },
+		});
+	});
+
+	it("renders no action bar on a record every action excludes", () => {
+		const root = listShell();
+		mountCardList({
+			root,
+			config: listConfig({ card: SCHEDULE_TEMPLATE }),
+			initialData: { rows: SCHEDULES },
+			bridge,
+		});
+		const archived = root.querySelectorAll(".gomu-card-item")[2]!;
+		expect(archived.querySelector(".gomu-card-item-actions")).toBeNull();
+		// The footer carries nothing else here, so it is left out entirely.
+		expect(archived.querySelector(".gomu-card-item-footer")).toBeNull();
+		expect(archived.querySelector(".gomu-card-action")).toBeNull();
 	});
 
 	// jsdom has no layout, so the strip's geometry is stubbed; the behavior
@@ -608,6 +729,28 @@ describe("card behavior", () => {
 		expect(calls[0]!.params).toMatchObject({ name: "edit_user", arguments: { id: 1 } });
 		expect(root.querySelector(".gomu-card-title")?.textContent).toBe("Caroline");
 		expect(root.querySelector<HTMLElement>("[data-gomu-status]")?.textContent).toBe("Saved.");
+	});
+
+	it("hides the actions the record does not match and still fires the rest", async () => {
+		const root = cardShell();
+		host.onToolCall = () => ({ structuredContent: {} });
+		// A paused schedule: the header's "Open" and the footer's "Pause" do not
+		// apply to it.
+		mountCard({
+			root,
+			config: cardConfig({ card: SCHEDULE_TEMPLATE }),
+			initialData: { rows: [SCHEDULES[1]] },
+			bridge,
+		});
+		const card = root.querySelector(".gomu-card-item")!;
+		expect(actionIndices(card)).toEqual({ Activate: "1", Edit: "3" });
+
+		card.querySelector<HTMLElement>('[data-gomu-action="1"]')!.click();
+		await flush();
+		expect(host.received(M.toolsCall)[0]!.params).toMatchObject({
+			name: "schedule_activate",
+			arguments: { id: 2 },
+		});
 	});
 
 	it("sends what the card's own controls collected with its action", async () => {

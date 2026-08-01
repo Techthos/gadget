@@ -199,6 +199,48 @@ func TestCardListConfigIsland(t *testing.T) {
 	}
 }
 
+func TestCardConfigVisibleWhen(t *testing.T) {
+	c := canonicalCard()
+	c.Template.Header.Badge = Column{}
+	c.Template.Header.Action = &Action{
+		Label:       "Activate",
+		Tool:        "schedule_manage",
+		VisibleWhen: RowIs("state", "paused"),
+	}
+	c.Template.Footer.Actions = append(c.Template.Footer.Actions, Action{
+		Label:       "Retry",
+		Tool:        "schedule_retry",
+		VisibleWhen: RowNot(RowIn("state", "running", "paused")),
+	})
+	if err := c.Validate(); err != nil {
+		t.Fatalf("Validate() = %v, want nil", err)
+	}
+	b, err := json.Marshal(c.config())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := string(b)
+	for _, want := range []string{
+		`"visibleWhen":{"equals":"paused","key":"state"}`,
+		`"visibleWhen":{"in":["running","paused"],"key":"state","not":true}`,
+	} {
+		if !strings.Contains(cfg, want) {
+			t.Errorf("config island missing %s\nfull: %s", want, cfg)
+		}
+	}
+}
+
+func TestCardListBulkRejectsVisibleWhen(t *testing.T) {
+	l := canonicalCardList()
+	l.Selection = &SelectionConfig{Bulk: []Action{
+		{Label: "Archive", Tool: "archive_users", VisibleWhen: RowIs("state", "paused")},
+	}}
+	err := l.Validate()
+	if err == nil || !strings.Contains(err.Error(), "only valid on per-record actions") {
+		t.Errorf("Validate() = %v, want a bulk/VisibleWhen complaint", err)
+	}
+}
+
 func TestCardListConfigLoadTool(t *testing.T) {
 	l := canonicalCardList()
 	l.LoadTool = "list_users"
