@@ -96,7 +96,7 @@ never need Node. CI rebuilds and fails on drift (`make verify-dist`).
   U+2028/9) — `</script>` breakout is impossible.
 - `RawCSS`/`RawJS` refuse `</style`/`</script`/`<!--` as a backstop for the
   trusted bundle; `Theme` values are validated against CSS breakout.
-- Confirmations are inline two-phase buttons — native `confirm()` is
+- Confirmations open a modal overlay over the frame — native `confirm()` is
   silently disabled in sandboxed iframes without `allow-modals`.
 
 ## Known deviations / future work

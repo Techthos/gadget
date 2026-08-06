@@ -6,6 +6,7 @@ import type { MountContext } from "../index";
 import { HOST_CONTEXT_EVENT } from "../host";
 import { Row, rowsFrom } from "../data";
 import { clear } from "../dom";
+import { confirmAction } from "../confirm-modal";
 import { CallToolResult, M } from "../protocol";
 import { errorText, textOf } from "../status";
 import { releaseDropdowns } from "../dropdown";
@@ -36,7 +37,6 @@ interface CardCfg {
 	loadArgs?: Record<string, unknown>;
 }
 
-const CONFIRM_RESET_MS = 4000;
 const STATUS_CLEAR_MS = 4000;
 
 export function mountCard(ctx: MountContext): void {
@@ -134,17 +134,15 @@ export function mountCard(ctx: MountContext): void {
 		}
 	}
 
-	// Native confirm() is silently disabled in sandboxed MCP Apps iframes;
-	// confirmation is a two-phase button (arm, then fire on a second click).
+	// Native confirm() is silently disabled in sandboxed MCP Apps iframes; a
+	// confirmed action asks over the frame instead (see confirm-modal.ts).
 	function armOrFire(btn: HTMLElement, action: ActionCfg): void {
-		if (action.confirm && !btn.hasAttribute("data-gomu-armed")) {
-			const original = btn.textContent;
-			btn.setAttribute("data-gomu-armed", "");
-			btn.textContent = action.confirm;
-			setTimeout(() => {
-				btn.removeAttribute("data-gomu-armed");
-				btn.textContent = original;
-			}, CONFIRM_RESET_MS);
+		if (action.confirm) {
+			confirmAction(
+				btn,
+				{ message: action.confirm, confirmLabel: action.label, variant: action.variant },
+				() => void fire(action),
+			);
 			return;
 		}
 		void fire(action);

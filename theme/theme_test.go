@@ -53,6 +53,21 @@ func TestTransparentEmission(t *testing.T) {
 	}
 }
 
+func TestFramedEmission(t *testing.T) {
+	if got := (&Theme{}).CSS(); got != "" {
+		t.Errorf("zero Theme emits frame tokens: %q", got)
+	}
+	th := Theme{Framed: true}
+	got := th.CSS()
+	want := `.gomu-root{--gomu-card-border-width:1px;--gomu-card-radius:var(--gomu-radius-l)}`
+	if got != want {
+		t.Errorf("CSS():\n got %q\nwant %q", got, want)
+	}
+	if err := th.Validate(); err != nil {
+		t.Errorf("Validate() = %v, want nil", err)
+	}
+}
+
 func TestPageTokensEmission(t *testing.T) {
 	th := Theme{ColorPage: "#faf7f2", PagePad: "0"}
 	got := th.CSS()

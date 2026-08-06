@@ -1,41 +1,113 @@
-/* Anchored popup panels: the dropdown's listbox and the action menu (see
- * ui/src/popup.ts). Both hang off .gomu-root rather than their trigger — the
- * card chrome clips its overflow, and a panel inside it would be cut off at
- * the card's edge — so the runtime writes left/top in the root's coordinates
- * and this only describes the surface. */
+/* Modal popup overlays: the dropdown's listbox, the action menu and the date
+ * field's calendar (see ui/src/popup.ts). Each hangs off .gomu-root and opens
+ * as a centered overlay that dims the whole iframe — a content-sized frame has
+ * no room to drop an anchored panel below a control near its bottom edge, and
+ * the card chrome clips whatever hangs past it. */
 
+.gomu-pop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--gomu-space-unit) * 4);
+  /* A dim plus a slight blur: the dim carries the light theme, the blur makes
+   * the frame read as pushed-back in the dark one, where a black scrim over
+   * dark content barely shows. */
+  background: rgb(0 0 0 / 0.5);
+  backdrop-filter: blur(2px);
+  animation: gomu-pop-fade 0.12s ease-out;
+}
+
+/* The dialog surface. Capped to the frame and scrolls inside itself; a header
+ * (dropdown search) stays pinned because the scroll lives on an inner list. */
 .gomu-pop-panel {
-  position: absolute;
-  z-index: 20;
-  max-height: 15rem;
-  overflow-y: auto;
-  padding: calc(var(--gomu-space-unit) * 1);
+  display: flex;
+  flex-direction: column;
+  min-width: min(13rem, 100%);
+  max-width: min(28rem, 100%);
+  max-height: 100%;
+  overflow: hidden;
   background: var(--gomu-color-bg);
   border: 1px solid var(--gomu-color-border);
   border-radius: var(--gomu-radius-m);
-  box-shadow: 0 6px 20px rgb(0 0 0 / 0.16);
-  animation: gomu-pop-in 0.12s ease-out;
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.28);
+  animation: gomu-pop-in 0.14s ease-out;
 }
 
-.gomu-pop-panel--above {
-  animation-name: gomu-pop-in-above;
+/* Panels with no pinned header (menu, calendar) let the whole surface scroll. */
+.gomu-action-panel,
+.gomu-cal-panel {
+  overflow-y: auto;
+  padding: calc(var(--gomu-space-unit) * 1);
+}
+
+.gomu-cal-panel {
+  min-width: 0;
+  width: max-content;
+}
+
+/* Header row shared by any panel that pins content above its scroll area. */
+.gomu-pop-header {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--gomu-space-unit) * 2);
+  padding: calc(var(--gomu-space-unit) * 2) calc(var(--gomu-space-unit) * 3);
+  border-bottom: 1px solid var(--gomu-color-border);
+}
+
+.gomu-pop-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--gomu-color-text-muted);
+}
+
+.gomu-pop-close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  color: var(--gomu-color-text-muted);
+  background: none;
+  border: 0;
+  border-radius: var(--gomu-radius-s);
+  cursor: pointer;
+}
+
+.gomu-pop-close:hover {
+  color: var(--gomu-color-text);
+  background: var(--gomu-color-surface);
+}
+
+.gomu-pop-close-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+@keyframes gomu-pop-fade {
+  from {
+    opacity: 0;
+  }
 }
 
 @keyframes gomu-pop-in {
   from {
     opacity: 0;
-    transform: translateY(-0.25rem);
-  }
-}
-
-@keyframes gomu-pop-in-above {
-  from {
-    opacity: 0;
-    transform: translateY(0.25rem);
+    transform: translateY(0.5rem) scale(0.98);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .gomu-pop-overlay,
   .gomu-pop-panel {
     animation: none;
   }

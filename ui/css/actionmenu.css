@@ -60,14 +60,6 @@
   color: var(--gomu-color-primary);
 }
 
-/* An armed item is showing its confirmation text and waiting for the second
- * choice, so it reads as the consequence rather than as the label. */
-.gomu-action-item[data-gomu-armed] {
-  color: var(--gomu-color-primary-text);
-  background: var(--gomu-color-danger);
-  font-weight: 500;
-}
-
 /* Bulk actions: a labelled trigger rather than an icon, because the toolbar
  * has the room and the selection count beside it needs the sentence finished. */
 .gomu-bulk-menu {

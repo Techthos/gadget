@@ -253,11 +253,8 @@ export function mountTable(ctx: MountContext): void {
 	menu.bind(root, "bulk-menu", () => {
 		const actions = cfg.selection?.bulk ?? [];
 		if (actions.length === 0) return null;
-		// The toolbar has room to its trailing side, and the trigger is at its
-		// leading one.
 		return {
 			items: actions,
-			align: "start",
 			onSelect: (i) => void fire(actions[i] as ActionCfg, null),
 		};
 	});

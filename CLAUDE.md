@@ -74,7 +74,7 @@ JSON-RPC method names live in `ui/src/spec-constants.json`, consumed by TS and m
 - Data reaches HTML **only** via gomponents text nodes (Go) or `textContent` (TS). Never build DOM from data with innerHTML.
 - JSON islands rely on `encoding/json`'s HTML-safe escaping; `RawCSS`/`RawJS` refuse `</style`/`</script`/`<!--`; `Theme` values are validated against CSS breakout.
 - Documents must stay fully self-contained: no external URLs, CDNs, or files on disk (must satisfy `default-src 'none'` + inline allowances).
-- Confirmations use inline two-phase buttons — native `confirm()` doesn't work in sandboxed iframes.
+- Confirmations use a modal overlay over the frame (see `ui/src/confirm-modal.ts`) — native `confirm()` doesn't work in sandboxed iframes.
 
 ## Examples / manual testing
 

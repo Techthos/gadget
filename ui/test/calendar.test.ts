@@ -410,6 +410,8 @@ function field(
 		form,
 		trigger: root.querySelector<HTMLButtonElement>(".gomu-dt-trigger")!,
 		panel: root.querySelector<HTMLElement>(".gomu-cal-panel")!,
+		// Visibility lives on the overlay that wraps the panel (see src/popup.ts).
+		overlay: root.querySelector<HTMLElement>(".gomu-cal-panel")?.parentElement as HTMLElement,
 		value: root.querySelector<HTMLElement>(".gomu-dt-value")!,
 		start: form.querySelector<HTMLInputElement>('input[name="stay"], input[name="when"]')!,
 		end: form.querySelector<HTMLInputElement>('input[name="stay_until"]'),
@@ -428,9 +430,9 @@ describe("date fields", () => {
 		expect(f.start.id).toBe("");
 		expect(f.trigger.getAttribute("aria-expanded")).toBe("false");
 		expect(f.value.textContent).toBe("Pick a date");
-		// The panel escapes the card chrome that would clip it.
-		expect(f.panel.parentElement).toBe(f.root);
-		expect(f.panel.hidden).toBe(true);
+		// The overlay escapes the card chrome that would clip it, and starts closed.
+		expect(f.overlay.parentElement).toBe(f.root);
+		expect(f.overlay.hidden).toBe(true);
 	});
 
 	it("writes the pick back through the native input", () => {
@@ -439,14 +441,17 @@ describe("date fields", () => {
 		f.start.addEventListener("change", () => changes.push(f.start.value));
 
 		f.trigger.click();
-		expect(f.panel.hidden).toBe(false);
+		expect(f.overlay.hidden).toBe(false);
+		// The panel must never carry hidden, or [hidden]'s display:none would
+		// blank it inside a shown overlay.
+		expect(f.panel.hasAttribute("hidden")).toBe(false);
 		day(f.panel, "2026-07-20").click();
 
 		expect(f.start.value).toBe("2026-07-20");
 		expect(changes).toEqual(["2026-07-20"]);
 		expect(f.value.textContent).toBe("20 Jul 2026");
 		// A finished pick closes the popover.
-		expect(f.panel.hidden).toBe(true);
+		expect(f.overlay.hidden).toBe(true);
 	});
 
 	it("keeps the popover open until a range is finished", () => {
@@ -456,12 +461,12 @@ describe("date fields", () => {
 		expect(f.value.textContent).toBe("Pick a date range");
 		f.trigger.click();
 		day(f.panel, "2026-07-20").click();
-		expect(f.panel.hidden).toBe(false);
+		expect(f.overlay.hidden).toBe(false);
 		expect(f.start.value).toBe("2026-07-20");
 		expect(f.end!.value).toBe("");
 
 		day(f.panel, "2026-07-24").click();
-		expect(f.panel.hidden).toBe(true);
+		expect(f.overlay.hidden).toBe(true);
 		expect(f.end!.value).toBe("2026-07-24");
 		expect(f.value.textContent).toBe(formatDateRange("2026-07-20", "2026-07-24"));
 	});
@@ -504,9 +509,9 @@ describe("date fields", () => {
 	it("closes on Escape and re-focuses the trigger", () => {
 		const f = field(DATE_FIELD, { when: { calendar: { startOn: TODAY } } });
 		f.trigger.click();
-		expect(f.panel.hidden).toBe(false);
+		expect(f.overlay.hidden).toBe(false);
 		key(f.panel, "Escape");
-		expect(f.panel.hidden).toBe(true);
+		expect(f.overlay.hidden).toBe(true);
 		expect(document.activeElement).toBe(f.trigger);
 	});
 
@@ -515,22 +520,22 @@ describe("date fields", () => {
 			when: { calendar: { startOn: TODAY, monthDropdowns: true, fromYear: 2020, toYear: 2030 } },
 		});
 		f.trigger.click();
-		expect(f.panel.hidden).toBe(false);
+		expect(f.overlay.hidden).toBe(false);
 
 		// A popup opened from inside another must not close its own parent.
 		const ddTrigger = f.panel.querySelector<HTMLButtonElement>(".gomu-dd-trigger")!;
 		ddTrigger.click();
-		const ddPanel = f.root.querySelector<HTMLElement>(".gomu-dd-panel")!;
-		expect(ddPanel.hidden).toBe(false);
-		expect(f.panel.hidden).toBe(false);
+		const ddOverlay = f.root.querySelector<HTMLElement>(".gomu-dd-panel")!.parentElement as HTMLElement;
+		expect(ddOverlay.hidden).toBe(false);
+		expect(f.overlay.hidden).toBe(false);
 
 		// A press inside the calendar is outside the dropdown: it peels one layer.
 		press(f.panel);
-		expect(ddPanel.hidden).toBe(true);
-		expect(f.panel.hidden).toBe(false);
+		expect(ddOverlay.hidden).toBe(true);
+		expect(f.overlay.hidden).toBe(false);
 
 		press(document.body);
-		expect(f.panel.hidden).toBe(true);
+		expect(f.overlay.hidden).toBe(true);
 	});
 
 	it("leaves a date input the form does not declare alone", () => {

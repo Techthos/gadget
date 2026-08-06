@@ -13,15 +13,13 @@
 //
 // Data reaches the DOM through textContent only (see dom.ts); action labels
 // are no exception.
+import { confirmAction } from "./confirm-modal";
 import { clear, delegate, h, icon } from "./dom";
-import { openPopup, popupHost, positionPanel, releasePopup, type Popup } from "./popup";
+import { mountOverlay, openPopup, popupHost, releasePopup, type Popup } from "./popup";
 
 // Three dots in a 16x16 viewBox: near-zero runs, painted as dots by the round
 // line cap.
 const DOTS_PATHS = ["M3.5 8h.01", "M8 8h.01", "M12.5 8h.01"];
-// An armed action disarms itself after this long, so a confirmation left
-// hanging cannot be completed by a later, unrelated click.
-const CONFIRM_RESET_MS = 4000;
 
 /** The parts of an action config this menu renders. */
 export interface MenuAction {
@@ -34,9 +32,6 @@ export interface MenuAction {
 export interface MenuBinding {
   items: MenuAction[];
   onSelect(index: number): void;
-  /** Which edge of the panel lines up with the trigger's. Defaults to end,
-   * where a trailing actions column wants it. */
-  align?: "start" | "end";
 }
 
 export interface ActionMenu {
@@ -77,20 +72,19 @@ export function actionMenuTrigger(
 export function createActionMenu(root: HTMLElement): ActionMenu {
   const host = popupHost(root);
   const id = `gomu-menu-${++seq}`;
+  // Visibility lives on the overlay (see popup.ts); the panel itself is never
+  // hidden, or [hidden]'s display:none would blank it inside a shown overlay.
   const panel = h("div", {
     class: "gomu-pop-panel gomu-action-panel",
     id,
     role: "menu",
-    hidden: true,
   });
-  host.append(panel);
+  const overlay = mountOverlay(host, panel);
 
   let trigger: HTMLElement | null = null;
   let binding: MenuBinding | null = null;
   let itemEls: HTMLElement[] = [];
   let active = -1;
-  let armed = -1;
-  let armTimer: ReturnType<typeof setTimeout> | undefined;
 
   const popup: Popup = {
     get anchor(): HTMLElement {
@@ -98,15 +92,10 @@ export function createActionMenu(root: HTMLElement): ActionMenu {
     },
     panel,
     close: (focus?: boolean) => close(focus),
-    position: () => place(),
   };
 
   function isOpen(): boolean {
-    return !panel.hidden;
-  }
-
-  function place(): void {
-    if (trigger) positionPanel(trigger, panel, host, { align: binding?.align ?? "end" });
+    return !overlay.hidden;
   }
 
   function build(items: MenuAction[]): void {
@@ -134,23 +123,20 @@ export function createActionMenu(root: HTMLElement): ActionMenu {
     if (b.items.length === 0) return;
     trigger = el;
     binding = b;
-    disarm();
     build(b.items);
-    panel.hidden = false;
+    overlay.hidden = false;
     el.setAttribute("aria-expanded", "true");
     el.setAttribute("aria-controls", id);
     const name = el.getAttribute("aria-label") ?? el.textContent ?? "";
     if (name.trim() !== "") panel.setAttribute("aria-label", name.trim());
     openPopup(popup);
-    place();
     setActive(0);
   }
 
   function close(focus = false): void {
     releasePopup(popup);
     if (!isOpen()) return;
-    panel.hidden = true;
-    disarm();
+    overlay.hidden = true;
     active = -1;
     const el = trigger;
     trigger = null;
@@ -178,36 +164,21 @@ export function createActionMenu(root: HTMLElement): ActionMenu {
     return (from + dir + n) % n;
   }
 
-  function disarm(): void {
-    clearTimeout(armTimer);
-    const el = itemEls[armed];
-    const action = binding?.items[armed];
-    if (el && action) {
-      el.removeAttribute("data-gomu-armed");
-      el.textContent = action.label;
-    }
-    armed = -1;
-  }
-
-  // Native confirm() is silently disabled in sandboxed MCP Apps iframes, so a
-  // confirmed action is two-phase: the first choice swaps the item's label for
-  // the confirmation text and arms it, a second choice within the window
-  // fires. The menu stays open in between — that is the question being asked.
+  // A confirmed action asks over the frame (see confirm-modal.ts): opening the
+  // dialog closes the menu (its openPopup peels this popup off the stack), so
+  // onSelect fires only on a deliberate confirm. Native confirm() is silently
+  // disabled in sandboxed MCP Apps iframes, which is why it is built, not called.
   function choose(i: number): void {
     const b = binding;
     const action = b?.items[i];
     if (!b || !action) return;
-    if (action.confirm && armed !== i) {
-      disarm();
-      armed = i;
-      const el = itemEls[i];
-      if (el) {
-        el.setAttribute("data-gomu-armed", "");
-        el.textContent = action.confirm;
-      }
-      setActive(i);
-      place();
-      armTimer = setTimeout(disarm, CONFIRM_RESET_MS);
+    if (action.confirm) {
+      const anchor = trigger ?? panel;
+      confirmAction(
+        anchor,
+        { message: action.confirm, confirmLabel: action.label, variant: action.variant },
+        () => b.onSelect(i),
+      );
       return;
     }
     close(true);

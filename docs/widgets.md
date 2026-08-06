@@ -73,8 +73,8 @@ table := &gomukit.Table{
 - **RowID** (default `"id"`) identifies rows for selection and args.
 - **Actions**: `Kind` tool (default) calls an MCP tool; `Kind` link opens
   `HrefKey` via `ui/open-link`. Arg sources: `Static(v)`, `FromRow(field)`,
-  `FromSelection(field)` (bulk only). `Confirm` renders an inline two-phase
-  confirmation (native `confirm()` doesn't work in sandboxed iframes).
+  `FromSelection(field)` (bulk only). `Confirm` opens a confirmation modal
+  over the frame (native `confirm()` doesn't work in sandboxed iframes).
   An actions column renders one "⋯" trigger per row and bulk actions render an
   "Actions" trigger in the toolbar, each opening a menu of the labels — an
   actions column costs the same width whether it holds one action or five, and

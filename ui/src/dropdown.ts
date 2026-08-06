@@ -1,7 +1,8 @@
 // Custom dropdown: upgrades a native <select> into a trigger button plus a
-// popup listbox, so every widget gets the same control instead of the host
+// modal listbox, so every widget gets the same control instead of the host
 // browser's own select chrome (which is unstyleable and looks foreign inside
-// a chat pane).
+// a chat pane), and the list opens as a centered overlay rather than a panel
+// with nowhere to drop in a short iframe (see popup.ts).
 //
 // The <select> stays in the DOM as the single source of truth: it keeps the
 // value, the name, native constraint validation and multiple-selection, and
@@ -12,14 +13,19 @@
 // Data reaches the DOM through textContent only (see dom.ts); option labels
 // are no exception.
 import { clear, h, icon } from "./dom";
-import { openPopup, popupHost, positionPanel, releasePopup, type Popup } from "./popup";
+import { mountOverlay, openPopup, popupHost, releasePopup, type Popup } from "./popup";
 
 export const CHEVRON_PATH = "M4 6.5 8 10.5 12 6.5";
 const CHECK_PATH = "M3.5 8.5 6.5 11.5 12.5 5";
+const CLOSE_PATHS = ["M4 4 12 12", "M12 4 4 12"];
 // A typed run this far apart starts a new typeahead search.
 const TYPEAHEAD_RESET_MS = 600;
+// Above this many options the panel gains a search field; below it, the list
+// is short enough to scan and typeahead covers it.
+const SEARCH_MIN = 8;
 
 interface Dropdown extends Popup {
+  overlay: HTMLElement;
   sync(): void;
 }
 
@@ -43,9 +49,9 @@ export function refreshDropdown(select: HTMLSelectElement | null | undefined): v
 }
 
 /**
- * Undoes the upgrade of a select that is about to be thrown away. A panel is
- * a child of the widget root rather than of the select (see popup.ts), so
- * dropping the select alone would leave the panel behind — a list rebuilt on
+ * Undoes the upgrade of a select that is about to be thrown away. The overlay
+ * is a child of the widget root rather than of the select (see popup.ts), so
+ * dropping the select alone would leave the overlay behind — a list rebuilt on
  * every data change would pile them up.
  */
 export function releaseDropdown(select: HTMLSelectElement | null | undefined): void {
@@ -53,7 +59,7 @@ export function releaseDropdown(select: HTMLSelectElement | null | undefined): v
   const dd = registry.get(select);
   if (!dd) return;
   dd.close();
-  dd.panel.remove();
+  dd.overlay.remove();
   registry.delete(select);
 }
 
@@ -92,9 +98,9 @@ export function enhanceSelect(select: HTMLSelectElement): void {
   const trigger = h("button", {
     type: "button",
     class: ["gomu-input", "gomu-dd-trigger", ...extra].join(" "),
-    // Select-only combobox: the trigger keeps focus while open and points at
-    // the active option with aria-activedescendant, so the panel itself never
-    // has to be focusable.
+    // Select-only combobox: the trigger points at the active option with
+    // aria-activedescendant while the list is closed; when the panel carries a
+    // search field, the field takes that role once open.
     role: "combobox",
     "aria-haspopup": "listbox",
     "aria-expanded": "false",
@@ -113,18 +119,42 @@ export function enhanceSelect(select: HTMLSelectElement): void {
   trigger.append(valueEl, icon("gomu-dd-chevron", CHEVRON_PATH));
   wrap.append(trigger);
 
-  const panel = h("div", {
-    class: "gomu-pop-panel gomu-dd-panel",
-    id,
-    role: "listbox",
-    hidden: true,
-  });
-  if (multiple) panel.setAttribute("aria-multiselectable", "true");
-  // The panel hangs off the widget root rather than the field: the card chrome
-  // clips its overflow, and a panel nested inside it would be cut off at the
-  // card's edge (see popup.ts).
   const host = popupHost(select);
-  host.append(panel);
+  const titleText = ariaLabel ?? labelText(host, trigger.id) ?? "Select";
+
+  const closeBtn = h(
+    "button",
+    { type: "button", class: "gomu-pop-close", "aria-label": "Close" },
+    icon("gomu-pop-close-icon", ...CLOSE_PATHS),
+  ) as HTMLButtonElement;
+  const header = h("div", { class: "gomu-pop-header" }, h("span", { class: "gomu-pop-title" }, titleText), closeBtn);
+
+  const searchInput =
+    select.options.length > SEARCH_MIN
+      ? (h("input", {
+          type: "text",
+          class: "gomu-input gomu-dd-search",
+          role: "combobox",
+          "aria-expanded": "true",
+          "aria-controls": id,
+          "aria-autocomplete": "list",
+          "aria-label": ariaLabel !== null ? `Search ${ariaLabel}` : "Search options",
+          placeholder: "Search…",
+        }) as HTMLInputElement)
+      : null;
+  // Whichever element holds focus while the list is open owns the active
+  // descendant: the search field when there is one, else the trigger.
+  const owner: HTMLElement = searchInput ?? trigger;
+
+  const list = h("div", { class: "gomu-dd-list", id, role: "listbox" });
+  if (multiple) list.setAttribute("aria-multiselectable", "true");
+
+  const panel = h("div", { class: "gomu-pop-panel gomu-dd-panel" });
+  panel.append(header);
+  if (searchInput) panel.append(searchInput);
+  panel.append(list);
+
+  const overlay = mountOverlay(host, panel);
 
   let optionEls: HTMLElement[] = [];
   let active = -1;
@@ -132,7 +162,7 @@ export function enhanceSelect(select: HTMLSelectElement): void {
   let typedAt = 0;
 
   function buildOptions(): void {
-    clear(panel);
+    clear(list);
     optionEls = [...select.options].map((opt, i) => {
       const el = h("div", {
         class: "gomu-dd-option",
@@ -145,7 +175,7 @@ export function enhanceSelect(select: HTMLSelectElement): void {
         icon("gomu-dd-check", CHECK_PATH),
         h("span", { class: "gomu-dd-option-label" }, opt.text),
       );
-      panel.append(el);
+      list.append(el);
       return el;
     });
   }
@@ -188,29 +218,29 @@ export function enhanceSelect(select: HTMLSelectElement): void {
     if (select.disabled) close();
   }
 
-  function position(): void {
-    positionPanel(trigger, panel, host, { matchWidth: true });
-  }
-
   function isOpen(): boolean {
-    return !panel.hidden;
+    return !overlay.hidden;
   }
 
   function open(): void {
     if (isOpen() || select.disabled) return;
-    panel.hidden = false;
+    overlay.hidden = false;
     trigger.setAttribute("aria-expanded", "true");
     openPopup(dd);
-    position();
-    setActive(select.selectedIndex >= 0 ? select.selectedIndex : step(-1, 1));
+    if (searchInput) {
+      searchInput.value = "";
+      filter("");
+    }
+    const start = select.selectedIndex;
+    setActive(start >= 0 && selectableAt(start) ? start : step(-1, 1));
+    owner.focus();
   }
 
   function close(focus = false): void {
     releasePopup(dd);
     if (!isOpen()) return;
-    panel.hidden = true;
+    overlay.hidden = true;
     trigger.setAttribute("aria-expanded", "false");
-    trigger.removeAttribute("aria-activedescendant");
     setActive(-1);
     if (focus) trigger.focus();
   }
@@ -220,22 +250,40 @@ export function enhanceSelect(select: HTMLSelectElement): void {
     active = i;
     const el = optionEls[i];
     if (!el) {
-      trigger.removeAttribute("aria-activedescendant");
+      owner.removeAttribute("aria-activedescendant");
       return;
     }
     el.classList.add("gomu-dd-option--active");
-    trigger.setAttribute("aria-activedescendant", el.id);
+    owner.setAttribute("aria-activedescendant", el.id);
     // Absent in some non-browser DOM implementations.
     if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "nearest" });
+  }
+
+  /** A pickable option: neither disabled nor filtered out by the search. */
+  function selectableAt(i: number): boolean {
+    const opt = select.options[i];
+    return !!opt && !opt.disabled && !optionEls[i]?.hidden;
   }
 
   /** Index of the next selectable option from `from` in direction `dir`. */
   function step(from: number, dir: 1 | -1): number {
     const n = select.options.length;
     for (let i = from + dir; i >= 0 && i < n; i += dir) {
-      if (!select.options[i]?.disabled) return i;
+      if (selectableAt(i)) return i;
     }
-    return from >= 0 && from < n && !select.options[from]?.disabled ? from : -1;
+    return selectableAt(from) ? from : -1;
+  }
+
+  /** Hides options whose label does not contain the query, and keeps the
+   * active option on something visible. */
+  function filter(query: string): void {
+    const needle = query.trim().toLowerCase();
+    optionEls.forEach((el, i) => {
+      const opt = select.options[i];
+      el.hidden = needle !== "" && !(opt?.text.toLowerCase().includes(needle) ?? false);
+    });
+    if (active < 0 || optionEls[active]?.hidden) setActive(step(-1, 1));
+    else setActive(active);
   }
 
   function choose(i: number): void {
@@ -261,19 +309,16 @@ export function enhanceSelect(select: HTMLSelectElement): void {
       // Start one past the active option so repeating a letter cycles.
       const i = (from + (typed.length > 1 ? 0 : 1) + k) % n;
       const opt = select.options[i];
-      if (opt && !opt.disabled && opt.text.toLowerCase().startsWith(typed)) {
+      if (opt && selectableAt(i) && opt.text.toLowerCase().startsWith(typed)) {
         setActive(i);
         return;
       }
     }
   }
 
-  trigger.addEventListener("click", () => {
-    if (isOpen()) close(true);
-    else open();
-  });
-
-  trigger.addEventListener("keydown", (ev) => {
+  /** Keyboard for the control, shared by the trigger and the search field —
+   * whichever holds focus. */
+  function onKey(ev: KeyboardEvent): void {
     const key = ev.key;
     if (key === "Escape") {
       if (isOpen()) {
@@ -293,36 +338,63 @@ export function enhanceSelect(select: HTMLSelectElement): void {
       return;
     }
     if (key === "Home" || key === "End") {
-      if (!isOpen()) return;
+      if (!isOpen() || searchInput) return;
       ev.preventDefault();
       setActive(key === "Home" ? step(-1, 1) : step(select.options.length, -1));
       return;
     }
-    if (key === "Enter" || key === " " || key === "Spacebar") {
+    if (key === "Enter") {
+      ev.preventDefault();
+      if (!isOpen()) open();
+      else if (active >= 0) choose(active);
+      return;
+    }
+    if (key === " " || key === "Spacebar") {
+      // With a search field, space types into it; without one it selects.
+      if (searchInput) return;
       ev.preventDefault();
       if (!isOpen()) open();
       else if (active >= 0) choose(active);
       return;
     }
     if (key.length === 1 && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+      if (searchInput) {
+        // The field filters; only open the list so the first keystroke lands.
+        if (!isOpen()) {
+          open();
+          ev.preventDefault();
+        }
+        return;
+      }
       if (!isOpen()) open();
       typeahead(key.toLowerCase());
       ev.preventDefault();
     }
+  }
+
+  trigger.addEventListener("click", () => {
+    if (isOpen()) close(true);
+    else open();
   });
+  trigger.addEventListener("keydown", onKey);
+  searchInput?.addEventListener("keydown", onKey);
+  searchInput?.addEventListener("input", () => filter(searchInput.value));
 
-  // The panel is not focusable: pressing inside it must not pull focus off
-  // the trigger, or the dropdown would close before the click lands.
-  panel.addEventListener("pointerdown", (ev) => ev.preventDefault());
+  closeBtn.addEventListener("click", () => close(true));
 
-  panel.addEventListener("click", (ev) => {
+  // A press on the option list keeps focus on the owner (trigger or search
+  // field) so keyboard control survives a click; the header controls stay
+  // clickable because they sit outside the list.
+  list.addEventListener("pointerdown", (ev) => ev.preventDefault());
+
+  list.addEventListener("click", (ev) => {
     const target = ev.target;
     if (!(target instanceof Element)) return;
     const el = target.closest<HTMLElement>("[data-gomu-dd-index]");
     if (el) choose(Number(el.getAttribute("data-gomu-dd-index")));
   });
 
-  panel.addEventListener("mousemove", (ev) => {
+  list.addEventListener("mousemove", (ev) => {
     const target = ev.target;
     if (!(target instanceof Element)) return;
     const el = target.closest<HTMLElement>("[data-gomu-dd-index]");
@@ -343,9 +415,17 @@ export function enhanceSelect(select: HTMLSelectElement): void {
     });
   }
 
-  const dd: Dropdown = { anchor: wrap, panel, sync, close, position };
+  const dd: Dropdown = { anchor: wrap, panel, overlay, sync, close };
   registry.set(select, dd);
   buildOptions();
   sync();
 }
 
+/** The text of the <label> that points at id, if any — the field name to
+ * title the overlay with when the select carries no aria-label. */
+function labelText(host: ParentNode, id: string): string | null {
+  if (!id) return null;
+  const label = host.querySelector(`label[for="${id}"]`);
+  const text = label?.textContent?.trim();
+  return text ? text : null;
+}

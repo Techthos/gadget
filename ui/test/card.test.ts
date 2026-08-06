@@ -512,11 +512,12 @@ describe("cardlist behavior", () => {
 		const delBtn = root
 			.querySelector(".gomu-card-item")!
 			.querySelector<HTMLElement>('[data-gomu-action="1"]')!;
-		delBtn.click(); // arms
+		delBtn.click(); // opens the confirmation over the frame
 		await flush();
 		expect(host.received(M.toolsCall)).toHaveLength(0);
-		expect(delBtn.textContent).toBe("Really delete?");
-		delBtn.click(); // fires
+		const ask = root.querySelector<HTMLElement>(".gomu-ask-panel")!;
+		expect(ask.querySelector(".gomu-ask-message")!.textContent).toBe("Really delete?");
+		ask.querySelector<HTMLButtonElement>(".gomu-ask-confirm")!.click(); // confirms → fires
 		await flush();
 		const calls = host.received(M.toolsCall);
 		expect(calls).toHaveLength(1);

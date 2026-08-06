@@ -6,6 +6,7 @@ import type { MountContext } from "../index";
 import { HOST_CONTEXT_EVENT } from "../host";
 import { Row, rowsFrom } from "../data";
 import { clear, delegate, h } from "../dom";
+import { confirmAction } from "../confirm-modal";
 import { refreshDropdown, releaseDropdowns } from "../dropdown";
 import { CallToolResult, M } from "../protocol";
 import {
@@ -72,7 +73,6 @@ interface CardListState {
 	statusMsg?: string;
 }
 
-const CONFIRM_RESET_MS = 4000;
 const STATUS_CLEAR_MS = 4000;
 const FILTER_DEBOUNCE_MS = 150;
 // Pointer travel before a press turns into a drag rather than a click.
@@ -208,14 +208,12 @@ export function mountCardList(ctx: MountContext): void {
 		row: Row | null,
 		answers: InputValues = {},
 	): void {
-		if (action.confirm && !btn.hasAttribute("data-gomu-armed")) {
-			const original = btn.textContent;
-			btn.setAttribute("data-gomu-armed", "");
-			btn.textContent = action.confirm;
-			setTimeout(() => {
-				btn.removeAttribute("data-gomu-armed");
-				btn.textContent = original;
-			}, CONFIRM_RESET_MS);
+		if (action.confirm) {
+			confirmAction(
+				btn,
+				{ message: action.confirm, confirmLabel: action.label, variant: action.variant },
+				() => void fire(action, row, answers),
+			);
 			return;
 		}
 		void fire(action, row, answers);

@@ -39,11 +39,16 @@ type Theme struct {
 	// (default 0.25rem). Increase for a roomier layout, decrease for density.
 	SpaceUnit string
 
+	// Framed draws the widget shell as a card: a 1px border with RadiusL
+	// corners. Off by default — hosts embed widgets in a bubble or panel that
+	// already has its own frame, and a second one around the widget reads as a
+	// box inside a box.
+	Framed bool
+
 	// Transparent removes the page fill and the gutter to the iframe edge, so
-	// the frame itself becomes invisible: only the widget's card, with its
-	// rounded corners, sits on the host UI. Card, tile, control and overlay
-	// surfaces are untouched and stay opaque. Equivalent to ColorPage
-	// "transparent" plus PagePad "0".
+	// the frame itself becomes invisible: only the widget's own surface sits on
+	// the host UI. Card, tile, control and overlay surfaces are untouched and
+	// stay opaque. Equivalent to ColorPage "transparent" plus PagePad "0".
 	//
 	// It also requires the host to leave the iframe element unpainted (no
 	// background, no border); see docs/theming.md.
@@ -89,6 +94,18 @@ var tokenFields = []struct {
 	{"--gomu-radius-m", func(t *Theme) string { return t.RadiusM }},
 	{"--gomu-radius-l", func(t *Theme) string { return t.RadiusL }},
 	{"--gomu-space-unit", func(t *Theme) string { return t.SpaceUnit }},
+	{"--gomu-card-border-width", func(t *Theme) string {
+		if t.Framed {
+			return "1px"
+		}
+		return ""
+	}},
+	{"--gomu-card-radius", func(t *Theme) string {
+		if t.Framed {
+			return "var(--gomu-radius-l)"
+		}
+		return ""
+	}},
 }
 
 // rootFields are document-level tokens: they must land on :root because the

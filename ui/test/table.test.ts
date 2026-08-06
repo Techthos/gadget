@@ -363,7 +363,7 @@ describe("table behavior", () => {
     expect(root.querySelector<HTMLElement>("[data-gomu-status]")!.textContent).toBe("Done");
   });
 
-  it("requires a second choice for confirm actions", async () => {
+  it("asks for confirmation over the frame before a confirmed action fires", async () => {
     const root = shell();
     const cfg = config({
       columns: [
@@ -384,15 +384,16 @@ describe("table behavior", () => {
     const item = openMenu(root, 'tbody [data-gomu-action-menu="1"]')[0]!;
     item.click();
     await flush();
+    // No call yet: the menu has closed and a confirmation stands over the frame.
     expect(host.received(M.toolsCall)).toHaveLength(0);
-    expect(item.hasAttribute("data-gomu-armed")).toBe(true);
-    expect(item.textContent).toBe("Really delete?");
-    // The menu stays open while the question is standing.
-    expect(root.querySelector<HTMLElement>(".gomu-action-panel")!.hidden).toBe(false);
-    item.click();
+    expect(root.querySelector<HTMLElement>(".gomu-action-panel")!.parentElement!.hidden).toBe(true);
+    const ask = root.querySelector<HTMLElement>(".gomu-ask-panel")!;
+    expect(ask.querySelector(".gomu-ask-message")!.textContent).toBe("Really delete?");
+
+    ask.querySelector<HTMLButtonElement>(".gomu-ask-confirm")!.click();
     await flush();
     expect(host.received(M.toolsCall)).toHaveLength(1);
-    expect(root.querySelector<HTMLElement>(".gomu-action-panel")!.hidden).toBe(true);
+    expect(root.querySelector(".gomu-ask-panel")).toBeNull();
   });
 
   // --- per-row visibility (Action.VisibleWhen) ---

@@ -1,0 +1,20 @@
+/* Action confirmation modal (see ui/src/confirm-modal.ts): the question and a
+ * cancel/confirm pair on the shared .gomu-pop-panel surface. */
+.gomu-ask-panel {
+  gap: calc(var(--gomu-space-unit) * 4);
+  padding: calc(var(--gomu-space-unit) * 4);
+  min-width: min(18rem, 100%);
+}
+
+.gomu-ask-message {
+  margin: 0;
+  color: var(--gomu-color-text);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.gomu-ask-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: calc(var(--gomu-space-unit) * 2);
+}

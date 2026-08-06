@@ -33,9 +33,14 @@ host's look** without configuration, and still render sensibly with no host.
 
 ## Embedding: hiding the iframe
 
+The widget shell has no border and no corner radius by default: hosts embed
+widgets in a chat bubble or panel that already carries its own frame, and a
+second outlined box inside it reads as a box in a box. `Framed: true` restores
+the card chrome (1px border, `RadiusL` corners).
+
 A widget renders inside the host's iframe. By default it paints a page fill
 plus an 8px gutter, so the frame reads as a panel of its own. `Transparent`
-removes both, leaving only the widget's card on the host surface:
+removes both, leaving only the widget's own surface on the host:
 
 ```go
 table := &gomukit.Table{ /* ... */, Theme: &theme.Theme{Transparent: true}}
@@ -121,4 +126,5 @@ empty fields keep host-aware behavior. `Extra` keys must start with
 | `--gomu-radius-s/m/l` | corner radii | `--border-radius-sm/md/lg` |
 | `--gomu-space-unit` | base spacing unit (0.25rem) | — |
 | `--gomu-page-pad` | gutter between widget and iframe edge (8px; set on `:root`) | — |
+| `--gomu-card-border-width` / `--gomu-card-radius` | widget shell frame (both `0`; `Framed` sets them) | — |
 | `--gomu-card-width` | width of one card in the CardList carousel (17rem) | — |

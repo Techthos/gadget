@@ -80,8 +80,23 @@
   color: var(--gomu-color-primary);
 }
 
-/* The panel surface itself is .gomu-pop-panel (popup.css); what follows is
- * the listbox it holds. */
+/* The panel surface itself is .gomu-pop-panel (popup.css). A search field
+ * (long lists only) and the scrolling listbox sit inside it. */
+.gomu-dd-panel {
+  min-width: min(16rem, 100%);
+}
+
+.gomu-dd-search {
+  margin: calc(var(--gomu-space-unit) * 2) calc(var(--gomu-space-unit) * 3) 0;
+}
+
+.gomu-dd-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: calc(var(--gomu-space-unit) * 1) calc(var(--gomu-space-unit) * 1.5);
+}
+
 .gomu-dd-option {
   display: flex;
   align-items: center;

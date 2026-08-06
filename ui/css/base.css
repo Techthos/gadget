@@ -9,6 +9,13 @@ body {
   padding: var(--gomu-page-pad);
 }
 
+/* While a modal popup is open the runtime sets this on the document element
+ * (see ui/src/popup.ts); the fixed overlay already covers the frame, this
+ * stops the content behind it drifting on a wheel or trackpad scroll. */
+.gomu-modal-open {
+  overflow: hidden;
+}
+
 .gomu-root,
 .gomu-root *,
 .gomu-root *::before,
@@ -41,8 +48,8 @@ body {
 }
 
 .gomu-card {
-  border: 1px solid var(--gomu-color-border);
-  border-radius: var(--gomu-radius-l);
+  border: var(--gomu-card-border-width) solid var(--gomu-color-border);
+  border-radius: var(--gomu-card-radius);
   background: var(--gomu-color-bg);
   overflow: hidden;
 }
@@ -101,12 +108,6 @@ body {
   color: var(--gomu-color-danger);
   border-color: var(--gomu-color-danger);
   background: transparent;
-}
-
-.gomu-btn[data-gomu-armed] {
-  background: var(--gomu-color-danger);
-  border-color: var(--gomu-color-danger);
-  color: var(--gomu-color-primary-text);
 }
 
 .gomu-btn:disabled {

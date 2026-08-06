@@ -413,7 +413,7 @@ type Action struct {
     Args    map[string]ArgSource // tool argument name -> value source; ignored when Prompt is set
     Prompt  string               // post this text as a user turn instead of calling Tool (ActionTool only)
     HrefKey string               // row field holding the URL (REQUIRED for ActionLink; opens via ui/open-link)
-    Confirm string               // when set: inline two-phase confirmation with this text before firing
+    Confirm string               // when set: a confirmation modal poses this text over the frame before firing
     Variant ActionVariant        // VariantDefault ("") | VariantPrimary | VariantDanger
     VisibleWhen RowPredicate     // draw the action only on records matching this test; absent = every record
 }
@@ -461,9 +461,10 @@ validation/marshaling.
 
 **Behavior contract**:
 
-- `Confirm` renders an inline two-phase button (click → confirm text → click
-  again). Native `confirm()` dialogs are silently disabled in sandboxed MCP
-  Apps iframes — never rely on them.
+- `Confirm` opens a confirmation modal over the frame (the `Confirm` text as
+  the question, plus cancel/confirm buttons); the action fires only on a
+  deliberate confirm. Native `confirm()` dialogs are silently disabled in
+  sandboxed MCP Apps iframes — never rely on them.
 - **If a tool called by a table action returns a result whose
   `structuredContent` contains `RowsKey`, the table re-renders with the
   returned rows and clears the selection.** Therefore: mutating tools
@@ -1546,8 +1547,10 @@ type Theme struct {
 
     SpaceUnit string // base spacing unit (default 0.25rem); all gaps/paddings derive from it
 
+    Framed bool        // draw the widget shell as a card: 1px border + RadiusL corners.
+                       // Off by default — hosts already frame the widget in a bubble or panel
     Transparent bool   // drop the page fill and the gutter: the iframe rectangle disappears,
-                       // leaving only the widget's card on the host surface. Card, control
+                       // leaving only the widget's own surface on the host UI. Card, control
                        // and overlay fills are untouched. == ColorPage "transparent" + PagePad "0"
     ColorPage   string // page fill alone (cards/controls/overlays keep ColorBackground); ignored when Transparent
     PagePad     string // gutter between widget and iframe edge (default 8px); ignored when Transparent
@@ -1578,9 +1581,13 @@ danger/success/warning ← `--color-text-danger/success/warning`,
 
 ### Embedding without a visible frame
 
+The widget shell carries no border and no corner radius by default, so it sits
+flush in whatever the host already draws around it; `Framed: true` puts the
+card chrome back.
+
 `Transparent: true` makes the widget document paint nothing of its own, so the
-host page shows through the iframe and only the card (with its border radius)
-reads as part of the host UI. Two things it depends on:
+host page shows through the iframe and only the widget's own surface reads as
+part of the host UI. Two things it depends on:
 
 - The **host** must leave the `<iframe>` element unpainted: `border: 0`
   (the UA default is `2px inset`) and no `background`.

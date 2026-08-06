@@ -35,11 +35,29 @@ const PLACEHOLDER = `
     <option value="name|asc">Name ↑</option>
   </select>`;
 
+// Ten options — past the threshold that adds the search field.
+const LONG = `
+  <select id="gomu-f-city" name="city" class="gomu-input" aria-label="City">
+    <option value="ath">Athens</option>
+    <option value="ber">Berlin</option>
+    <option value="cai">Cairo</option>
+    <option value="del">Delhi</option>
+    <option value="edi">Edinburgh</option>
+    <option value="flo">Florence</option>
+    <option value="gen">Geneva</option>
+    <option value="hel">Helsinki</option>
+    <option value="ist">Istanbul</option>
+    <option value="jak">Jakarta</option>
+  </select>`;
+
 function parts(root: HTMLElement) {
 	return {
 		select: root.querySelector<HTMLSelectElement>("select")!,
 		trigger: root.querySelector<HTMLButtonElement>(".gomu-dd-trigger")!,
+		overlay: root.querySelector<HTMLElement>(".gomu-pop-overlay")!,
 		panel: root.querySelector<HTMLElement>(".gomu-dd-panel")!,
+		list: root.querySelector<HTMLElement>(".gomu-dd-list")!,
+		search: root.querySelector<HTMLInputElement>(".gomu-dd-search"),
 		value: root.querySelector<HTMLElement>(".gomu-dd-value")!,
 		options: [...root.querySelectorAll<HTMLElement>(".gomu-dd-option")],
 	};
@@ -56,7 +74,7 @@ describe("dropdown", () => {
 
 	it("upgrades a select without removing it", () => {
 		const root = shell(SINGLE);
-		const { select, trigger, panel, options } = parts(root);
+		const { select, trigger, overlay, list, options } = parts(root);
 
 		expect(select.isConnected).toBe(true);
 		expect(select.name).toBe("role");
@@ -72,10 +90,10 @@ describe("dropdown", () => {
 		// Author classes style what the user sees.
 		expect(trigger.classList.contains("gomu-sort-select")).toBe(true);
 
-		// The panel escapes the card chrome that would clip it.
-		expect(panel.parentElement).toBe(root);
-		expect(panel.hidden).toBe(true);
-		expect(panel.getAttribute("role")).toBe("listbox");
+		// The overlay escapes the card chrome that would clip it, and starts closed.
+		expect(overlay.parentElement).toBe(root);
+		expect(overlay.hidden).toBe(true);
+		expect(list.getAttribute("role")).toBe("listbox");
 		expect(options.map((o) => o.textContent)).toEqual(["User", "Admin", "Owner"]);
 		expect(options[2]?.getAttribute("aria-disabled")).toBe("true");
 		expect(parts(root).value.textContent).toBe("User");
@@ -83,18 +101,18 @@ describe("dropdown", () => {
 
 	it("opens on click and selects an option", () => {
 		const root = shell(SINGLE);
-		const { select, trigger, panel } = parts(root);
+		const { select, trigger, overlay } = parts(root);
 		const changes: string[] = [];
 		select.addEventListener("change", () => changes.push(select.value));
 
 		trigger.click();
-		expect(panel.hidden).toBe(false);
+		expect(overlay.hidden).toBe(false);
 		expect(trigger.getAttribute("aria-expanded")).toBe("true");
 
 		parts(root).options[1]!.click();
 		expect(select.value).toBe("admin");
 		expect(changes).toEqual(["admin"]);
-		expect(panel.hidden).toBe(true);
+		expect(overlay.hidden).toBe(true);
 		expect(parts(root).value.textContent).toBe("Admin");
 		expect(parts(root).options[1]!.getAttribute("aria-selected")).toBe("true");
 		expect(parts(root).options[0]!.getAttribute("aria-selected")).toBe("false");
@@ -102,10 +120,10 @@ describe("dropdown", () => {
 
 	it("navigates with the keyboard and skips disabled options", () => {
 		const root = shell(SINGLE);
-		const { select, trigger, panel } = parts(root);
+		const { select, trigger, overlay } = parts(root);
 
 		key(trigger, "ArrowDown");
-		expect(panel.hidden).toBe(false);
+		expect(overlay.hidden).toBe(false);
 		// Opens on the current selection, then steps past the disabled option
 		// and stops at the end of the list.
 		key(trigger, "ArrowDown");
@@ -114,11 +132,11 @@ describe("dropdown", () => {
 
 		key(trigger, "Enter");
 		expect(select.value).toBe("admin");
-		expect(panel.hidden).toBe(true);
+		expect(overlay.hidden).toBe(true);
 
 		key(trigger, "ArrowDown");
 		key(trigger, "Escape");
-		expect(panel.hidden).toBe(true);
+		expect(overlay.hidden).toBe(true);
 		expect(trigger.getAttribute("aria-expanded")).toBe("false");
 	});
 
@@ -133,7 +151,7 @@ describe("dropdown", () => {
 
 	it("toggles several values and stays open for a multiple select", () => {
 		const root = shell(MULTI);
-		const { select, trigger, panel } = parts(root);
+		const { select, trigger, overlay } = parts(root);
 
 		expect(parts(root).value.textContent).toBe("Pick tags");
 		expect(parts(root).value.classList.contains("gomu-dd-value--placeholder")).toBe(true);
@@ -141,7 +159,7 @@ describe("dropdown", () => {
 		trigger.click();
 		parts(root).options[0]!.click();
 		parts(root).options[2]!.click();
-		expect(panel.hidden).toBe(false);
+		expect(overlay.hidden).toBe(false);
 		expect([...select.selectedOptions].map((o) => o.value)).toEqual(["a", "c"]);
 		expect(parts(root).value.textContent).toBe("Alpha, Gamma");
 
@@ -165,12 +183,35 @@ describe("dropdown", () => {
 
 	it("closes on a press outside", () => {
 		const root = shell(SINGLE);
-		const { trigger, panel } = parts(root);
+		const { trigger, overlay } = parts(root);
 
 		trigger.click();
-		expect(panel.hidden).toBe(false);
+		expect(overlay.hidden).toBe(false);
 		document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
-		expect(panel.hidden).toBe(true);
+		expect(overlay.hidden).toBe(true);
+	});
+
+	it("adds a search field only when the list is long", () => {
+		expect(parts(shell(SINGLE)).search).toBe(null);
+		expect(parts(shell(LONG)).search).not.toBe(null);
+	});
+
+	it("filters the list from the search field and picks a match", () => {
+		const root = shell(LONG);
+		const { select, trigger, search, overlay } = parts(root);
+
+		trigger.click();
+		search!.value = "ber";
+		search!.dispatchEvent(new Event("input", { bubbles: true }));
+
+		const visible = parts(root).options.filter((o) => !o.hidden);
+		expect(visible.map((o) => o.textContent)).toEqual(["Berlin"]);
+		// The active option follows the filter to the one match.
+		expect(search!.getAttribute("aria-activedescendant")).toBe(visible[0]!.id);
+
+		key(search!, "Enter");
+		expect(select.value).toBe("ber");
+		expect(overlay.hidden).toBe(true);
 	});
 
 	it("follows the select's disabled and aria-invalid state", async () => {

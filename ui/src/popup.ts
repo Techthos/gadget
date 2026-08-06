@@ -1,32 +1,29 @@
-// Anchored popups: the plumbing shared by the dropdown (a listbox over a
-// <select>) and the action menu (a row's or a selection's actions).
+// Modal popups: the plumbing shared by the dropdown (a listbox over a
+// <select>), the action menu (a row's or a selection's actions) and the date
+// field's calendar. Each opens as a centered overlay that dims the whole
+// iframe, rather than a panel anchored to its trigger — a content-sized iframe
+// often has no room to drop a panel below a control near its bottom edge, and
+// the card chrome clips whatever hangs past it. A modal escapes both: it is
+// fixed to the iframe viewport and scrolls inside itself.
 //
 // Two things about a popup are properties of the set, not of any one of them,
-// so they live here rather than in either module: only one may be open at a
-// time, and a press anywhere else closes whichever is. The third is placement,
-// which both solve identically — a panel is a child of the widget root, not of
-// its trigger, because the card chrome and the table's scroll container clip
-// their overflow and a nested panel would be cut off at their edge. Its
-// coordinates are therefore written relative to that root.
+// so they live here rather than in either module: only one branch may be open
+// at a time, and a press on the backdrop closes whichever is on top.
 //
 // "One at a time" is a stack rather than a single slot, because a popup can be
 // opened from inside another: the calendar's month and year dropdowns live in
 // the calendar's own panel. Opening one closes every popup it is not nested
 // inside, and an outside press peels the stack from the top — so pressing the
-// calendar closes the dropdown over it without taking the calendar with it.
+// calendar's backdrop closes the dropdown over it without taking the calendar
+// with it.
 
-/** Gap between a trigger and its panel, and the room a panel needs below the
- * trigger before it flips above it. */
-export const PANEL_GAP_PX = 4;
-/** Room a panel keeps from the viewport edge when it has to slide inward. */
-const VIEWPORT_MARGIN_PX = 8;
+import { h } from "./dom";
 
 export interface Popup {
   /** The trigger, or whatever else counts as "inside" for an outside press. */
   readonly anchor: HTMLElement;
   readonly panel: HTMLElement;
   close(focus?: boolean): void;
-  position(): void;
 }
 
 // Open popups, outermost first. A popup is nested inside the one below it when
@@ -34,15 +31,36 @@ export interface Popup {
 let stack: Popup[] = [];
 let globalsBound = false;
 
-/** The element a popup's panel is appended to and positioned against. */
+/** The element a popup's overlay is appended to. */
 export function popupHost(el: Element): HTMLElement {
   return el.closest<HTMLElement>(".gomu-root") ?? document.body;
 }
 
 /**
+ * Wraps panel in a centered, dimmed overlay and mounts it in host, hidden. The
+ * overlay hangs off the widget root rather than the field, so the card chrome
+ * cannot clip it. Consumers toggle the returned element's `hidden` to open and
+ * close, and keep the panel to fill.
+ */
+export function mountOverlay(host: HTMLElement, panel: HTMLElement): HTMLElement {
+  const overlay = h("div", { class: "gomu-pop-overlay", hidden: true });
+  overlay.append(panel);
+  host.append(overlay);
+  return overlay;
+}
+
+/** Locks the document scroller while any overlay is open. A fixed overlay
+ * already covers the frame; this stops the content behind it drifting. */
+function syncScrollLock(): void {
+  if (typeof document === "undefined") return;
+  document.documentElement.classList.toggle("gomu-modal-open", stack.length > 0);
+}
+
+/**
  * Records p as open, closing every open popup p is not nested inside. A nested
- * panel hangs off the widget root like any other (see popupHost), so ancestry
- * is read from where the trigger sits, not from where the panel was appended.
+ * overlay hangs off the widget root like any other (see popupHost), so
+ * ancestry is read from where the trigger sits, not from where the panel was
+ * appended.
  */
 export function openPopup(p: Popup): void {
   for (let i = stack.length - 1; i >= 0; i--) {
@@ -52,6 +70,7 @@ export function openPopup(p: Popup): void {
     q.close();
   }
   if (!stack.includes(p)) stack.push(p);
+  syncScrollLock();
   bindGlobals();
 }
 
@@ -64,44 +83,7 @@ export function releasePopup(p: Popup): void {
   // already gone, so the recursion stops at one level.
   const dropped = stack.splice(i);
   for (let k = dropped.length - 1; k >= 1; k--) (dropped[k] as Popup).close();
-}
-
-export interface PlaceOptions {
-  /** Which edge of the panel lines up with the trigger's. Defaults to start. */
-  align?: "start" | "end";
-  /** Widens the panel to at least the trigger's width. */
-  matchWidth?: boolean;
-}
-
-/**
- * Places panel against trigger in host's coordinate space: below it unless the
- * viewport has no room there and more above, and slid inward when the aligned
- * edge would take it off-screen.
- */
-export function positionPanel(
-  trigger: HTMLElement,
-  panel: HTMLElement,
-  host: HTMLElement,
-  opts: PlaceOptions = {},
-): void {
-  const t = trigger.getBoundingClientRect();
-  const h0 = host.getBoundingClientRect();
-  if (opts.matchWidth) panel.style.minWidth = `${t.width}px`;
-
-  const width = panel.offsetWidth;
-  const height = panel.offsetHeight;
-
-  let left = opts.align === "end" ? t.right - width : t.left;
-  const rightLimit = Math.max(VIEWPORT_MARGIN_PX, window.innerWidth - width - VIEWPORT_MARGIN_PX);
-  left = Math.min(Math.max(left, VIEWPORT_MARGIN_PX), rightLimit);
-  panel.style.left = `${left - h0.left}px`;
-
-  const above =
-    window.innerHeight - t.bottom < height + PANEL_GAP_PX && t.top > height + PANEL_GAP_PX;
-  panel.classList.toggle("gomu-pop-panel--above", above);
-  panel.style.top = above
-    ? `${t.top - h0.top - height - PANEL_GAP_PX}px`
-    : `${t.bottom - h0.top + PANEL_GAP_PX}px`;
+  syncScrollLock();
 }
 
 function bindGlobals(): void {
@@ -113,8 +95,8 @@ function bindGlobals(): void {
     (ev) => {
       const target = ev.target;
       if (!(target instanceof Node)) return;
-      // Peel from the top: a press inside the calendar is outside the dropdown
-      // over it, and closes only that one.
+      // Peel from the top: a press on the calendar's backdrop is outside the
+      // dropdown over it, and closes only that one.
       for (let i = stack.length - 1; i >= 0; i--) {
         const p = stack[i] as Popup;
         if (p.anchor.contains(target) || p.panel.contains(target)) break;
@@ -123,10 +105,4 @@ function bindGlobals(): void {
     },
     true,
   );
-
-  const reposition = (): void => {
-    for (const p of [...stack]) p.position();
-  };
-  window.addEventListener("resize", reposition);
-  window.addEventListener("scroll", reposition, true);
 }

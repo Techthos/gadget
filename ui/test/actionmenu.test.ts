@@ -18,9 +18,12 @@ function shell(): HTMLElement {
 }
 
 function parts(root: HTMLElement) {
+	const panel = root.querySelector<HTMLElement>(".gomu-action-panel")!;
 	return {
 		trigger: root.querySelector<HTMLButtonElement>("[data-gomu-action-menu]")!,
-		panel: root.querySelector<HTMLElement>(".gomu-action-panel")!,
+		panel,
+		// Visibility lives on the overlay that wraps the panel (see src/popup.ts).
+		overlay: panel?.parentElement as HTMLElement,
 		items: () => [...root.querySelectorAll<HTMLElement>("[data-gomu-action-index]")],
 	};
 }
@@ -40,12 +43,15 @@ describe("action menu", () => {
 		const onSelect = vi.fn();
 		const menu = createActionMenu(root);
 		menu.bind(root, "action-menu", () => ({ items: ACTIONS, onSelect }));
-		const { trigger, panel, items } = parts(root);
+		const { trigger, panel, overlay, items } = parts(root);
 
-		expect(panel.hidden).toBe(true);
+		expect(overlay.hidden).toBe(true);
 		trigger.click();
 
-		expect(panel.hidden).toBe(false);
+		expect(overlay.hidden).toBe(false);
+		// Visibility is the overlay's job; the panel must never carry hidden, or
+		// [hidden]'s display:none would blank it inside a shown overlay.
+		expect(panel.hasAttribute("hidden")).toBe(false);
 		expect(trigger.getAttribute("aria-expanded")).toBe("true");
 		expect(panel.getAttribute("role")).toBe("menu");
 		expect(items().map((el) => el.textContent)).toEqual([
@@ -57,7 +63,7 @@ describe("action menu", () => {
 
 		items()[1]!.click();
 		expect(onSelect).toHaveBeenCalledWith(1);
-		expect(panel.hidden).toBe(true);
+		expect(overlay.hidden).toBe(true);
 		expect(trigger.getAttribute("aria-expanded")).toBe("false");
 	});
 
@@ -75,39 +81,48 @@ describe("action menu", () => {
 		expect(item.textContent).toBe("<img src=x onerror=alert(1)>");
 	});
 
-	it("asks a confirmed action twice, on the item itself", () => {
+	it("asks over the frame before firing a confirmed action", () => {
 		const root = shell();
 		const onSelect = vi.fn();
 		const menu = createActionMenu(root);
 		menu.bind(root, "action-menu", () => ({ items: ACTIONS, onSelect }));
-		const { panel, items } = parts(root);
+		const { overlay, items } = parts(root);
 		parts(root).trigger.click();
 
-		items()[2]!.click();
+		items()[2]!.click(); // Delete carries a confirm
+		// The menu closes and a confirmation takes the frame instead.
+		expect(overlay.hidden).toBe(true);
+		const ask = root.querySelector<HTMLElement>(".gomu-ask-panel")!;
+		expect(ask.querySelector(".gomu-ask-message")!.textContent).toBe("Really?");
+		const go = ask.querySelector<HTMLButtonElement>(".gomu-ask-confirm")!;
+		expect(go.textContent).toBe("Delete");
+		expect(go.classList.contains("gomu-btn--danger")).toBe(true);
 		expect(onSelect).not.toHaveBeenCalled();
-		expect(items()[2]!.textContent).toBe("Really?");
-		expect(items()[2]!.hasAttribute("data-gomu-armed")).toBe(true);
-		expect(panel.hidden).toBe(false);
 
-		items()[2]!.click();
+		// Cancel dismisses it without firing.
+		ask.querySelector<HTMLButtonElement>(".gomu-ask-cancel")!.click();
+		expect(onSelect).not.toHaveBeenCalled();
+		expect(root.querySelector(".gomu-ask-panel")).toBeNull();
+
+		// Reopen and confirm: now it fires once.
+		parts(root).trigger.click();
+		parts(root).items()[2]!.click();
+		root.querySelector<HTMLButtonElement>(".gomu-ask-confirm")!.click();
 		expect(onSelect).toHaveBeenCalledWith(2);
-		expect(panel.hidden).toBe(true);
+		expect(root.querySelector(".gomu-ask-panel")).toBeNull();
 	});
 
-	it("disarms a confirmation left standing", () => {
-		vi.useFakeTimers();
+	it("dismisses the confirmation on Escape without firing", () => {
 		const root = shell();
 		const onSelect = vi.fn();
 		const menu = createActionMenu(root);
 		menu.bind(root, "action-menu", () => ({ items: ACTIONS, onSelect }));
 		parts(root).trigger.click();
-
 		parts(root).items()[2]!.click();
-		vi.advanceTimersByTime(5000);
-		expect(parts(root).items()[2]!.textContent).toBe("Delete");
 
-		parts(root).items()[2]!.click();
+		key(root.querySelector<HTMLElement>(".gomu-ask-panel")!, "Escape");
 		expect(onSelect).not.toHaveBeenCalled();
+		expect(root.querySelector(".gomu-ask-panel")).toBeNull();
 	});
 
 	it("navigates with the keyboard and closes back onto the trigger", () => {
@@ -115,10 +130,10 @@ describe("action menu", () => {
 		const onSelect = vi.fn();
 		const menu = createActionMenu(root);
 		menu.bind(root, "action-menu", () => ({ items: ACTIONS, onSelect }));
-		const { trigger, panel, items } = parts(root);
+		const { trigger, overlay, items } = parts(root);
 
 		key(trigger, "ArrowDown");
-		expect(panel.hidden).toBe(false);
+		expect(overlay.hidden).toBe(false);
 		expect(document.activeElement).toBe(items()[0]);
 
 		key(items()[0]!, "ArrowUp"); // wraps to the last item
@@ -132,7 +147,7 @@ describe("action menu", () => {
 		key(trigger, "ArrowUp"); // opens onto the end of the menu
 		expect(document.activeElement).toBe(items()[2]);
 		key(items()[2]!, "Escape");
-		expect(panel.hidden).toBe(true);
+		expect(overlay.hidden).toBe(true);
 		expect(document.activeElement).toBe(trigger);
 	});
 
@@ -140,12 +155,12 @@ describe("action menu", () => {
 		const root = shell();
 		const menu = createActionMenu(root);
 		menu.bind(root, "action-menu", () => ({ items: ACTIONS, onSelect: () => {} }));
-		const { trigger, panel } = parts(root);
+		const { trigger, overlay } = parts(root);
 
 		trigger.click();
-		expect(panel.hidden).toBe(false);
+		expect(overlay.hidden).toBe(false);
 		trigger.click();
-		expect(panel.hidden).toBe(true);
+		expect(overlay.hidden).toBe(true);
 	});
 
 	it("stays shut for a trigger that resolves to nothing", () => {
@@ -153,18 +168,18 @@ describe("action menu", () => {
 		const menu = createActionMenu(root);
 		menu.bind(root, "action-menu", () => ({ items: [], onSelect: () => {} }));
 		parts(root).trigger.click();
-		expect(parts(root).panel.hidden).toBe(true);
+		expect(parts(root).overlay.hidden).toBe(true);
 	});
 
 	it("closes when a press lands outside it", () => {
 		const root = shell();
 		const menu = createActionMenu(root);
 		menu.bind(root, "action-menu", () => ({ items: ACTIONS, onSelect: () => {} }));
-		const { trigger, panel } = parts(root);
+		const { trigger, overlay } = parts(root);
 		trigger.click();
 
 		document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
-		expect(panel.hidden).toBe(true);
+		expect(overlay.hidden).toBe(true);
 	});
 
 	// Both popups share one open slot (see src/popup.ts), so a widget with a
@@ -176,20 +191,20 @@ describe("action menu", () => {
 		root.append(select);
 		enhanceSelects(root);
 		const ddTrigger = root.querySelector<HTMLButtonElement>(".gomu-dd-trigger")!;
-		const ddPanel = root.querySelector<HTMLElement>(".gomu-dd-panel")!;
+		const ddOverlay = root.querySelector<HTMLElement>(".gomu-dd-panel")!.parentElement as HTMLElement;
 
 		const menu = createActionMenu(root);
 		menu.bind(root, "action-menu", () => ({ items: ACTIONS, onSelect: () => {} }));
-		const { trigger, panel } = parts(root);
+		const { trigger, overlay } = parts(root);
 
 		ddTrigger.click();
-		expect(ddPanel.hidden).toBe(false);
+		expect(ddOverlay.hidden).toBe(false);
 		trigger.click();
-		expect(ddPanel.hidden).toBe(true);
-		expect(panel.hidden).toBe(false);
+		expect(ddOverlay.hidden).toBe(true);
+		expect(overlay.hidden).toBe(false);
 
 		ddTrigger.click();
-		expect(panel.hidden).toBe(true);
-		expect(ddPanel.hidden).toBe(false);
+		expect(overlay.hidden).toBe(true);
+		expect(ddOverlay.hidden).toBe(false);
 	});
 });

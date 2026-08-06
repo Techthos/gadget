@@ -62,6 +62,11 @@
   --gomu-radius-m: var(--border-radius-md, 8px);
   --gomu-radius-l: var(--border-radius-lg, 12px);
   --gomu-space-unit: 0.25rem;
+  /* Widget shell frame. Off by default: embedded in a host's own chat bubble
+   * or panel, a second outlined, rounded box around the widget reads as a
+   * frame inside a frame. theme.Theme.Framed turns it back on. */
+  --gomu-card-border-width: 0;
+  --gomu-card-radius: 0;
   /* fixed width of one card in the CardList carousel */
   --gomu-card-width: 17rem;
   /* smallest a Menu tile may get before the grid drops a column */

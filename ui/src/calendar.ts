@@ -16,7 +16,7 @@
 import { clear, h, icon } from "./dom";
 import { getLocale, getTimeZone } from "./format";
 import { enhanceSelects, refreshDropdown } from "./dropdown";
-import { openPopup, popupHost, positionPanel, releasePopup, type Popup } from "./popup";
+import { mountOverlay, openPopup, popupHost, releasePopup, type Popup } from "./popup";
 
 const DAY_MS = 86400000;
 const CHEVRON_LEFT = "M10 3 5.5 8 10 13";
@@ -1072,19 +1072,20 @@ function enhanceDateInput(
   trigger.append(valueEl);
   wrap.append(trigger);
 
+  // Visibility lives on the overlay (see popup.ts); the panel itself is never
+  // hidden, or [hidden]'s display:none would blank it inside a shown overlay.
   const panel = h("div", {
     class: "gomu-pop-panel gomu-cal-panel",
     id,
     role: "dialog",
-    "aria-modal": "false",
-    hidden: true,
+    "aria-modal": "true",
   });
   if (label !== null) panel.setAttribute("aria-label", label);
-  // The panel hangs off the widget root rather than the field: the card chrome
-  // clips its overflow, and a panel nested inside it would be cut off at the
-  // card's edge (see popup.ts).
+  // The overlay hangs off the widget root rather than the field: the card
+  // chrome clips its overflow, and a panel nested inside it would be cut off at
+  // the card's edge (see popup.ts).
   const host = popupHost(startEl);
-  host.append(panel);
+  const overlay = mountOverlay(host, panel);
 
   const cal = createCalendar(
     { ...cfg, mode: range ? "range" : "single" },
@@ -1144,28 +1145,23 @@ function enhanceDateInput(
     syncTrigger();
   }
 
-  function position(): void {
-    positionPanel(trigger, panel, host);
-  }
-
   function isOpen(): boolean {
-    return !panel.hidden;
+    return !overlay.hidden;
   }
 
   function open(): void {
     if (isOpen() || startEl.disabled) return;
     sync();
-    panel.hidden = false;
+    overlay.hidden = false;
     trigger.setAttribute("aria-expanded", "true");
     openPopup(popup);
-    position();
     cal.focusGrid();
   }
 
   function close(focus = false): void {
     releasePopup(popup);
     if (!isOpen()) return;
-    panel.hidden = true;
+    overlay.hidden = true;
     trigger.setAttribute("aria-expanded", "false");
     if (focus) trigger.focus();
   }
@@ -1203,7 +1199,7 @@ function enhanceDateInput(
     });
   }
 
-  const popup: Popup = { anchor: wrap, panel, close, position };
+  const popup: Popup = { anchor: wrap, panel, close };
   const field: DateField = { sync };
   fields.set(startEl, field);
   if (endEl) fields.set(endEl, field);
